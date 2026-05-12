@@ -1,0 +1,31 @@
+{
+  "name": "actify-lambda-pdf",
+  "version": "1.0.0",
+  "description": "Actify Release 1 — Lambda: Bedrock analysis + PDF generation + S3 upload",
+  "main": "dist/handler.js",
+  "scripts": {
+    "build": "tsc --project tsconfig.json && node scripts/bundle.js",
+    "build:tsc": "tsc --project tsconfig.json",
+    "lint": "tsc --noEmit",
+    "test:bedrock": "ts-node --project tsconfig.json tests/test-bedrock.ts",
+    "test:pdf": "ts-node --project tsconfig.json tests/test-pdf.ts",
+    "test:handler": "ts-node --project tsconfig.json tests/test-handler.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "@sparticuz/chromium": "^123.0.1",
+    "puppeteer-core": "^22.8.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.140",
+    "@types/node": "^20.12.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

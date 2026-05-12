@@ -1,0 +1,13 @@
+# ─── Actify SaaS Release 1 — Terraform variables ─────────────────────────────
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored (contains secrets).
+
+aws_region  = "eu-central-1"
+environment = "demo"
+
+# ─── Amplify (optional) ───────────────────────────────────────────────────────
+# Set enable_amplify = true once you have the GitHub repo ready.
+enable_amplify     = false
+github_oauth_token = ""   # GitHub PAT — scopes: repo
+github_repository  = ""   # e.g. https://github.com/YOUR_ORG/actify-frontend
+github_branch      = "main"

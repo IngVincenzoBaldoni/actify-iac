@@ -1,0 +1,37 @@
+# ─── Terraform ────────────────────────────────────────────────────────────────
+# Provider binaries and cached plugins — scaricati da "terraform init", non versionate
+.terraform/
+.terraform.lock.hcl   # rimossa: ogni dev esegue terraform init
+# Stato infrastruttura — può contenere dati sensibili; usare backend remoto in produzione
+terraform.tfstate
+terraform.tfstate.backup
+# Variabili locali — usare terraform.tfvars.example come template
+terraform.tfvars
+# Crash log
+crash.log
+crash.*.log
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ─── Lambda / Node.js ─────────────────────────────────────────────────────────
+node_modules/
+dist/
+*.zip
+
+# ─── macOS ────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.iml
+
+# ─── Secrets ──────────────────────────────────────────────────────────────────
+.env
+.env.*
+secrets.json
