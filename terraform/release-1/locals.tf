@@ -21,4 +21,12 @@ locals {
   iam_policy_name       = "${local.project}-lambda-policy"
   api_name              = "${local.project}-api"
   amplify_app_name      = "${local.project}-frontend"
+
+  # ─── Data Lake (Bronze Layer) ────────────────────────────────────────────────
+  datalake_bucket_name  = "${local.project}-datalake"
+  glue_database_name    = "actify_datalake"
+  glue_crawler_name     = "${local.project}-prospects-crawler"
+  glue_role_name        = "${local.project}-glue-crawler-role"
+  glue_policy_name      = "${local.project}-glue-crawler-policy"
+  athena_workgroup_name = "${local.project}-analytics"
 }

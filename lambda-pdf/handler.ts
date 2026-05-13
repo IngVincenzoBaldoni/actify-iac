@@ -4,7 +4,7 @@ import { validatePayload } from "./middleware/validator";
 import { analyze } from "./services/bedrockService";
 import { render } from "./services/htmlTemplate";
 import { htmlToPdf } from "./services/pdfService";
-import { uploadReport } from "./services/s3Service";
+import { uploadReport, writeToDatalake } from "./services/s3Service";
 import { formHtml } from "./services/formHtml";
 
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
@@ -123,6 +123,17 @@ export async function handler(
     s3_key: uploadResult.key,
   });
 
-  // ── 7. Return download URL ───────────────────────────────────────────────────
+  // ── 7. Write to data lake (non-fatal — failure never blocks the user) ────────
+  try {
+    await writeToDatalake(payload, pdfBuffer);
+  } catch (err) {
+    log("error", "datalake_write_failed", {
+      error: err instanceof Error ? err.message : String(err),
+      company: payload.company.name,
+    });
+    // Intentionally swallowed — user still gets their report
+  }
+
+  // ── 8. Return download URL ───────────────────────────────────────────────────
   return json(200, { download_url: uploadResult.presigned_url });
 }

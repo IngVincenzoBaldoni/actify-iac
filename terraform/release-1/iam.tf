@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "lambda_permissions" {
     resources = ["${aws_cloudwatch_log_group.lambda.arn}:*"]
   }
 
-  # S3 — write generated PDFs under reports/ prefix
+  # S3 — write generated PDFs under reports/ prefix (temp bucket for presigned URLs)
   statement {
     sid     = "AllowS3PutReport"
     effect  = "Allow"
@@ -45,6 +45,17 @@ data "aws_iam_policy_document" "lambda_permissions" {
     effect  = "Allow"
     actions = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.reports_temp.arn}/reports/*"]
+  }
+
+  # S3 — write to data lake: prospect JSON records + PDF copies
+  statement {
+    sid    = "AllowS3DatalakeWrite"
+    effect = "Allow"
+    actions = ["s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.datalake.arn}/bronze/prospects/*",
+      "${aws_s3_bucket.datalake.arn}/company-reports/*",
+    ]
   }
 
   # Bedrock — invoke Nova Pro

@@ -53,6 +53,56 @@ output "amplify_default_domain" {
   value       = var.enable_amplify ? "https://${var.github_branch}.${aws_amplify_app.frontend[0].default_domain}" : "n/a — set enable_amplify = true"
 }
 
+# ─── Data Lake ────────────────────────────────────────────────────────────────
+output "datalake_bucket_name" {
+  description = "S3 data lake bucket — prospect records + PDF copies"
+  value       = aws_s3_bucket.datalake.bucket
+}
+
+output "glue_database_name" {
+  description = "Glue Data Catalog database for Athena queries"
+  value       = aws_glue_catalog_database.actify.name
+}
+
+output "glue_crawler_name" {
+  description = "Glue Crawler name (runs daily; trigger manually after first submissions)"
+  value       = aws_glue_crawler.prospects.name
+}
+
+output "athena_workgroup_name" {
+  description = "Athena workgroup for prospect analytics"
+  value       = aws_athena_workgroup.actify.name
+}
+
+output "cmd_run_crawler" {
+  description = "Trigger Glue Crawler manually (run after first form submissions)"
+  value = join(" ", [
+    "aws glue start-crawler",
+    "--name", aws_glue_crawler.prospects.name,
+    "--region", var.aws_region,
+  ])
+}
+
+output "cmd_athena_all_prospects" {
+  description = "Athena query — list all prospects ordered by date"
+  value = join("", [
+    "aws athena start-query-execution",
+    " --query-string \"SELECT submission_id, company_name, company_sector, company_employees, sede_legale, ai_role, tool_count, report_s3_key, year, month, day FROM ${aws_glue_catalog_database.actify.name}.prospects ORDER BY year DESC, month DESC, day DESC\"",
+    " --work-group ${aws_athena_workgroup.actify.name}",
+    " --region ${var.aws_region}",
+  ])
+}
+
+output "cmd_athena_count_by_month" {
+  description = "Athena query — prospect count per month"
+  value = join("", [
+    "aws athena start-query-execution",
+    " --query-string \"SELECT year, month, COUNT(*) AS submissions FROM ${aws_glue_catalog_database.actify.name}.prospects GROUP BY year, month ORDER BY year DESC, month DESC\"",
+    " --work-group ${aws_athena_workgroup.actify.name}",
+    " --region ${var.aws_region}",
+  ])
+}
+
 # ─── Post-deploy commands ─────────────────────────────────────────────────────
 output "cmd_deploy_lambda" {
   description = "Run this after `cd lambda-pdf && npm run build` to deploy Lambda code"

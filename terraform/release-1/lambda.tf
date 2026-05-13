@@ -49,6 +49,7 @@ resource "aws_lambda_function" "pdf_generator" {
       S3_BUCKET           = aws_s3_bucket.reports_temp.bucket
       S3_REGION           = var.aws_region
       PRESIGNED_URL_TTL   = "900"
+      DATALAKE_BUCKET     = aws_s3_bucket.datalake.bucket
       RATE_LIMIT_MAX      = "5"
       RATE_LIMIT_WINDOW   = "900"
       ENV                 = var.environment
