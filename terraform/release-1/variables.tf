@@ -15,27 +15,3 @@ variable "environment" {
   }
 }
 
-variable "enable_amplify" {
-  type        = bool
-  description = "Provision the Amplify frontend app. Requires github_oauth_token and github_repository."
-  default     = false
-}
-
-variable "github_oauth_token" {
-  type        = string
-  description = "GitHub OAuth token (repo scope) for Amplify CI/CD. Required when enable_amplify = true."
-  sensitive   = true
-  default     = ""
-}
-
-variable "github_repository" {
-  type        = string
-  description = "GitHub repository URL for Amplify (e.g. https://github.com/org/actify-frontend)"
-  default     = ""
-}
-
-variable "github_branch" {
-  type        = string
-  description = "Branch to track for Amplify auto-deploy"
-  default     = "main"
-}

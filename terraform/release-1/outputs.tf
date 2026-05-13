@@ -47,10 +47,25 @@ output "cloudwatch_log_group_apigw" {
   value       = aws_cloudwatch_log_group.api_gateway.name
 }
 
-# ─── Amplify ──────────────────────────────────────────────────────────────────
-output "amplify_default_domain" {
-  description = "Amplify app default domain (only when enable_amplify = true)"
-  value       = var.enable_amplify ? "https://${var.github_branch}.${aws_amplify_app.frontend[0].default_domain}" : "n/a — set enable_amplify = true"
+# ─── Frontend (S3 + CloudFront) ───────────────────────────────────────────────
+output "frontend_url" {
+  description = "CloudFront URL for the static frontend"
+  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+}
+
+output "frontend_s3_bucket" {
+  description = "S3 bucket name for frontend static files"
+  value       = aws_s3_bucket.frontend.bucket
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (needed for cache invalidation in GitHub Actions)"
+  value       = aws_cloudfront_distribution.frontend.id
+}
+
+output "frontend_deploy_role_arn" {
+  description = "IAM role ARN for GitHub Actions OIDC deploy — set as AWS_DEPLOY_ROLE_ARN secret"
+  value       = aws_iam_role.github_actions_deploy.arn
 }
 
 # ─── Data Lake ────────────────────────────────────────────────────────────────
