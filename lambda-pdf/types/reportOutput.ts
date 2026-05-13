@@ -9,6 +9,7 @@ export type ComplianceStatus =
   | "unknown";
 export type Priority = "immediate" | "short_term" | "medium_term";
 export type ToolCategory = string;
+export type PhaseRelevanceStatus = "relevant" | "monitor" | "not_applicable";
 
 export interface ToolCatalogEntry {
   tool_name: string;
@@ -30,12 +31,26 @@ export interface AIActTimeline {
   aug_2027: string[];
 }
 
+export interface PhaseRelevance {
+  already_in_force: PhaseRelevanceStatus;
+  aug_2025: PhaseRelevanceStatus;
+  aug_2026: PhaseRelevanceStatus;
+  aug_2027: PhaseRelevanceStatus;
+}
+
 export interface ComplianceSummary {
   compliant_count: number;
   non_compliant_count: number;
   monitoring_count: number;
   most_urgent_deadline: string | null;
   months_to_urgency: number | null;
+}
+
+export interface ScoreBreakdown {
+  governance: number;
+  transparency: number;
+  documentation: number;
+  monitoring: number;
 }
 
 export interface PriorityAction {
@@ -50,8 +65,12 @@ export interface BedrockReportOutput {
   overall_risk_score: number;
   tool_catalog: ToolCatalogEntry[];
   ai_act_timeline: AIActTimeline;
+  phase_relevance: PhaseRelevance;
   compliance_summary: ComplianceSummary;
+  compliance_gaps: string[];
+  score_breakdown: ScoreBreakdown;
   priority_actions: PriorityAction[];
+  recommended_documents: string[];
   key_findings_from_notes: string;
   report_footer_note: string;
 }
