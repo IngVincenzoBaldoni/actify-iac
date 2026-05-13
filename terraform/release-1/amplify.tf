@@ -4,6 +4,7 @@
 #
 # The build spec is read from amplify.yml in the repository root — see SDD §3.5.
 # NEXT_PUBLIC_API_URL is injected automatically from the API Gateway endpoint.
+# Platform WEB (static export) — page.tsx is fully 'use client', no SSR needed.
 
 resource "aws_amplify_app" "frontend" {
   count = var.enable_amplify ? 1 : 0
@@ -11,7 +12,7 @@ resource "aws_amplify_app" "frontend" {
   name        = local.amplify_app_name
   repository  = var.github_repository
   oauth_token = var.github_oauth_token
-  platform    = "WEB_COMPUTE" # Required for Next.js SSR (App Router)
+  platform    = "WEB"
 
   environment_variables = {
     NEXT_PUBLIC_API_URL = aws_apigatewayv2_api.main.api_endpoint
@@ -34,7 +35,7 @@ resource "aws_amplify_branch" "main" {
   branch_name = var.github_branch
 
   enable_auto_build = true
-  framework         = "Next.js - SSR"
+  framework         = "Next.js"
   stage             = var.environment == "production" ? "PRODUCTION" : "DEVELOPMENT"
 
   environment_variables = {
