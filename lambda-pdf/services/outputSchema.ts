@@ -9,7 +9,7 @@ const complianceStatusSchema = z.enum([
   "unknown",
 ]);
 const prioritySchema = z.enum(["immediate", "short_term", "medium_term"]);
-const toolCategorySchema = z.enum(["llm", "specialized", "proprietary"]);
+const toolCategorySchema = z.string().min(1).max(100);
 
 export const reportOutputSchema = z.object({
   executive_summary: z.string().min(1),
@@ -73,7 +73,7 @@ export const OUTPUT_SCHEMA_TEMPLATE = {
     {
       tool_name: "<nome>",
       vendor: "<vendor | 'Proprietario' | 'Non specificato'>",
-      category: "llm | specialized | proprietary",
+      category: "<categoria del sistema: llm | hr | finance | marketing | operations | legal | tech | healthcare | altro>",
       declared_purpose: "<max 10 parole>",
       risk_classification: "prohibited | high | limited | minimal",
       applicable_articles: ["Art. X", "Annex III cat. Y(z)"],

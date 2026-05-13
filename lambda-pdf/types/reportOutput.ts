@@ -8,7 +8,7 @@ export type ComplianceStatus =
   | "monitoring_needed"
   | "unknown";
 export type Priority = "immediate" | "short_term" | "medium_term";
-export type ToolCategory = "llm" | "specialized" | "proprietary";
+export type ToolCategory = string;
 
 export interface ToolCatalogEntry {
   tool_name: string;
