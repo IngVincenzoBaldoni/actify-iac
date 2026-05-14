@@ -1,6 +1,6 @@
 // ── Constants ─────────────────────────────────────────────────────────────────
-var STEP_NAMES = ['Profilo Azienda', 'Ruolo & Sistemi AI', 'Decisioni', 'AI Readiness', 'Contesto', 'Riepilogo'];
-var TOTAL_STEPS = 6;
+var STEP_NAMES = ['Profilo Azienda', 'Ruolo & Sistemi AI', 'AI Readiness', 'Contesto', 'Riepilogo'];
+var TOTAL_STEPS = 5;
 
 var AI_CATS = [
   {v:'hr',        l:'HR & Recruiting'},
@@ -23,6 +23,29 @@ var LLM_LIST = [
   {id:'perplexity', l:'Perplexity', v:'Perplexity AI'},
   {id:'grok',       l:'Grok',       v:'xAI'},
   {id:'other_llm',  l:'Altro LLM',  v:''}
+];
+
+var DECISION_DOMAINS = [
+  {v:'hiring',                l:'Assunzione, selezione, screening personale'},
+  {v:'performance_management',l:'Valutazione prestazioni, promozioni, licenziamenti'},
+  {v:'credit_scoring',        l:'Valutazione creditizia, prestiti, scoring finanziario'},
+  {v:'insurance',             l:'Assicurazioni: underwriting, tariffazione, sinistri'},
+  {v:'healthcare_diagnosis',  l:'Diagnosi medica, supporto clinico, triage'},
+  {v:'education_assessment',  l:'Valutazione studenti, accesso all\'istruzione'},
+  {v:'public_services',       l:'Accesso a servizi pubblici, sussidi, benefici'},
+  {v:'law_enforcement',       l:'Forze dell\'ordine, biometria, sorveglianza'},
+  {v:'content_moderation',    l:'Moderazione contenuti, accesso a piattaforme'},
+  {v:'other_decisions',       l:'Altre decisioni con impatto su persone fisiche'}
+];
+
+var DATA_TYPES = [
+  {v:'biometric',           l:'Biometrici (volto, voce, impronte, andatura)'},
+  {v:'health',              l:'Sanitari, cartelle cliniche, stati di salute'},
+  {v:'financial',           l:'Finanziari, bancari, reddituali'},
+  {v:'behavioral',          l:'Comportamentali, pattern di utilizzo'},
+  {v:'location',            l:'Geolocalizzazione o movimenti fisici'},
+  {v:'personal_identifiers',l:'Identificatori personali (nome, CF, email)'},
+  {v:'sensitive_categories',l:'Categorie speciali GDPR (etnia, religione, ecc.)'}
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -153,9 +176,75 @@ function toggleTarget(type, idx, val, on) {
   else { var ix = tu.indexOf(val); if (ix >= 0) tu.splice(ix, 1); }
 }
 
+// ── Decision section helpers ───────────────────────────────────────────────────
+function getSysArr(type) {
+  return type === 'prov' ? providerSystems : type === 'llm' ? deployerLlmSelected : deployerSpecialized;
+}
+function setSystemField(type, idx, field, val) {
+  getSysArr(type)[idx][field] = val;
+}
+function toggleSystemArray(type, idx, field, val, on) {
+  var arr = getSysArr(type)[idx][field];
+  if (on) { if (arr.indexOf(val) < 0) arr.push(val); }
+  else { var i = arr.indexOf(val); if (i >= 0) arr.splice(i, 1); }
+}
+
+function renderDecisionSection(type, idx, sys) {
+  var HOV = [
+    {v:'always',    l:'Sempre presente', d:'Ogni output AI è revisionato da un operatore umano prima di produrre effetti'},
+    {v:'sometimes', l:'In alcuni casi',  d:'Supervisione solo per decisioni ad alto rischio; il resto è automatico'},
+    {v:'never',     l:'Mai — Full Auto', d:'Il sistema decide o agisce autonomamente, senza intervento umano nel loop'},
+    {v:'na',        l:'Non applicabile', d:'Il sistema non produce decisioni con impatto su persone fisiche'}
+  ];
+  var radioHtml = HOV.map(function(h) {
+    var chk = sys.human_oversight === h.v ? ' checked' : '';
+    return '<label class="radio-card">'
+      + '<input type="radio" name="ho_' + type + '_' + idx + '" value="' + h.v + '"' + chk
+      + ' onchange="setSystemField(\'' + type + '\',' + idx + ',\'human_oversight\',\'' + h.v + '\')">'
+      + '<div class="rc-row"><div class="rc-title">' + h.l + '</div><div class="rc-dot"></div></div>'
+      + '<div class="rc-desc">' + h.d + '</div></label>';
+  }).join('');
+  var domHtml = DECISION_DOMAINS.map(function(d) {
+    var chk = sys.decision_domains.indexOf(d.v) >= 0 ? ' checked' : '';
+    return '<label class="check-row"><input type="checkbox"' + chk
+      + ' onchange="toggleSystemArray(\'' + type + '\',' + idx + ',\'decision_domains\',\'' + d.v + '\',this.checked)">'
+      + '<span>' + d.l + '</span></label>';
+  }).join('');
+  var dtHtml = DATA_TYPES.map(function(d) {
+    var chk = sys.data_types.indexOf(d.v) >= 0 ? ' checked' : '';
+    return '<label class="check-row"><input type="checkbox"' + chk
+      + ' onchange="toggleSystemArray(\'' + type + '\',' + idx + ',\'data_types\',\'' + d.v + '\',this.checked)">'
+      + '<span>' + d.l + '</span></label>';
+  }).join('');
+
+  return '<div class="dec-section">'
+    + '<div class="dec-title">Decisioni &amp; Human-in-the-Loop</div>'
+    + '<div class="check-cards">'
+    + '<label class="check-card"><input type="checkbox"' + (sys.makes_decisions ? ' checked' : '')
+    + ' onchange="setSystemField(\'' + type + '\',' + idx + ',\'makes_decisions\',this.checked)">'
+    + '<div><div class="cc-title">Produce decisioni o raccomandazioni che impattano persone fisiche</div>'
+    + '<div class="cc-desc">Include: assunzione, accesso al credito, diagnosi, valutazione scolastica, scoring comportamentale</div></div></label>'
+    + '<label class="check-card"><input type="checkbox"' + (sys.affects_vulnerable ? ' checked' : '')
+    + ' onchange="setSystemField(\'' + type + '\',' + idx + ',\'affects_vulnerable\',this.checked)">'
+    + '<div><div class="cc-title">Interagisce con soggetti vulnerabili</div>'
+    + '<div class="cc-desc">Minori, anziani, persone con disabilità, persone in difficoltà economica o emotiva</div></div></label>'
+    + '</div>'
+    + '<div class="dec-sub">Supervisione Umana (Human-in-the-Loop)</div>'
+    + '<div class="radio-grid">' + radioHtml + '</div>'
+    + '<div class="dec-sub">Ambiti di Decisione</div>'
+    + '<div class="check-list cl-2col">' + domHtml + '</div>'
+    + '<div class="dec-sub">Tipologie di Dati Trattati</div>'
+    + '<div class="check-list cl-2col">' + dtHtml + '</div>'
+    + '</div>';
+}
+
 // ── Provider Systems ──────────────────────────────────────────────────────────
 function addProviderSystem() {
-  providerSystems.push({tool_name: '', category: 'tech', purpose: '', target_users: []});
+  providerSystems.push({
+    tool_name: '', category: 'tech', purpose: '', target_users: [],
+    makes_decisions: false, affects_vulnerable: false,
+    human_oversight: 'na', decision_domains: [], data_types: []
+  });
   renderProviderSystems();
 }
 function removeProviderSystem(i) { providerSystems.splice(i, 1); renderProviderSystems(); }
@@ -186,6 +275,7 @@ function renderProviderSystems() {
       + '<div class="field"><label>Finalità d\'uso *</label>'
       + '<textarea rows="2" placeholder="A cosa serve, come viene usato, quali decisioni supporta..." oninput="providerSystems[' + i + '].purpose=this.value">' + esc(s.purpose) + '</textarea></div>'
       + tuHtml
+      + renderDecisionSection('prov', i, s)
       + '</div>';
   }).join('');
 }
@@ -200,7 +290,11 @@ function toggleLlm(id) {
   if (existing >= 0) {
     deployerLlmSelected.splice(existing, 1);
   } else {
-    deployerLlmSelected.push({id: id, label: llm.l, vendor: llm.v, custom_name: '', purpose: '', target_users: []});
+    deployerLlmSelected.push({
+      id: id, label: llm.l, vendor: llm.v, custom_name: '', purpose: '', target_users: [],
+      makes_decisions: false, affects_vulnerable: false,
+      human_oversight: 'na', decision_domains: [], data_types: []
+    });
   }
   renderLlmGrid();
   renderLlmDetails();
@@ -235,6 +329,7 @@ function renderLlmDetails() {
         + '<div class="field"><label>Finalità d\'uso *</label>'
         + '<textarea rows="2" placeholder="Come usi ' + l.label + ' nella tua organizzazione? Chi ne fa uso? Per quali processi?" oninput="deployerLlmSelected[' + i + '].purpose=this.value">' + esc(l.purpose) + '</textarea></div>'
         + tuHtml
+        + renderDecisionSection('llm', i, l)
         + '</div>';
     }).join('')
     + '</div>';
@@ -242,7 +337,11 @@ function renderLlmDetails() {
 
 // ── Deployer Specialized ──────────────────────────────────────────────────────
 function addDeployerSpecialized() {
-  deployerSpecialized.push({subcategory: 'hr', tool_name: '', vendor: '', purpose: '', target_users: []});
+  deployerSpecialized.push({
+    subcategory: 'hr', tool_name: '', vendor: '', purpose: '', target_users: [],
+    makes_decisions: false, affects_vulnerable: false,
+    human_oversight: 'na', decision_domains: [], data_types: []
+  });
   renderDeployerSpecialized();
 }
 function removeDeployerSpecialized(i) { deployerSpecialized.splice(i, 1); renderDeployerSpecialized(); }
@@ -273,23 +372,18 @@ function renderDeployerSpecialized() {
       + '<div class="field"><label>Finalità d\'uso *</label>'
       + '<textarea rows="2" placeholder="A cosa serve nella tua azienda? Chi lo usa? Quali decisioni supporta?" oninput="deployerSpecialized[' + i + '].purpose=this.value">' + esc(s.purpose) + '</textarea></div>'
       + tuHtml
+      + renderDecisionSection('spec', i, s)
       + '</div>';
   }).join('');
 }
 
 // ── Review ────────────────────────────────────────────────────────────────────
 function renderReview() {
-  var domains  = Array.from(document.querySelectorAll('.domain:checked')).map(function(el) { return el.value; });
-  var dtypes   = Array.from(document.querySelectorAll('.dtype:checked')).map(function(el) { return el.value; });
-  var hovEl    = document.querySelector('input[name=humanOversight]:checked');
-  var hovLabel = {always: 'Sempre presente', sometimes: 'In alcuni casi', never: 'Mai (Full Automatic)', na: 'Non applicabile'};
   var dpoEl    = document.querySelector('input[name=dpoStatus]:checked');
   var dpoLabel = {inhouse: 'In-house', service: 'As a Service', none: 'Non presente'};
+  var hovLabel = {always: 'Sempre presente', sometimes: 'In alcuni casi', never: 'Mai (Full Auto)', na: 'Non applicabile'};
 
-  var provCount = providerSystems.filter(function(s) { return s.tool_name.trim(); }).length;
-  var llmCount  = deployerLlmSelected.length;
-  var specCount = deployerSpecialized.filter(function(s) { return s.tool_name.trim(); }).length;
-  var aiRole    = isProvider && isDeployer ? 'Provider + Deployer' : isProvider ? 'Provider' : isDeployer ? 'Deployer' : 'Non selezionato';
+  var aiRole = isProvider && isDeployer ? 'Provider + Deployer' : isProvider ? 'Provider' : isDeployer ? 'Deployer' : 'Non selezionato';
 
   var readiness = [
     ['Inventario AI', 'hasInventory'],
@@ -299,42 +393,52 @@ function renderReview() {
     ['Formazione personale', 'hasTraining']
   ];
 
+  function sysDecSummary(s) {
+    var hov = hovLabel[s.human_oversight] || s.human_oversight;
+    var domCount = s.decision_domains.length;
+    var dtCount  = s.data_types.length;
+    return '<div class="rev-sys-dec">'
+      + '<div class="rev-row" style="margin-bottom:3px"><span class="rk" style="min-width:140px">Supervisione:</span><span class="rv">' + hov + '</span></div>'
+      + '<div class="rev-row" style="margin-bottom:3px"><span class="rk" style="min-width:140px">Decisioni su persone:</span><span class="rv" style="color:' + (s.makes_decisions ? 'var(--orange)' : 'var(--dim)') + '">' + (s.makes_decisions ? '&#9888; S&igrave;' : '&ndash; No') + '</span></div>'
+      + (s.affects_vulnerable ? '<div class="rev-row" style="margin-bottom:3px"><span class="rk" style="min-width:140px">Soggetti vulnerabili:</span><span class="rv" style="color:var(--red)">&#9888; S&igrave;</span></div>' : '')
+      + (domCount ? '<div class="rev-row" style="margin-bottom:3px"><span class="rk" style="min-width:140px">Ambiti:</span><span class="rv">' + domCount + ' selezionato/i</span></div>' : '')
+      + (dtCount  ? '<div class="rev-row" style="margin-bottom:0"><span class="rk" style="min-width:140px">Dati trattati:</span><span class="rv">' + dtCount  + ' tipologia/e</span></div>' : '')
+      + '</div>';
+  }
+
   var html = '<div class="rev-block"><h3>Profilo Azienda</h3>'
     + '<div class="rev-row"><span class="rk">Nome:</span><span class="rv">' + esc(fv('companyName')) + '</span></div>'
     + '<div class="rev-row"><span class="rk">Settore:</span><span class="rv">' + esc(fv('companySector')) + '</span></div>'
     + '<div class="rev-row"><span class="rk">Dimensione:</span><span class="rv">' + esc(fv('companySize')) + ' dipendenti</span></div>'
     + '<div class="rev-row"><span class="rk">Sede Legale:</span><span class="rv">' + esc(fv('companySede')) + '</span></div>'
     + '</div>'
-    + '<div class="rev-block"><h3>Ruolo & Sistemi AI</h3>'
+    + '<div class="rev-block"><h3>Ruolo &amp; Sistemi AI</h3>'
     + '<div class="rev-row"><span class="rk">Ruolo AI Act:</span><span class="rv" style="color:var(--green)">' + aiRole + '</span></div>';
 
-  if (isProvider && provCount > 0) {
-    html += '<div class="rev-row" style="align-items:flex-start"><span class="rk">Sistemi Proprietari:</span><div>'
-      + providerSystems.filter(function(s) { return s.tool_name.trim(); }).map(function(s) {
-          return '<div class="rev-row" style="margin-bottom:4px"><span class="rv">' + esc(s.tool_name) + '</span></div>';
-        }).join('')
-      + '</div></div>';
+  if (isProvider) {
+    providerSystems.filter(function(s) { return s.tool_name.trim(); }).forEach(function(s) {
+      html += '<div style="margin:10px 0 4px">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px">&#9679; ' + esc(s.tool_name) + ' <span style="font-size:11px;color:var(--dim);font-weight:400">(Proprietario)</span></div>'
+        + sysDecSummary(s)
+        + '</div>';
+    });
   }
-  if (isDeployer && llmCount > 0) {
-    html += '<div class="rev-row" style="align-items:flex-start"><span class="rk">LLM Standard:</span><div class="tags">'
-      + deployerLlmSelected.map(function(l) { return '<span class="tag">' + l.label + '</span>'; }).join('')
-      + '</div></div>';
-  }
-  if (isDeployer && specCount > 0) {
-    html += '<div class="rev-row" style="align-items:flex-start"><span class="rk">Sistemi Specializzati:</span><div>'
-      + deployerSpecialized.filter(function(s) { return s.tool_name.trim(); }).map(function(s) {
-          return '<div class="rev-row" style="margin-bottom:4px"><span class="rv">' + esc(s.tool_name) + '</span></div>';
-        }).join('')
-      + '</div></div>';
+  if (isDeployer) {
+    deployerLlmSelected.forEach(function(l) {
+      html += '<div style="margin:10px 0 4px">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px">&#9679; ' + esc(l.label) + ' <span style="font-size:11px;color:var(--dim);font-weight:400">(LLM &mdash; ' + esc(l.vendor) + ')</span></div>'
+        + sysDecSummary(l)
+        + '</div>';
+    });
+    deployerSpecialized.filter(function(s) { return s.tool_name.trim(); }).forEach(function(s) {
+      html += '<div style="margin:10px 0 4px">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px">&#9679; ' + esc(s.tool_name) + ' <span style="font-size:11px;color:var(--dim);font-weight:400">(Specializzato)</span></div>'
+        + sysDecSummary(s)
+        + '</div>';
+    });
   }
 
   html += '</div>'
-    + '<div class="rev-block"><h3>Decisioni & Dati</h3>'
-    + '<div class="rev-row"><span class="rk">Decisioni su persone:</span><span class="rv" style="color:' + (document.getElementById('makesDec').checked ? 'var(--orange)' : 'var(--muted)') + '">' + (document.getElementById('makesDec').checked ? '&#9888; S&igrave;' : '&ndash; No') + '</span></div>'
-    + '<div class="rev-row"><span class="rk">Supervisione umana:</span><span class="rv">' + (hovEl ? (hovLabel[hovEl.value] || hovEl.value) : 'Non selezionato') + '</span></div>'
-    + '<div class="rev-row"><span class="rk">Soggetti vulnerabili:</span><span class="rv" style="color:' + (document.getElementById('vulnerable').checked ? 'var(--red)' : 'var(--muted)') + '">' + (document.getElementById('vulnerable').checked ? '&#9888; S&igrave;' : '&ndash; No') + '</span></div>'
-    + (domains.length ? '<div class="rev-row" style="align-items:flex-start"><span class="rk">Ambiti:</span><div class="tags">' + domains.map(function(d) { return '<span class="tag">' + d + '</span>'; }).join('') + '</div></div>' : '')
-    + '</div>'
     + '<div class="rev-block"><h3>AI Readiness</h3>'
     + '<div class="rev-row"><span class="rk">DPO:</span><span class="rv" style="color:' + (!dpoEl || dpoEl.value === 'none' ? '#F87171' : 'var(--green)') + '">' + (dpoEl ? (dpoLabel[dpoEl.value] || dpoEl.value) : 'Non selezionato') + '</span></div>'
     + readiness.map(function(r) {
@@ -358,13 +462,9 @@ async function submitForm() {
   document.getElementById('errorAlert').className = 'alert-err';
   document.getElementById('btnSubmit').disabled = true;
 
-  var domains = Array.from(document.querySelectorAll('.domain:checked')).map(function(el) { return el.value; });
-  var dtypes  = Array.from(document.querySelectorAll('.dtype:checked')).map(function(el) { return el.value; });
-  var hovEl   = document.querySelector('input[name=humanOversight]:checked');
-  var hovVal  = hovEl ? hovEl.value : 'na';
-  var dpoEl   = document.querySelector('input[name=dpoStatus]:checked');
-  var dpoVal  = dpoEl ? dpoEl.value : 'none';
-  var aiRole  = isProvider && isDeployer ? 'both' : isProvider ? 'provider' : isDeployer ? 'deployer' : 'unknown';
+  var dpoEl  = document.querySelector('input[name=dpoStatus]:checked');
+  var dpoVal = dpoEl ? dpoEl.value : 'none';
+  var aiRole = isProvider && isDeployer ? 'both' : isProvider ? 'provider' : isDeployer ? 'deployer' : 'unknown';
 
   var aiTools = [];
 
@@ -377,7 +477,12 @@ async function submitForm() {
           category: s.category,
           role: 'provider',
           purpose: s.purpose,
-          target_users: s.target_users.length ? s.target_users : ['employees']
+          target_users: s.target_users.length ? s.target_users : ['employees'],
+          makes_decisions: s.makes_decisions,
+          affects_vulnerable: s.affects_vulnerable,
+          human_oversight: s.human_oversight,
+          decision_domains: s.decision_domains,
+          data_types: s.data_types
         });
       }
     });
@@ -392,7 +497,12 @@ async function submitForm() {
         category: 'llm',
         role: 'deployer',
         purpose: l.purpose || 'Uso generale',
-        target_users: l.target_users.length ? l.target_users : ['employees']
+        target_users: l.target_users.length ? l.target_users : ['employees'],
+        makes_decisions: l.makes_decisions,
+        affects_vulnerable: l.affects_vulnerable,
+        human_oversight: l.human_oversight,
+        decision_domains: l.decision_domains,
+        data_types: l.data_types
       });
     });
     deployerSpecialized.forEach(function(s) {
@@ -403,15 +513,41 @@ async function submitForm() {
           category: s.subcategory,
           role: 'deployer',
           purpose: s.purpose,
-          target_users: s.target_users.length ? s.target_users : ['employees']
+          target_users: s.target_users.length ? s.target_users : ['employees'],
+          makes_decisions: s.makes_decisions,
+          affects_vulnerable: s.affects_vulnerable,
+          human_oversight: s.human_oversight,
+          decision_domains: s.decision_domains,
+          data_types: s.data_types
         });
       }
     });
   }
 
   if (!aiTools.length) {
-    aiTools = [{tool_name: 'Non specificato', vendor: 'N/D', category: 'other', role: 'deployer', purpose: 'Da definire', target_users: ['employees']}];
+    aiTools = [{
+      tool_name: 'Non specificato', vendor: 'N/D', category: 'other', role: 'deployer',
+      purpose: 'Da definire', target_users: ['employees'],
+      makes_decisions: false, affects_vulnerable: false,
+      human_oversight: 'na', decision_domains: [], data_types: []
+    }];
   }
+
+  // Compute global decisions summary from per-tool data (backward compat with Lambda schema)
+  var allDomains = [], allDtypes = [];
+  var makesDec = false, affVul = false;
+  var worstOversight = 'na';
+  var oversightPri = {never: 0, sometimes: 1, always: 2, na: 3};
+  aiTools.forEach(function(t) {
+    if (t.makes_decisions) makesDec = true;
+    if (t.affects_vulnerable) affVul = true;
+    (t.decision_domains || []).forEach(function(d) { if (allDomains.indexOf(d) < 0) allDomains.push(d); });
+    (t.data_types || []).forEach(function(d) { if (allDtypes.indexOf(d) < 0) allDtypes.push(d); });
+    var pri = oversightPri[t.human_oversight];
+    if (pri !== undefined && pri < (oversightPri[worstOversight] !== undefined ? oversightPri[worstOversight] : 3)) {
+      worstOversight = t.human_oversight;
+    }
+  });
 
   var payload = {
     company: {
@@ -424,18 +560,18 @@ async function submitForm() {
     ai_tools: aiTools,
     use_cases: [],
     decisions: {
-      makes_automated_decisions: document.getElementById('makesDec').checked,
-      human_oversight_level: hovVal,
-      decision_domains: domains,
-      data_types: dtypes,
-      affects_vulnerable_groups: document.getElementById('vulnerable').checked
+      makes_automated_decisions: makesDec,
+      human_oversight_level: worstOversight,
+      decision_domains: allDomains,
+      data_types: allDtypes,
+      affects_vulnerable_groups: affVul
     },
     governance: {
       has_dpo: dpoVal !== 'none',
       dpo_status: dpoVal,
       has_ai_inventory: document.getElementById('hasInventory').checked,
       has_impact_assessment: document.getElementById('hasImpact').checked,
-      has_human_oversight: hovVal !== 'never' && hovVal !== 'na',
+      has_human_oversight: worstOversight !== 'never' && worstOversight !== 'na',
       has_incident_procedure: document.getElementById('hasIncident').checked,
       has_ai_policy: document.getElementById('hasAiPolicy').checked,
       has_training: document.getElementById('hasTraining').checked

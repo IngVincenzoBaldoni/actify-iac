@@ -1,11 +1,7 @@
-name: Deploy Frontend
+name: Deploy Frontend (LEGACY — S3 static, disabled)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
 
 permissions:
   id-token: write

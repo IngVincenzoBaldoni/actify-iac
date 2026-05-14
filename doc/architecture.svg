@@ -1,24 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="660" viewBox="0 0 1080 660"
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="865" viewBox="0 0 1300 865"
      font-family="'Segoe UI', Arial, sans-serif">
 
-  <!-- ═══════════════════════════════════════════════════
-       BACKGROUND
-  ═══════════════════════════════════════════════════ -->
-  <rect width="1080" height="660" fill="#0F172A"/>
+  <rect width="1300" height="865" fill="#0F172A"/>
 
-  <!-- ═══════════════════════════════════════════════════
-       AWS CLOUD REGION BOUNDARY
-  ═══════════════════════════════════════════════════ -->
-  <rect x="162" y="18" width="900" height="608" rx="14"
-        fill="#1E293B" stroke="#475569" stroke-width="1.5" stroke-dasharray="9,4"/>
-  <text x="182" y="43" font-size="12" fill="#94A3B8" font-weight="bold" letter-spacing="0.4">
-    AWS Cloud  ·  eu-central-1  ·  Frankfurt
-  </text>
-
-  <!-- ═══════════════════════════════════════════════════
-       ARROW MARKERS
-  ═══════════════════════════════════════════════════ -->
   <defs>
     <marker id="a-blue"   markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#60A5FA"/></marker>
     <marker id="a-green"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#22C55E"/></marker>
@@ -26,230 +11,317 @@
     <marker id="a-purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#A78BFA"/></marker>
     <marker id="a-pink"   markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#F472B6"/></marker>
     <marker id="a-red"    markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#F87171"/></marker>
-    <marker id="a-gray"   markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#94A3B8"/></marker>
+    <marker id="a-cyan"   markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#22D3EE"/></marker>
+    <marker id="a-yellow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#FACC15"/></marker>
   </defs>
 
-  <!-- ═══════════════════════════════════════════════════
-       BROWSER / CLIENT
-  ═══════════════════════════════════════════════════ -->
-  <rect x="12" y="255" width="130" height="120" rx="10"
+  <!-- AWS Cloud Region boundary -->
+  <rect x="170" y="10" width="1120" height="845" rx="14"
+        fill="#1E293B" stroke="#475569" stroke-width="1.5" stroke-dasharray="9,4"/>
+  <text x="190" y="34" font-size="12" fill="#94A3B8" font-weight="bold" letter-spacing="0.4">AWS Cloud  ·  eu-central-1  ·  Frankfurt</text>
+
+  <!-- ══ GITHUB ACTIONS (CI/CD — outside AWS) ══ -->
+  <rect x="12" y="15" width="145" height="132" rx="10"
+        fill="#0A1628" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <rect x="12" y="15" width="145" height="28" rx="10" fill="#1E3A5F"/>
+  <rect x="12" y="29" width="145" height="14" fill="#1E3A5F"/>
+  <text x="84" y="35" text-anchor="middle" font-size="11" fill="#93C5FD" font-weight="bold">GitHub Actions</text>
+  <text x="84" y="57" text-anchor="middle" font-size="9" fill="#94A3B8">on: push → main</text>
+  <text x="84" y="72" text-anchor="middle" font-size="9" fill="#64748B">OIDC keyless auth</text>
+  <text x="84" y="87" text-anchor="middle" font-size="9" fill="#64748B">npm ci + npm run build</text>
+  <text x="84" y="102" text-anchor="middle" font-size="9" fill="#64748B">aws s3 sync --delete</text>
+  <text x="84" y="117" text-anchor="middle" font-size="9" fill="#64748B">cloudfront create-invalidation</text>
+  <text x="84" y="134" text-anchor="middle" font-size="8" fill="#475569">deploy-frontend.yml</text>
+
+  <!-- ══ CLOUDFRONT ══ -->
+  <rect x="184" y="15" width="182" height="118" rx="10"
+        fill="#1A2540" stroke="#60A5FA" stroke-width="2"/>
+  <rect x="184" y="15" width="182" height="28" rx="10" fill="#1E3A8A"/>
+  <rect x="184" y="29" width="182" height="14" fill="#1E3A8A"/>
+  <text x="275" y="35" text-anchor="middle" font-size="12" fill="#BFDBFE" font-weight="bold">CloudFront</text>
+  <text x="275" y="57" text-anchor="middle" font-size="9" fill="#93C5FD" font-weight="bold">E2LIJKND7AI4TL</text>
+  <text x="275" y="72" text-anchor="middle" font-size="9" fill="#94A3B8">PriceClass_100 · HTTPS redirect</text>
+  <text x="275" y="87" text-anchor="middle" font-size="9" fill="#64748B">OAC → S3 private bucket</text>
+  <text x="275" y="102" text-anchor="middle" font-size="9" fill="#64748B">SPA: 403/404 → /index.html</text>
+  <text x="275" y="117" text-anchor="middle" font-size="9" fill="#64748B">dxmu107adlwoo.cloudfront.net</text>
+
+  <!-- ══ S3 FRONTEND ══ -->
+  <rect x="406" y="15" width="178" height="100" rx="10"
+        fill="#071A0E" stroke="#16A34A" stroke-width="2"/>
+  <rect x="406" y="15" width="178" height="28" rx="10" fill="#14532D"/>
+  <rect x="406" y="29" width="178" height="14" fill="#14532D"/>
+  <text x="495" y="35" text-anchor="middle" font-size="12" fill="#BBF7D0" font-weight="bold">S3 — Frontend</text>
+  <text x="495" y="57" text-anchor="middle" font-size="9" fill="#86EFAC" font-weight="bold">actify-saas-frontend</text>
+  <text x="495" y="72" text-anchor="middle" font-size="9" fill="#94A3B8">private · OAC only (CloudFront)</text>
+  <text x="495" y="87" text-anchor="middle" font-size="9" fill="#64748B">Next.js static export (out/)</text>
+  <text x="495" y="102" text-anchor="middle" font-size="9" fill="#64748B">NEXT_PUBLIC_API_URL baked at build</text>
+
+  <!-- GitHub Actions → S3 Frontend -->
+  <line x1="157" y1="56" x2="406" y2="56" stroke="#22C55E" stroke-width="1.5" marker-end="url(#a-green)"/>
+  <text x="281" y="48" text-anchor="middle" font-size="8" fill="#86EFAC">s3 sync --delete</text>
+
+  <!-- GitHub Actions → CloudFront (invalidation) -->
+  <line x1="157" y1="84" x2="184" y2="84" stroke="#60A5FA" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#a-blue)"/>
+  <text x="170" y="77" text-anchor="middle" font-size="7.5" fill="#93C5FD">CF inval</text>
+
+  <!-- CloudFront ↔ S3 Frontend (OAC) -->
+  <line x1="366" y1="65" x2="406" y2="65" stroke="#22C55E" stroke-width="1.5" marker-end="url(#a-green)"/>
+  <text x="386" y="57" text-anchor="middle" font-size="8" fill="#86EFAC">OAC</text>
+
+  <!-- ══ BROWSER ══ -->
+  <rect x="12" y="308" width="130" height="112" rx="10"
         fill="#0C1A3A" stroke="#3B82F6" stroke-width="2"/>
-  <!-- monitor shape -->
-  <rect x="30" y="268" width="94" height="58" rx="5" fill="#1E3A5F" stroke="#60A5FA" stroke-width="1.5"/>
-  <text x="77" y="302" text-anchor="middle" font-size="19" fill="#60A5FA">⬛</text>
-  <rect x="55" y="326" width="44" height="7" rx="3" fill="#3B82F6"/>
-  <rect x="46" y="333" width="62" height="4" rx="2" fill="#3B82F6"/>
-  <text x="77" y="360" text-anchor="middle" font-size="13" fill="#93C5FD" font-weight="bold">Browser</text>
-  <text x="77" y="375" text-anchor="middle" font-size="10" fill="#64748B">/ Client</text>
+  <rect x="28" y="322" width="98" height="56" rx="5" fill="#1E3A5F" stroke="#60A5FA" stroke-width="1.5"/>
+  <rect x="52" y="378" width="50" height="6" rx="3" fill="#3B82F6"/>
+  <rect x="44" y="384" width="66" height="4" rx="2" fill="#3B82F6"/>
+  <text x="77" y="354" text-anchor="middle" font-size="18" fill="#60A5FA">⬛</text>
+  <text x="77" y="406" text-anchor="middle" font-size="13" fill="#93C5FD" font-weight="bold">Browser</text>
+  <text x="77" y="420" text-anchor="middle" font-size="10" fill="#64748B">/ Client</text>
 
-  <!-- ── Arrows Browser → API GW ── -->
-  <!-- GET / -->
-  <line x1="142" y1="286" x2="204" y2="286" stroke="#60A5FA" stroke-width="1.8" marker-end="url(#a-blue)"/>
-  <text x="173" y="280" text-anchor="middle" font-size="9" fill="#93C5FD">① GET /</text>
-  <!-- POST -->
-  <line x1="142" y1="308" x2="204" y2="308" stroke="#22C55E" stroke-width="1.8" marker-end="url(#a-green)"/>
-  <text x="173" y="302" text-anchor="middle" font-size="9" fill="#86EFAC">② POST</text>
-  <text x="173" y="314" text-anchor="middle" font-size="9" fill="#86EFAC">/api/report/</text>
-  <text x="173" y="326" text-anchor="middle" font-size="9" fill="#86EFAC">generate</text>
+  <!-- Browser → CloudFront (GET static pages) -->
+  <path d="M 77 308 Q 68 162 184 82"
+        stroke="#60A5FA" stroke-width="1.8" fill="none" marker-end="url(#a-blue)"/>
+  <text x="86" y="202" text-anchor="middle" font-size="8" fill="#93C5FD">① GET /</text>
+  <text x="86" y="214" text-anchor="middle" font-size="8" fill="#93C5FD">(static)</text>
 
-  <!-- ── Return: presigned URL → Browser ── -->
-  <path d="M 77 375 Q 77 440 142 440 L 204 440"
+  <!-- CloudFront → Browser (return) -->
+  <path d="M 210 133 Q 140 248 77 308"
+        stroke="#60A5FA" stroke-width="1.2" stroke-dasharray="5,3" fill="none"
+        marker-end="url(#a-blue)"/>
+
+  <!-- Browser → API GW (POST) -->
+  <line x1="142" y1="356" x2="192" y2="356" stroke="#22C55E" stroke-width="1.8" marker-end="url(#a-green)"/>
+  <text x="167" y="348" text-anchor="middle" font-size="8" fill="#86EFAC">② POST /api/</text>
+  <text x="167" y="360" text-anchor="middle" font-size="8" fill="#86EFAC">report/generate</text>
+
+  <!-- Return presigned URL → Browser -->
+  <path d="M 77 420 Q 55 508 142 508 L 192 508"
         stroke="#22C55E" stroke-width="1.5" stroke-dasharray="5,3" fill="none"
         marker-end="url(#a-green)"/>
-  <text x="140" y="456" text-anchor="middle" font-size="9" fill="#86EFAC">⑦ { download_url }</text>
+  <text x="122" y="524" text-anchor="middle" font-size="8" fill="#86EFAC">⑦ { download_url }</text>
 
-  <!-- ═══════════════════════════════════════════════════
-       API GATEWAY
-  ═══════════════════════════════════════════════════ -->
-  <rect x="204" y="242" width="172" height="158" rx="10"
+  <!-- ══ API GATEWAY ══ -->
+  <rect x="192" y="294" width="172" height="166" rx="10"
         fill="#1A0C35" stroke="#A78BFA" stroke-width="2"/>
-  <!-- header -->
-  <rect x="204" y="242" width="172" height="30" rx="10" fill="#4C1D95"/>
-  <rect x="204" y="258" width="172" height="14" fill="#4C1D95"/>
-  <text x="290" y="263" text-anchor="middle" font-size="12" fill="#DDD6FE" font-weight="bold">API Gateway</text>
-  <!-- body -->
-  <text x="290" y="286" text-anchor="middle" font-size="10" fill="#C4B5FD">HTTP API v2</text>
-  <text x="290" y="303" text-anchor="middle" font-size="9" fill="#94A3B8">actify-saas-api</text>
-  <line x1="216" y1="312" x2="364" y2="312" stroke="#334155" stroke-width="0.8"/>
-  <text x="290" y="326" text-anchor="middle" font-size="9" fill="#94A3B8">GET /</text>
-  <text x="290" y="341" text-anchor="middle" font-size="9" fill="#94A3B8">POST /api/report/generate</text>
-  <line x1="216" y1="350" x2="364" y2="350" stroke="#334155" stroke-width="0.8"/>
-  <text x="290" y="364" text-anchor="middle" font-size="9" fill="#64748B">CORS · throttle 2 req/s burst 10</text>
-  <text x="290" y="378" text-anchor="middle" font-size="9" fill="#64748B">auto-deploy · access logs</text>
+  <rect x="192" y="294" width="172" height="30" rx="10" fill="#4C1D95"/>
+  <rect x="192" y="310" width="172" height="14" fill="#4C1D95"/>
+  <text x="278" y="316" text-anchor="middle" font-size="12" fill="#DDD6FE" font-weight="bold">API Gateway</text>
+  <text x="278" y="339" text-anchor="middle" font-size="10" fill="#C4B5FD">HTTP API v2</text>
+  <text x="278" y="355" text-anchor="middle" font-size="9" fill="#94A3B8">actify-saas-api</text>
+  <line x1="204" y1="364" x2="352" y2="364" stroke="#334155" stroke-width="0.8"/>
+  <text x="278" y="377" text-anchor="middle" font-size="9" fill="#94A3B8">POST /api/report/generate</text>
+  <line x1="204" y1="388" x2="352" y2="388" stroke="#334155" stroke-width="0.8"/>
+  <text x="278" y="401" text-anchor="middle" font-size="9" fill="#64748B">CORS · throttle 2 req/s</text>
+  <text x="278" y="415" text-anchor="middle" font-size="9" fill="#64748B">burst 10 · auto-deploy</text>
+  <text x="278" y="430" text-anchor="middle" font-size="9" fill="#64748B">AWS_PROXY 2.0 · access logs</text>
+  <text x="278" y="450" text-anchor="middle" font-size="9" fill="#64748B">$default stage</text>
 
-  <!-- ── Arrow: API GW → Lambda ── -->
-  <line x1="376" y1="322" x2="418" y2="322" stroke="#FB923C" stroke-width="2" marker-end="url(#a-orange)"/>
-  <text x="397" y="314" text-anchor="middle" font-size="9" fill="#FED7AA">③ AWS_PROXY</text>
+  <!-- API GW → Lambda -->
+  <line x1="364" y1="373" x2="416" y2="373" stroke="#FB923C" stroke-width="2" marker-end="url(#a-orange)"/>
+  <text x="390" y="365" text-anchor="middle" font-size="8" fill="#FED7AA">③ proxy</text>
 
-  <!-- ── Return arrow Lambda → API GW (dashed) ── -->
-  <line x1="418" y1="340" x2="376" y2="340" stroke="#FB923C" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a-orange)"/>
+  <!-- Lambda → API GW (return) -->
+  <line x1="416" y1="390" x2="364" y2="390" stroke="#FB923C" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a-orange)"/>
 
-  <!-- ═══════════════════════════════════════════════════
-       LAMBDA FUNCTION
-  ═══════════════════════════════════════════════════ -->
-  <rect x="418" y="42" width="256" height="458" rx="12"
+  <!-- ══ LAMBDA FUNCTION ══ -->
+  <rect x="416" y="155" width="256" height="490" rx="12"
         fill="#1C1600" stroke="#F97316" stroke-width="2"/>
-  <!-- header bar -->
-  <rect x="418" y="42" width="256" height="32" rx="12" fill="#92400E"/>
-  <rect x="418" y="60" width="256" height="14" fill="#92400E"/>
-  <text x="546" y="65" text-anchor="middle" font-size="12" fill="#FDE68A" font-weight="bold">Lambda Function</text>
-  <text x="546" y="84" text-anchor="middle" font-size="10" fill="#FCD34D">actify-saas-pdf-generator</text>
-  <text x="546" y="100" text-anchor="middle" font-size="9" fill="#94A3B8">Node.js 20  ·  1024 MB  ·  30 s timeout</text>
-  <text x="546" y="114" text-anchor="middle" font-size="9" fill="#64748B" font-style="italic">handler.ts  ·  dist/handler.handler</text>
+  <rect x="416" y="155" width="256" height="32" rx="12" fill="#92400E"/>
+  <rect x="416" y="173" width="256" height="14" fill="#92400E"/>
+  <text x="544" y="178" text-anchor="middle" font-size="12" fill="#FDE68A" font-weight="bold">Lambda Function</text>
+  <text x="544" y="197" text-anchor="middle" font-size="10" fill="#FCD34D">actify-saas-pdf-generator</text>
+  <text x="544" y="213" text-anchor="middle" font-size="9" fill="#94A3B8">Node.js 20  ·  1024 MB  ·  30 s timeout</text>
 
-  <!-- ── Internal service boxes ── -->
   <!-- Rate Limiter -->
-  <rect x="432" y="122" width="228" height="40" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
-  <text x="546" y="139" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">Rate Limiter</text>
-  <text x="546" y="154" text-anchor="middle" font-size="9" fill="#64748B">5 req / IP / 15 min · in-memory Map</text>
+  <rect x="430" y="222" width="228" height="38" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
+  <text x="544" y="238" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">Rate Limiter</text>
+  <text x="544" y="252" text-anchor="middle" font-size="9" fill="#64748B">5 req / IP / 15 min · in-memory Map</text>
 
   <!-- Validator -->
-  <rect x="432" y="170" width="228" height="40" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
-  <text x="546" y="187" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">Validator</text>
-  <text x="546" y="202" text-anchor="middle" font-size="9" fill="#64748B">zod · IntakePayload schema</text>
+  <rect x="430" y="268" width="228" height="38" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
+  <text x="544" y="284" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">Validator</text>
+  <text x="544" y="298" text-anchor="middle" font-size="9" fill="#64748B">zod · IntakePayload schema</text>
 
   <!-- Bedrock Service -->
-  <rect x="432" y="218" width="228" height="42" rx="6" fill="#1E0B3A" stroke="#7C3AED" stroke-width="1.2"/>
-  <text x="546" y="235" text-anchor="middle" font-size="10" fill="#C4B5FD" font-weight="bold">Bedrock Service</text>
-  <text x="546" y="250" text-anchor="middle" font-size="9" fill="#64748B">Converse API · system prompt · retry</text>
-  <!-- flow label -->
-  <text x="546" y="264" text-anchor="middle" font-size="8" fill="#7C3AED">④</text>
+  <rect x="430" y="314" width="228" height="40" rx="6" fill="#1E0B3A" stroke="#7C3AED" stroke-width="1.2"/>
+  <text x="544" y="330" text-anchor="middle" font-size="10" fill="#C4B5FD" font-weight="bold">Bedrock Service</text>
+  <text x="544" y="345" text-anchor="middle" font-size="9" fill="#64748B">Converse API · system prompt · retry</text>
 
   <!-- HTML Template -->
-  <rect x="432" y="270" width="228" height="40" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
-  <text x="546" y="287" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">HTML Template</text>
-  <text x="546" y="302" text-anchor="middle" font-size="9" fill="#64748B">cover · KPI boxes · tool cards · timeline</text>
+  <rect x="430" y="362" width="228" height="38" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
+  <text x="544" y="378" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">HTML Template</text>
+  <text x="544" y="392" text-anchor="middle" font-size="9" fill="#64748B">cover · KPI boxes · tool cards · timeline</text>
 
   <!-- PDF Service -->
-  <rect x="432" y="318" width="228" height="40" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
-  <text x="546" y="335" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">PDF Service</text>
-  <text x="546" y="350" text-anchor="middle" font-size="9" fill="#64748B">Puppeteer · @sparticuz/chromium · A4</text>
+  <rect x="430" y="408" width="228" height="38" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
+  <text x="544" y="424" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">PDF Service</text>
+  <text x="544" y="438" text-anchor="middle" font-size="9" fill="#64748B">Puppeteer · @sparticuz/chromium · A4</text>
 
-  <!-- S3 Service -->
-  <rect x="432" y="366" width="228" height="42" rx="6" fill="#071A0E" stroke="#16A34A" stroke-width="1.2"/>
-  <text x="546" y="383" text-anchor="middle" font-size="10" fill="#86EFAC" font-weight="bold">S3 Service</text>
-  <text x="546" y="398" text-anchor="middle" font-size="9" fill="#64748B">PutObject · getSignedUrl (SigV4)</text>
-  <text x="546" y="412" text-anchor="middle" font-size="8" fill="#16A34A">⑥</text>
+  <!-- S3 Service Reports -->
+  <rect x="430" y="454" width="228" height="40" rx="6" fill="#071A0E" stroke="#16A34A" stroke-width="1.2"/>
+  <text x="544" y="470" text-anchor="middle" font-size="10" fill="#86EFAC" font-weight="bold">S3 Service — Reports</text>
+  <text x="544" y="485" text-anchor="middle" font-size="9" fill="#64748B">PutObject · getSignedUrl · 15 min TTL</text>
 
-  <!-- Form HTML -->
-  <rect x="432" y="416" width="228" height="40" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
-  <text x="546" y="433" text-anchor="middle" font-size="10" fill="#CBD5E1" font-weight="bold">Form HTML</text>
-  <text x="546" y="448" text-anchor="middle" font-size="9" fill="#64748B">self-contained Italian wizard · 7 steps</text>
+  <!-- Datalake Service -->
+  <rect x="430" y="502" width="228" height="40" rx="6" fill="#0B1A2A" stroke="#0891B2" stroke-width="1.2"/>
+  <text x="544" y="518" text-anchor="middle" font-size="10" fill="#67E8F9" font-weight="bold">Datalake Service</text>
+  <text x="544" y="533" text-anchor="middle" font-size="9" fill="#64748B">PutObject → bronze/prospects/ (JSON)</text>
 
-  <!-- Lambda bottom note -->
-  <text x="546" y="488" text-anchor="middle" font-size="8" fill="#475569">zip: 81 MB · deployed via S3 staging</text>
+  <text x="544" y="564" text-anchor="middle" font-size="8" fill="#64748B" font-style="italic">systemPrompt.ts · ~10K token AI Act knowledge base</text>
+  <text x="544" y="578" text-anchor="middle" font-size="8" fill="#475569">zip 81 MB · staging via S3 · lifecycle: ignore_changes</text>
+  <text x="544" y="592" text-anchor="middle" font-size="8" fill="#475569">BEDROCK_MODEL_ID · S3_BUCKET · DATALAKE_BUCKET</text>
+  <text x="544" y="606" text-anchor="middle" font-size="8" fill="#475569">stub: 503 placeholder at first terraform apply</text>
+  <text x="544" y="622" text-anchor="middle" font-size="8" fill="#475569">real deploy: aws lambda update-function-code</text>
+  <text x="544" y="636" text-anchor="middle" font-size="8" fill="#475569">RATE_LIMIT_MAX=5 · RATE_LIMIT_WINDOW=900</text>
 
-  <!-- ═══════════════════════════════════════════════════
-       AMAZON BEDROCK
-  ═══════════════════════════════════════════════════ -->
-  <rect x="742" y="72" width="300" height="140" rx="10"
+  <!-- ══ AMAZON BEDROCK ══ -->
+  <rect x="732" y="75" width="290" height="145" rx="10"
         fill="#120B28" stroke="#7C3AED" stroke-width="2"/>
-  <!-- header -->
-  <rect x="742" y="72" width="300" height="30" rx="10" fill="#3B0764"/>
-  <rect x="742" y="88" width="300" height="14" fill="#3B0764"/>
-  <text x="892" y="93" text-anchor="middle" font-size="12" fill="#E9D5FF" font-weight="bold">Amazon Bedrock</text>
-  <!-- body -->
-  <text x="892" y="117" text-anchor="middle" font-size="10" fill="#C4B5FD" font-weight="bold">eu.amazon.nova-pro-v1:0</text>
-  <text x="892" y="134" text-anchor="middle" font-size="9" fill="#94A3B8">EU cross-region inference profile</text>
-  <text x="892" y="150" text-anchor="middle" font-size="9" fill="#64748B">eu-central-1 · eu-west-1 · eu-west-3 · eu-north-1</text>
-  <text x="892" y="166" text-anchor="middle" font-size="9" fill="#64748B">Converse API · max 5120 tokens · temp 0</text>
-  <text x="892" y="182" text-anchor="middle" font-size="9" fill="#64748B">output: compact JSON → BedrockReportOutput</text>
-  <text x="892" y="198" text-anchor="middle" font-size="9" fill="#64748B">IAM auth · no VPC endpoint needed</text>
+  <rect x="732" y="75" width="290" height="30" rx="10" fill="#3B0764"/>
+  <rect x="732" y="91" width="290" height="14" fill="#3B0764"/>
+  <text x="877" y="97" text-anchor="middle" font-size="12" fill="#E9D5FF" font-weight="bold">Amazon Bedrock</text>
+  <text x="877" y="121" text-anchor="middle" font-size="10" fill="#C4B5FD" font-weight="bold">eu.amazon.nova-pro-v1:0</text>
+  <text x="877" y="138" text-anchor="middle" font-size="9" fill="#94A3B8">EU cross-region inference profile</text>
+  <text x="877" y="154" text-anchor="middle" font-size="9" fill="#64748B">eu-central-1 · eu-west-1 · eu-west-3 · eu-north-1</text>
+  <text x="877" y="170" text-anchor="middle" font-size="9" fill="#64748B">Converse API · max 5120 tokens · temp 0</text>
+  <text x="877" y="186" text-anchor="middle" font-size="9" fill="#64748B">output: compact JSON → BedrockReportOutput</text>
+  <text x="877" y="202" text-anchor="middle" font-size="9" fill="#64748B">IAM auth (SigV4) · no VPC endpoint needed</text>
 
-  <!-- ── Arrow Lambda Bedrock Svc → Bedrock AWS ── -->
-  <line x1="660" y1="235" x2="742" y2="155" stroke="#7C3AED" stroke-width="1.8" marker-end="url(#a-purple)"/>
-  <!-- ── Return ── -->
-  <line x1="742" y1="165" x2="660" y2="248" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a-purple)"/>
-  <text x="715" y="228" text-anchor="middle" font-size="8" fill="#A78BFA">JSON response</text>
+  <!-- Lambda Bedrock Svc → Bedrock -->
+  <line x1="658" y1="334" x2="732" y2="155" stroke="#7C3AED" stroke-width="1.8" marker-end="url(#a-purple)"/>
+  <line x1="732" y1="168" x2="658" y2="348" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a-purple)"/>
+  <text x="710" y="262" text-anchor="middle" font-size="8" fill="#A78BFA">④ Converse API</text>
+  <text x="710" y="274" text-anchor="middle" font-size="8" fill="#A78BFA">⑤ JSON response</text>
 
-  <!-- ═══════════════════════════════════════════════════
-       AMAZON S3
-  ═══════════════════════════════════════════════════ -->
-  <rect x="742" y="282" width="300" height="158" rx="10"
+  <!-- ══ S3 REPORTS-TEMP ══ -->
+  <rect x="732" y="285" width="290" height="152" rx="10"
         fill="#071A0E" stroke="#16A34A" stroke-width="2"/>
-  <!-- header -->
-  <rect x="742" y="282" width="300" height="30" rx="10" fill="#14532D"/>
-  <rect x="742" y="298" width="300" height="14" fill="#14532D"/>
-  <text x="892" y="303" text-anchor="middle" font-size="12" fill="#BBF7D0" font-weight="bold">Amazon S3</text>
-  <!-- body -->
-  <text x="892" y="328" text-anchor="middle" font-size="10" fill="#86EFAC" font-weight="bold">actify-saas-reports-temp</text>
-  <text x="892" y="346" text-anchor="middle" font-size="9" fill="#94A3B8">SSE-AES256 · public access fully blocked</text>
-  <text x="892" y="362" text-anchor="middle" font-size="9" fill="#94A3B8">path: reports/{YYYY-MM-DD}/{uuid}-{slug}.pdf</text>
-  <text x="892" y="380" text-anchor="middle" font-size="9" fill="#64748B">lifecycle rule: expire after 1 day</text>
-  <text x="892" y="398" text-anchor="middle" font-size="9" fill="#64748B">presigned GET URL · TTL 15 min · SigV4</text>
-  <text x="892" y="416" text-anchor="middle" font-size="9" fill="#64748B">also used as staging bucket for Lambda zip</text>
-  <text x="892" y="432" text-anchor="middle" font-size="9" fill="#64748B">deployments/function.zip (81 MB)</text>
+  <rect x="732" y="285" width="290" height="30" rx="10" fill="#14532D"/>
+  <rect x="732" y="301" width="290" height="14" fill="#14532D"/>
+  <text x="877" y="307" text-anchor="middle" font-size="12" fill="#BBF7D0" font-weight="bold">Amazon S3 — Reports</text>
+  <text x="877" y="331" text-anchor="middle" font-size="10" fill="#86EFAC" font-weight="bold">actify-saas-reports-temp</text>
+  <text x="877" y="348" text-anchor="middle" font-size="9" fill="#94A3B8">SSE-AES256 · public access blocked</text>
+  <text x="877" y="364" text-anchor="middle" font-size="9" fill="#94A3B8">path: reports/{YYYY-MM-DD}/{uuid}-{slug}.pdf</text>
+  <text x="877" y="380" text-anchor="middle" font-size="9" fill="#64748B">lifecycle: expire after 1 day</text>
+  <text x="877" y="396" text-anchor="middle" font-size="9" fill="#64748B">presigned GET URL · TTL 15 min · SigV4</text>
+  <text x="877" y="412" text-anchor="middle" font-size="9" fill="#64748B">also: deployments/function.zip (Lambda staging)</text>
+  <text x="877" y="428" text-anchor="middle" font-size="9" fill="#64748B">no direct public access</text>
 
-  <!-- ── Arrow Lambda S3 Svc → S3 AWS ── -->
-  <line x1="660" y1="384" x2="742" y2="375" stroke="#16A34A" stroke-width="1.8" marker-end="url(#a-green)"/>
+  <!-- Lambda S3 Svc → S3 Reports -->
+  <line x1="658" y1="474" x2="732" y2="364" stroke="#16A34A" stroke-width="1.8" marker-end="url(#a-green)"/>
+  <text x="706" y="408" text-anchor="middle" font-size="8" fill="#86EFAC">⑥ PutObject</text>
 
-  <!-- ── Presigned URL return: S3 → Browser (long curved path) ── -->
-  <path d="M 742 430 Q 680 520 546 510 Q 350 495 204 440"
-        stroke="#22C55E" stroke-width="1.5" stroke-dasharray="5,3" fill="none"
+  <!-- Presigned URL flows back through Lambda → API GW → Browser -->
+  <path d="M 732 437 Q 672 534 544 538 Q 344 534 192 508"
+        stroke="#22C55E" stroke-width="1.4" stroke-dasharray="5,3" fill="none"
         marker-end="url(#a-green)"/>
-  <text x="470" y="530" text-anchor="middle" font-size="9" fill="#86EFAC">presigned URL flows back through Lambda response</text>
+  <text x="450" y="556" text-anchor="middle" font-size="8" fill="#86EFAC">presigned URL → Lambda response → Browser</text>
 
-  <!-- ═══════════════════════════════════════════════════
-       CLOUDWATCH LOGS
-  ═══════════════════════════════════════════════════ -->
-  <rect x="220" y="510" width="210" height="100" rx="10"
+  <!-- ══ DATA LAKE cluster ══ -->
+  <rect x="732" y="452" width="520" height="250" rx="10"
+        fill="#070F1A" stroke="#0891B2" stroke-width="1.5" stroke-dasharray="7,3"/>
+  <text x="752" y="470" font-size="10" fill="#67E8F9" font-weight="bold" letter-spacing="0.3">Data Lake  ·  Analytics</text>
+
+  <!-- S3 Datalake -->
+  <rect x="742" y="477" width="198" height="132" rx="8"
+        fill="#071A2E" stroke="#0891B2" stroke-width="1.5"/>
+  <rect x="742" y="477" width="198" height="26" rx="8" fill="#0C4A6E"/>
+  <rect x="742" y="489" width="198" height="14" fill="#0C4A6E"/>
+  <text x="841" y="496" text-anchor="middle" font-size="10" fill="#BAE6FD" font-weight="bold">S3 — Data Lake</text>
+  <text x="841" y="517" text-anchor="middle" font-size="9" fill="#67E8F9">actify-saas-datalake</text>
+  <text x="841" y="532" text-anchor="middle" font-size="8" fill="#94A3B8">bronze/prospects/ · Hive partitions</text>
+  <text x="841" y="546" text-anchor="middle" font-size="8" fill="#94A3B8">year=YYYY/month=MM/day=DD/</text>
+  <text x="841" y="560" text-anchor="middle" font-size="8" fill="#64748B">company-reports/ (PDF copies)</text>
+  <text x="841" y="574" text-anchor="middle" font-size="8" fill="#64748B">athena-results/ (30-day lifecycle)</text>
+  <text x="841" y="588" text-anchor="middle" font-size="8" fill="#64748B">SSE-AES256 · private · versioning off</text>
+  <text x="841" y="602" text-anchor="middle" font-size="8" fill="#64748B">written on every form submission</text>
+
+  <!-- Glue Crawler -->
+  <rect x="955" y="477" width="186" height="118" rx="8"
+        fill="#1A1A08" stroke="#CA8A04" stroke-width="1.5"/>
+  <rect x="955" y="477" width="186" height="26" rx="8" fill="#713F12"/>
+  <rect x="955" y="489" width="186" height="14" fill="#713F12"/>
+  <text x="1048" y="496" text-anchor="middle" font-size="10" fill="#FEF9C3" font-weight="bold">Glue Crawler</text>
+  <text x="1048" y="516" text-anchor="middle" font-size="9" fill="#FDE68A">actify-saas-prospects-crawler</text>
+  <text x="1048" y="531" text-anchor="middle" font-size="8" fill="#94A3B8">schedule: daily 02:00 UTC</text>
+  <text x="1048" y="545" text-anchor="middle" font-size="8" fill="#94A3B8">DB: actify_datalake</text>
+  <text x="1048" y="559" text-anchor="middle" font-size="8" fill="#64748B">Partition Projection (year/month/day)</text>
+  <text x="1048" y="573" text-anchor="middle" font-size="8" fill="#64748B">→ Glue Data Catalog</text>
+  <text x="1048" y="587" text-anchor="middle" font-size="8" fill="#64748B">trigger manually: aws glue start-crawler</text>
+
+  <!-- Athena -->
+  <rect x="955" y="614" width="186" height="82" rx="8"
+        fill="#1A100A" stroke="#EA580C" stroke-width="1.5"/>
+  <rect x="955" y="614" width="186" height="26" rx="8" fill="#7C2D12"/>
+  <rect x="955" y="626" width="186" height="14" fill="#7C2D12"/>
+  <text x="1048" y="632" text-anchor="middle" font-size="10" fill="#FED7AA" font-weight="bold">Amazon Athena</text>
+  <text x="1048" y="652" text-anchor="middle" font-size="9" fill="#FB923C">actify-saas-analytics</text>
+  <text x="1048" y="667" text-anchor="middle" font-size="8" fill="#94A3B8">workgroup · pay-per-query</text>
+  <text x="1048" y="681" text-anchor="middle" font-size="8" fill="#64748B">SQL analytics on prospects partition table</text>
+  <text x="1048" y="695" text-anchor="middle" font-size="8" fill="#64748B">results → athena-results/ (30-day)</text>
+
+  <!-- S3 Datalake → Glue -->
+  <line x1="940" y1="536" x2="955" y2="536" stroke="#CA8A04" stroke-width="1.5" marker-end="url(#a-yellow)"/>
+
+  <!-- Glue → Athena -->
+  <line x1="1048" y1="595" x2="1048" y2="614" stroke="#EA580C" stroke-width="1.5" marker-end="url(#a-orange)"/>
+  <text x="1063" y="608" font-size="8" fill="#FB923C">catalog</text>
+
+  <!-- Lambda Datalake Svc → S3 Datalake -->
+  <line x1="658" y1="522" x2="742" y2="532" stroke="#0891B2" stroke-width="1.8" marker-end="url(#a-cyan)"/>
+  <text x="700" y="515" text-anchor="middle" font-size="8" fill="#67E8F9">PutObject (JSON)</text>
+
+  <!-- ══ CLOUDWATCH LOGS ══ -->
+  <rect x="184" y="718" width="210" height="102" rx="10"
         fill="#1A0A24" stroke="#D946EF" stroke-width="1.5"/>
-  <!-- header -->
-  <rect x="220" y="510" width="210" height="28" rx="10" fill="#701A75"/>
-  <rect x="220" y="524" width="210" height="14" fill="#701A75"/>
-  <text x="325" y="530" text-anchor="middle" font-size="11" fill="#F5D0FE" font-weight="bold">CloudWatch Logs</text>
-  <!-- body -->
-  <text x="325" y="552" text-anchor="middle" font-size="9" fill="#94A3B8">/aws/lambda/actify-saas-pdf-generator</text>
-  <text x="325" y="567" text-anchor="middle" font-size="9" fill="#94A3B8">/aws/apigateway/actify-saas-api</text>
-  <text x="325" y="583" text-anchor="middle" font-size="9" fill="#64748B">retention: 14 days · structured JSON</text>
-  <text x="325" y="598" text-anchor="middle" font-size="9" fill="#64748B">API GW access logs (requestId, latency, IP)</text>
+  <rect x="184" y="718" width="210" height="28" rx="10" fill="#701A75"/>
+  <rect x="184" y="732" width="210" height="14" fill="#701A75"/>
+  <text x="289" y="738" text-anchor="middle" font-size="11" fill="#F5D0FE" font-weight="bold">CloudWatch Logs</text>
+  <text x="289" y="760" text-anchor="middle" font-size="9" fill="#94A3B8">/aws/lambda/actify-saas-pdf-generator</text>
+  <text x="289" y="775" text-anchor="middle" font-size="9" fill="#94A3B8">/aws/apigateway/actify-saas-api</text>
+  <text x="289" y="790" text-anchor="middle" font-size="9" fill="#64748B">retention: 14 days · structured JSON</text>
+  <text x="289" y="805" text-anchor="middle" font-size="9" fill="#64748B">access logs (requestId, latency, IP)</text>
 
-  <!-- ── Arrow Lambda → CloudWatch (dashed) ── -->
-  <line x1="490" y1="500" x2="430" y2="510" stroke="#D946EF" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#a-pink)"/>
-  <text x="460" y="504" text-anchor="middle" font-size="8" fill="#D946EF">⑧ logs</text>
+  <!-- Lambda → CloudWatch -->
+  <line x1="492" y1="645" x2="394" y2="718" stroke="#D946EF" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#a-pink)"/>
+  <text x="452" y="678" text-anchor="middle" font-size="8" fill="#D946EF">⑧ logs</text>
 
-  <!-- ── Arrow API GW → CloudWatch (dashed) ── -->
-  <line x1="310" y1="400" x2="310" y2="510" stroke="#D946EF" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a-pink)"/>
+  <!-- API GW → CloudWatch -->
+  <line x1="278" y1="460" x2="278" y2="718" stroke="#D946EF" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a-pink)"/>
 
-  <!-- ═══════════════════════════════════════════════════
-       IAM ROLE + POLICY
-  ═══════════════════════════════════════════════════ -->
-  <rect x="468" y="510" width="232" height="110" rx="10"
+  <!-- ══ IAM ══ -->
+  <rect x="432" y="714" width="282" height="140" rx="10"
         fill="#1F0808" stroke="#F87171" stroke-width="1.5"/>
-  <!-- header -->
-  <rect x="468" y="510" width="232" height="28" rx="10" fill="#7F1D1D"/>
-  <rect x="468" y="524" width="232" height="14" fill="#7F1D1D"/>
-  <text x="584" y="530" text-anchor="middle" font-size="11" fill="#FECACA" font-weight="bold">IAM</text>
-  <!-- body -->
-  <text x="584" y="552" text-anchor="middle" font-size="9" fill="#94A3B8">Role: actify-saas-lambda-role</text>
-  <text x="584" y="567" text-anchor="middle" font-size="9" fill="#94A3B8">Policy: actify-saas-lambda-policy</text>
-  <text x="584" y="583" text-anchor="middle" font-size="9" fill="#64748B">s3:PutObject · s3:GetObject (reports/*)</text>
-  <text x="584" y="598" text-anchor="middle" font-size="9" fill="#64748B">bedrock:InvokeModel (6 EU+US regions)</text>
-  <text x="584" y="612" text-anchor="middle" font-size="9" fill="#64748B">logs:CreateLogStream · logs:PutLogEvents</text>
+  <rect x="432" y="714" width="282" height="28" rx="10" fill="#7F1D1D"/>
+  <rect x="432" y="728" width="282" height="14" fill="#7F1D1D"/>
+  <text x="573" y="734" text-anchor="middle" font-size="11" fill="#FECACA" font-weight="bold">IAM</text>
+  <text x="573" y="756" text-anchor="middle" font-size="9" fill="#94A3B8">Lambda role: actify-saas-lambda-role</text>
+  <text x="573" y="770" text-anchor="middle" font-size="9" fill="#64748B">s3:PutObject/GetObject (reports/* · bronze/*)</text>
+  <text x="573" y="784" text-anchor="middle" font-size="9" fill="#64748B">bedrock:InvokeModel (6 EU+US regions)</text>
+  <text x="573" y="798" text-anchor="middle" font-size="9" fill="#64748B">logs:CreateLogStream · logs:PutLogEvents</text>
+  <line x1="444" y1="807" x2="702" y2="807" stroke="#334155" stroke-width="0.8"/>
+  <text x="573" y="820" text-anchor="middle" font-size="9" fill="#94A3B8">Deploy role: actify-saas-github-actions-deploy</text>
+  <text x="573" y="834" text-anchor="middle" font-size="9" fill="#64748B">OIDC · s3:Sync (frontend) · CF:CreateInvalidation</text>
+  <text x="573" y="848" text-anchor="middle" font-size="8" fill="#64748B">trust: token.actions.githubusercontent.com</text>
 
-  <!-- ── Arrow IAM → Lambda (dashed) ── -->
-  <line x1="584" y1="510" x2="546" y2="500" stroke="#F87171" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a-red)"/>
-  <text x="580" y="506" text-anchor="middle" font-size="8" fill="#F87171">assume role</text>
+  <!-- Lambda → IAM (assume role indicator) -->
+  <line x1="573" y1="714" x2="544" y2="645" stroke="#F87171" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a-red)"/>
+  <text x="577" y="680" font-size="8" fill="#F87171">assume role</text>
 
-  <!-- ═══════════════════════════════════════════════════
-       LEGEND / FLOW LABELS
-  ═══════════════════════════════════════════════════ -->
-  <rect x="742" y="460" width="300" height="148" rx="8" fill="#0F172A" stroke="#334155" stroke-width="1"/>
-  <text x="892" y="480" text-anchor="middle" font-size="11" fill="#94A3B8" font-weight="bold">Request Flow</text>
-  <text x="762" y="498" font-size="9" fill="#64748B">①  GET /  →  Lambda returns form HTML</text>
-  <text x="762" y="514" font-size="9" fill="#64748B">②  POST /api/report/generate</text>
-  <text x="762" y="530" font-size="9" fill="#64748B">③  API GW proxies to Lambda (AWS_PROXY 2.0)</text>
-  <text x="762" y="546" font-size="9" fill="#64748B">④  Lambda → Bedrock (Converse API)</text>
-  <text x="762" y="562" font-size="9" fill="#64748B">⑤  Lambda renders HTML → PDF (Puppeteer)</text>
-  <text x="762" y="578" font-size="9" fill="#64748B">⑥  Lambda → S3 PutObject + GetSignedUrl</text>
-  <text x="762" y="594" font-size="9" fill="#64748B">⑦  Lambda returns { download_url } to browser</text>
-  <text x="762" y="610" font-size="9" fill="#64748B">⑧  Lambda + API GW stream logs to CloudWatch</text>
+  <!-- ══ FLOW LEGEND ══ -->
+  <rect x="732" y="718" width="290" height="132" rx="8" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+  <text x="877" y="737" text-anchor="middle" font-size="11" fill="#94A3B8" font-weight="bold">Request Flow</text>
+  <text x="748" y="754" font-size="9" fill="#64748B">①  Browser → CloudFront → S3 frontend (static pages)</text>
+  <text x="748" y="769" font-size="9" fill="#64748B">②  Browser POST /api/report/generate</text>
+  <text x="748" y="784" font-size="9" fill="#64748B">③  API Gateway → Lambda (AWS_PROXY 2.0)</text>
+  <text x="748" y="799" font-size="9" fill="#64748B">④⑤  Lambda ↔ Bedrock (Converse API, JSON)</text>
+  <text x="748" y="814" font-size="9" fill="#64748B">⑥  Lambda → S3 PutObject + GetSignedUrl</text>
+  <text x="748" y="829" font-size="9" fill="#64748B">⑦  Lambda returns { download_url } to Browser</text>
+  <text x="748" y="844" font-size="9" fill="#64748B">⑧  Lambda + API GW → CloudWatch Logs</text>
 
-  <!-- ═══════════════════════════════════════════════════
-       TITLE / FOOTER
-  ═══════════════════════════════════════════════════ -->
-  <text x="540" y="648" text-anchor="middle" font-size="11" fill="#475569">
-    Actify SaaS  ·  Release 1  ·  Architecture Overview  ·  IaC: Terraform  ·  2025
+  <!-- Footer -->
+  <text x="650" y="858" text-anchor="middle" font-size="11" fill="#475569">
+    Actify SaaS  ·  Release 1  ·  Architecture Overview  ·  IaC: Terraform  ·  2026
   </text>
 
 </svg>

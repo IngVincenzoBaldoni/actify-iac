@@ -1,0 +1,4 @@
+aws_region        = "eu-central-1"
+environment       = "production"
+api_gateway_id    = "REPLACE_WITH_API_GATEWAY_ID"  # terraform -chdir=../release-1 output api_gateway_id
+cognito_ses_email = "noreply@actify.io"

@@ -1,0 +1,32 @@
+{
+  "name": "actify-lambda-api",
+  "version": "2.0.0",
+  "description": "Actify Release 2 — SaaS CRUD API: auth, company, systems, compliance checks",
+  "main": "dist/handler.js",
+  "scripts": {
+    "build": "tsc --project tsconfig.json && node scripts/bundle.js",
+    "build:tsc": "tsc --project tsconfig.json",
+    "lint": "tsc --noEmit",
+    "dev": "ts-node --project tsconfig.json handler.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.600.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.600.0",
+    "@aws-sdk/client-lambda": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.140",
+    "@types/node": "^20.12.12",
+    "@types/uuid": "^9.0.8",
+    "archiver": "^7.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

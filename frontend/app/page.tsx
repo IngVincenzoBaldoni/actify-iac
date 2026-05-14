@@ -16,6 +16,10 @@ export default function Page() {
           <span dangerouslySetInnerHTML={{ __html: markSvg(52) }} />
           <span dangerouslySetInnerHTML={{ __html: logoSvg(288, 80) }} />
           <div className="l-pill"><span className="pulse"></span>Enforcement Active &middot; Sanzioni fino a &euro;35M in vigore</div>
+          <div className="l-nav-auth">
+            <a href="/login" className="l-nav-login">Accedi</a>
+            <a href="/register" className="l-nav-register">Registrati</a>
+          </div>
         </nav>
 
         <div className="l-hero">
@@ -228,7 +232,7 @@ export default function Page() {
       <div id="app">
         <nav className="w-nav">
           <div className="w-logo"><span dangerouslySetInnerHTML={{ __html: logoSvg(162, 45) }} /></div>
-          <div className="w-step-info" id="stepInfo">Step 1 di 6</div>
+          <div className="w-step-info" id="stepInfo">Step 1 di 5</div>
           <button className="w-exit" onClick={w('exitWizard')}>&#8592; Esci</button>
         </nav>
         <div className="stepper" id="stepper"></div>
@@ -372,69 +376,6 @@ export default function Page() {
           {/* Step 3 */}
           <div id="step3" className="step-panel" style={{display:'none'}}>
             <div className="panel-head">
-              <h2>Decisioni &amp; Human-in-the-Loop</h2>
-              <p>Come i sistemi AI influenzano i processi decisionali nella tua organizzazione.</p>
-            </div>
-            <div className="fcard">
-              <h3>Processo Decisionale AI</h3>
-              <div className="check-cards">
-                <label className="check-card">
-                  <input type="checkbox" id="makesDec" />
-                  <div>
-                    <div className="cc-title">I sistemi AI producono decisioni o raccomandazioni che impattano persone fisiche</div>
-                    <div className="cc-desc">Include: assunzione, accesso al credito, diagnosi, valutazione scolastica, accesso a servizi, scoring comportamentale</div>
-                  </div>
-                </label>
-                <label className="check-card">
-                  <input type="checkbox" id="vulnerable" />
-                  <div>
-                    <div className="cc-title">I sistemi interagiscono con soggetti vulnerabili</div>
-                    <div className="cc-desc">Minori, anziani, persone con disabilit&agrave;, persone in difficolt&agrave; economica o emotiva</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-            <div className="fcard">
-              <h3>Supervisione Umana (Human-in-the-Loop)</h3>
-              <div className="radio-grid" style={{gridTemplateColumns:'1fr 1fr'}}>
-                <label className="radio-card"><input type="radio" name="humanOversight" value="always" /><div className="rc-row"><div className="rc-title">Sempre presente</div><div className="rc-dot"></div></div><div className="rc-desc">Ogni output AI &egrave; revisionato e approvato da un operatore umano prima di produrre effetti</div></label>
-                <label className="radio-card"><input type="radio" name="humanOversight" value="sometimes" /><div className="rc-row"><div className="rc-title">In alcuni casi</div><div className="rc-dot"></div></div><div className="rc-desc">Supervisione umana solo per decisioni ad alto rischio o casi limite; il resto &egrave; automatico</div></label>
-                <label className="radio-card"><input type="radio" name="humanOversight" value="never" /><div className="rc-row"><div className="rc-title">Mai &mdash; Full Automatic</div><div className="rc-dot"></div></div><div className="rc-desc">Il sistema decide o agisce autonomamente senza alcun intervento umano nel loop</div></label>
-                <label className="radio-card"><input type="radio" name="humanOversight" value="na" /><div className="rc-row"><div className="rc-title">Non applicabile</div><div className="rc-dot"></div></div><div className="rc-desc">I sistemi AI non producono decisioni su persone fisiche (uso puramente interno/operativo)</div></label>
-              </div>
-            </div>
-            <div className="fcard">
-              <h3>Ambiti di Decisione</h3>
-              <div className="check-list">
-                <label className="check-row"><input type="checkbox" className="domain" value="hiring" /><span>Assunzione, selezione e screening del personale</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="performance_management" /><span>Valutazione delle prestazioni, promozioni, licenziamenti</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="credit_scoring" /><span>Valutazione creditizia, prestiti, scoring finanziario</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="insurance" /><span>Assicurazioni: underwriting, tariffazione, liquidazione sinistri</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="healthcare_diagnosis" /><span>Diagnosi medica, supporto clinico, triage</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="education_assessment" /><span>Valutazione studenti, accesso all&rsquo;istruzione, orientamento</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="public_services" /><span>Accesso a servizi pubblici, sussidi, benefici sociali</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="law_enforcement" /><span>Forze dell&rsquo;ordine, controllo biometrico, sorveglianza</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="content_moderation" /><span>Moderazione contenuti, accesso a piattaforme digitali</span></label>
-                <label className="check-row"><input type="checkbox" className="domain" value="other_decisions" /><span>Altre decisioni con impatto significativo su persone</span></label>
-              </div>
-            </div>
-            <div className="fcard">
-              <h3>Tipologie di Dati Trattati dall&rsquo;AI</h3>
-              <div className="check-list">
-                <label className="check-row"><input type="checkbox" className="dtype" value="biometric" /><span>Dati biometrici (volto, voce, impronte digitali, andatura)</span></label>
-                <label className="check-row"><input type="checkbox" className="dtype" value="health" /><span>Dati sanitari, cartelle cliniche, stati di salute</span></label>
-                <label className="check-row"><input type="checkbox" className="dtype" value="financial" /><span>Dati finanziari, bancari, reddituali</span></label>
-                <label className="check-row"><input type="checkbox" className="dtype" value="behavioral" /><span>Dati comportamentali, navigazione, pattern di utilizzo</span></label>
-                <label className="check-row"><input type="checkbox" className="dtype" value="location" /><span>Dati di geolocalizzazione o movimenti fisici</span></label>
-                <label className="check-row"><input type="checkbox" className="dtype" value="personal_identifiers" /><span>Identificatori personali (nome, CF, email, numero di telefono)</span></label>
-                <label className="check-row"><input type="checkbox" className="dtype" value="sensitive_categories" /><span>Categorie speciali GDPR (etnia, religione, salute, orientamento sessuale, opinioni politiche)</span></label>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div id="step4" className="step-panel" style={{display:'none'}}>
-            <div className="panel-head">
               <h2>AI Readiness</h2>
               <p>Valuta il livello di presidio gi&agrave; in atto nella tua organizzazione rispetto agli obblighi dell&rsquo;AI Act.</p>
             </div>
@@ -458,8 +399,8 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Step 5 */}
-          <div id="step5" className="step-panel" style={{display:'none'}}>
+          {/* Step 4 */}
+          <div id="step4" className="step-panel" style={{display:'none'}}>
             <div className="panel-head">
               <h2>Contesto &amp; Note</h2>
               <p>Questo campo viene analizzato direttamente dall&rsquo;AI. Pi&ugrave; dettagli fornisci, pi&ugrave; il report sar&agrave; preciso.</p>
@@ -476,8 +417,8 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Step 6 */}
-          <div id="step6" className="step-panel" style={{display:'none'}}>
+          {/* Step 5 */}
+          <div id="step5" className="step-panel" style={{display:'none'}}>
             <div className="panel-head">
               <h2>Riepilogo e Generazione</h2>
               <p>Verifica i dati inseriti prima di generare il tuo report di compliance AI Act personalizzato.</p>
