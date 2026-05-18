@@ -41,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const nav = [
     { href: '/dashboard/inventory', label: 'AI Inventory', icon: '⬡' },
+    { href: '/dashboard/roadmap', label: 'Compliance Roadmap', icon: '⊙' },
     { href: '/dashboard/settings', label: 'Impostazioni', icon: '⚙' },
   ];
 

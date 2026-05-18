@@ -16,6 +16,7 @@ interface AISystem {
   human_oversight_level: string;
   last_exposure_min?: number;
   last_exposure_max?: number;
+  last_article_sanctions?: string; // JSON: Record<normalizedArticle, {min,max}>
 }
 
 function fmtEur(n: number): string {
@@ -102,9 +103,26 @@ export default function InventoryPage() {
   const analyzed      = compliant + gapFound;
   const riskAuto      = systems.filter(s => s.makes_automated_decisions).length;
   const score         = analyzed > 0 ? Math.round((compliant / analyzed) * 100) : null;
-  const totalExposMax = systems.reduce((sum, s) => sum + (s.last_exposure_max ?? 0), 0);
-  const totalExposMin = systems.reduce((sum, s) => sum + (s.last_exposure_min ?? 0), 0);
-  const hasExposure   = totalExposMax > 0;
+  // Merge per-article sanctions across systems: same article across systems → keep max (one sanction per article).
+  const mergedArticles = new Map<string, { min: number; max: number }>();
+  for (const s of systems) {
+    if (!s.last_article_sanctions) continue;
+    try {
+      const map: Record<string, { min: number; max: number }> = JSON.parse(s.last_article_sanctions);
+      for (const [art, val] of Object.entries(map)) {
+        const existing = mergedArticles.get(art);
+        if (!existing || val.max > existing.max) mergedArticles.set(art, val);
+      }
+    } catch { /* malformed JSON — skip */ }
+  }
+  let totalExposMax = 0, totalExposMin = 0;
+  Array.from(mergedArticles.values()).forEach(v => { totalExposMax += v.max; totalExposMin += v.min; });
+  // Fallback to simple sum for systems with old records that don't have last_article_sanctions yet
+  if (totalExposMax === 0) {
+    totalExposMax = systems.reduce((sum, s) => sum + (s.last_exposure_max ?? 0), 0);
+    totalExposMin = systems.reduce((sum, s) => sum + (s.last_exposure_min ?? 0), 0);
+  }
+  const hasExposure = totalExposMax > 0;
 
   return (
     <div className="inv-page">
@@ -194,6 +212,9 @@ export default function InventoryPage() {
                 <>
                   <div className="exp-banner-num">{fmtEur(totalExposMax)}</div>
                   <div className="exp-banner-range">da {fmtEur(totalExposMin)}</div>
+                  <div className="exp-banner-dedup-note">
+                    Per ogni articolo violato si applica una sola sanzione — violazioni multiple dello stesso articolo non si sommano (Art. 99 AI Act)
+                  </div>
                 </>
               ) : (
                 <div className="exp-banner-none">Esegui un compliance check per stimare le sanzioni</div>

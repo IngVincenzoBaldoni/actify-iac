@@ -25,6 +25,7 @@ export interface AISystem {
   last_check_at: string | null;
   last_exposure_min?: number;
   last_exposure_max?: number;
+  last_article_sanctions?: string; // JSON: Record<normalizedArticle, {min,max}>
   created_at: string;
   updated_at: string;
 }

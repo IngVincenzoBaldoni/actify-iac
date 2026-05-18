@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [inviteMsg, setInviteMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [revenueRange, setRevenueRange] = useState('');
+  const [revenueExact, setRevenueExact] = useState('');
   const [savingRevenue, setSavingRevenue] = useState(false);
   const [revenueMsg, setRevenueMsg] = useState('');
 
@@ -31,7 +32,11 @@ export default function SettingsPage() {
       ]);
       if (companyData.status === 'fulfilled') {
         setCompany(companyData.value);
-        setRevenueRange((companyData.value.annual_revenue_range as string) ?? '');
+        const NEW_RANGES = ['under_100k','100k_500k','500k_1m','1m_3m','3m_10m','10m_30m','30m_100m','100m_500m','500m_1b','over_1b'];
+        const storedRange = (companyData.value.annual_revenue_range as string) ?? '';
+        setRevenueRange(NEW_RANGES.includes(storedRange) ? storedRange : '');
+        const exact = companyData.value.annual_revenue_exact as number | undefined;
+        setRevenueExact(exact ? String(exact) : '');
       }
       if (usersData.status === 'fulfilled') setUsers(usersData.value as CompanyUser[]);
       if (claims.status === 'fulfilled' && claims.value) {
@@ -46,9 +51,19 @@ export default function SettingsPage() {
   async function handleSaveRevenue() {
     setSavingRevenue(true);
     setRevenueMsg('');
+    const exactNum = revenueExact ? parseFloat(revenueExact.replace(/[^\d.]/g, '')) : null;
+    if (revenueExact && (isNaN(exactNum!) || exactNum! <= 0)) {
+      setRevenueMsg('✗ Inserisci un importo valido per il fatturato esatto.');
+      setSavingRevenue(false);
+      return;
+    }
     try {
-      await api.company.update({ annual_revenue_range: revenueRange || null });
-      setRevenueMsg('✓ Fatturato aggiornato. I prossimi compliance check useranno questo valore.');
+      await api.company.update({
+        annual_revenue_range: revenueRange || null,
+        annual_revenue_exact: exactNum,
+      });
+      const src = exactNum ? 'fatturato esatto' : revenueRange ? 'valore mediano del range' : 'stima da dipendenti';
+      setRevenueMsg(`✓ Salvato. I prossimi compliance check useranno ${src}.`);
     } catch (err: unknown) {
       setRevenueMsg(`✗ ${(err as { message?: string }).message ?? 'Errore'}`);
     } finally {
@@ -109,19 +124,63 @@ export default function SettingsPage() {
 
           <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
             <div className="field-label-hint">
-              <label style={{ fontWeight: 600, fontSize: 14, color: 'var(--text2)' }}>Fatturato annuo (range) — opzionale</label>
-              <span className="hint-small">Migliora la precisione della stima sanzionatoria Art. 99 AI Act</span>
+              <label style={{ fontWeight: 600, fontSize: 14, color: 'var(--text2)' }}>Fatturato annuo — stima sanzionatoria Art. 99</label>
+              <span className="hint-small">Più preciso è il dato, più accurata sarà la stima. Il fatturato esatto ha priorità sul range.</span>
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <select className="settings-select" value={revenueRange} onChange={e => setRevenueRange(e.target.value)}>
-                <option value="">— Non specificato (stima da dipendenti) —</option>
-                <option value="under_500k">Meno di €500K</option>
-                <option value="500k_2m">€500K – €2M</option>
-                <option value="2m_10m">€2M – €10M</option>
-                <option value="10m_50m">€10M – €50M</option>
-                <option value="50m_250m">€50M – €250M</option>
-                <option value="over_250m">Oltre €250M</option>
-              </select>
+
+            {/* Exact revenue */}
+            <div style={{ marginTop: 14 }}>
+              <div className="rev-input-label">
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Fatturato esatto (€)</span>
+                <span className="rev-accuracy-chip rev-accuracy-best">Stima più precisa</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 6, alignItems: 'center' }}>
+                <input
+                  type="number"
+                  className="settings-input"
+                  placeholder="Es. 4500000"
+                  min="0"
+                  value={revenueExact}
+                  onChange={e => setRevenueExact(e.target.value)}
+                />
+                <span style={{ fontSize: 12, color: 'var(--dim)', whiteSpace: 'nowrap' }}>EUR / anno</span>
+              </div>
+            </div>
+
+            {/* Range */}
+            <div style={{ marginTop: 14 }}>
+              <div className="rev-input-label">
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Range fatturato</span>
+                <span className="rev-accuracy-chip rev-accuracy-mid">Usa il valore mediano del range</span>
+              </div>
+              <div style={{ marginTop: 6 }}>
+                <select className="settings-select" value={revenueRange} onChange={e => setRevenueRange(e.target.value)}
+                  disabled={!!revenueExact} style={{ opacity: revenueExact ? 0.45 : 1 }}>
+                  <option value="">— Non specificato (stima da dipendenti) —</option>
+                  <option value="under_100k">Meno di €100K</option>
+                  <option value="100k_500k">€100K – €500K</option>
+                  <option value="500k_1m">€500K – €1M</option>
+                  <option value="1m_3m">€1M – €3M</option>
+                  <option value="3m_10m">€3M – €10M</option>
+                  <option value="10m_30m">€10M – €30M</option>
+                  <option value="30m_100m">€30M – €100M</option>
+                  <option value="100m_500m">€100M – €500M</option>
+                  <option value="500m_1b">€500M – €1B</option>
+                  <option value="over_1b">Oltre €1B</option>
+                </select>
+                {revenueExact && (
+                  <p style={{ fontSize: 11, color: 'var(--dim)', marginTop: 5 }}>
+                    Il range è disabilitato perché hai inserito il fatturato esatto.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rev-disclaimer">
+              ℹ️ Il range usa il <strong>valore mediano</strong> come base di calcolo (es. €3M–€10M → €6,5M). Per una stima ancora più accurata inserisci il fatturato esatto. Nessun dato viene condiviso con terze parti.
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 14, alignItems: 'center' }}>
               <button className="btn-save-small" onClick={handleSaveRevenue} disabled={savingRevenue}>
                 {savingRevenue ? 'Salvataggio…' : 'Salva'}
               </button>

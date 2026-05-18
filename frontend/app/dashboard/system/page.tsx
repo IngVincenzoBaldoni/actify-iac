@@ -11,6 +11,12 @@ function fmtEur(n: number): string {
   if (n >= 1_000)     return `€${(n / 1_000).toFixed(0)}K`;
   return `€${n.toLocaleString('it-IT')}`;
 }
+function fmtEurFull(n: number): string {
+  return `€${n.toLocaleString('it-IT')}`;
+}
+function fmtPct(n: number): string {
+  return `${(n * 100).toFixed(0)}%`;
+}
 
 const URGENCY_CLASS: Record<string, string> = {
   critical: 'urgency-critical', high: 'urgency-high',
@@ -75,7 +81,7 @@ function SanctionOverview({ result }: { result: NonNullable<ComplianceCheck['res
           </div>
         </div>
         <div className="so-source-chip">
-          {exposure.turnover_source === 'declared' ? '📊 Fatturato dichiarato' : '📐 Fatturato stimato'}
+          {exposure.turnover_source === 'exact' ? '✅ Fatturato esatto' : exposure.turnover_source === 'declared' ? '📊 Range dichiarato (mediana)' : '📐 Fatturato stimato'}
           <span className="so-source-val">{fmtEur(exposure.turnover_used)}</span>
         </div>
       </div>
@@ -119,6 +125,8 @@ function SanctionOverview({ result }: { result: NonNullable<ComplianceCheck['res
           {activeGaps.map(g => {
             const pct = totalMax > 0 ? Math.max(6, ((g.estimated_sanction_max ?? 0) / totalMax) * 100) : 0;
             const remPct = g.can_actify_automate ? 0 : pct;
+            const ti = g.tier_info;
+            const m = exposure.methodology;
             return (
               <div key={g.gap_id} className="so-bar-row">
                 <div className="so-bar-meta">
@@ -133,9 +141,75 @@ function SanctionOverview({ result }: { result: NonNullable<ComplianceCheck['res
                   )}
                 </div>
                 <span className="so-bar-amt">{fmtEur(g.estimated_sanction_max ?? 0)}</span>
+                {ti && m && (
+                  <div className="so-formula">
+                    <span className="so-formula-tier">{ti.tier_label}</span>
+                    <div className="so-formula-steps">
+                      <span>
+                        <span className="so-fk">Fatturato × {fmtPct(ti.tier_pct)}</span>
+                        <span className="so-fv"> = {fmtEurFull(ti.theoretical_pct_amount)}</span>
+                      </span>
+                      <span className="so-farrow">→</span>
+                      <span>
+                        <span className="so-fk">min({fmtEur(ti.tier_cap)} cap, {fmtEurFull(ti.theoretical_pct_amount)})</span>
+                        <span className="so-fv"> = {fmtEurFull(ti.theoretical_max)}</span>
+                      </span>
+                      {m.is_sme && (
+                        <>
+                          <span className="so-farrow">→</span>
+                          <span>
+                            <span className="so-fk">Riduzione PMI Art. 100 (×{fmtPct(m.sme_reduction)})</span>
+                            <span className="so-fv"> = {fmtEurFull(g.estimated_sanction_max ?? 0)} max</span>
+                          </span>
+                        </>
+                      )}
+                      <span className="so-farrow">→</span>
+                      <span>
+                        <span className="so-fk">Min = max × {fmtPct(m.min_factor)}</span>
+                        <span className="so-fv"> = {fmtEurFull(g.estimated_sanction_min ?? 0)}</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Methodology summary ── */}
+      {exposure.methodology && (
+        <div className="so-method-box">
+          <div className="so-method-title">📐 Parametri di calcolo</div>
+          <div className="so-method-grid">
+            <div className="so-method-row">
+              <span className="so-mk">Fonte fatturato</span>
+              <span className="so-mv">{exposure.methodology.turnover_source_label}</span>
+            </div>
+            <div className="so-method-row">
+              <span className="so-mk">Fatturato usato</span>
+              <span className="so-mv">{fmtEurFull(exposure.turnover_used)}</span>
+            </div>
+            <div className="so-method-row">
+              <span className="so-mk">Riduzione PMI (Art. 100)</span>
+              <span className="so-mv">{exposure.methodology.is_sme ? `Sì — ×${fmtPct(exposure.methodology.sme_reduction)}` : 'No'}</span>
+            </div>
+            <div className="so-method-row">
+              <span className="so-mk">Fattore di precisione (min/max)</span>
+              <span className="so-mv">{fmtPct(exposure.methodology.min_factor)} — {exposure.methodology.turnover_source_label.toLowerCase().includes('esatto') ? 'range stretto (fatturato preciso)' : exposure.methodology.turnover_source_label.toLowerCase().includes('mediano') ? 'range medio (valore mediano)' : 'range ampio (dato stimato)'}</span>
+            </div>
+          </div>
+          <div className="so-method-tiers">
+            <div className="so-method-sub">Massimali sanzionatori Art. 99 AI Act</div>
+            <div className="so-method-tier-row"><span className="so-tier-badge so-tier-red">Art. 5</span><span>pratiche vietate → cap €35M o 7% fatturato globale</span></div>
+            <div className="so-method-tier-row"><span className="so-tier-badge so-tier-orange">Art. 8-27, 49, 50</span><span>requisiti e obblighi → cap €15M o 3% fatturato</span></div>
+            <div className="so-method-tier-row"><span className="so-tier-badge so-tier-dim">Altri</span><span>informazioni errate / altri art. → cap €7,5M o 1% fatturato</span></div>
+          </div>
+          <div className="so-method-formula">
+            <span className="so-method-sub">Formula applicata per ogni articolo</span>
+            <code>Max = min(Cap articolo, Fatturato × %) × Riduzione PMI</code>
+            <code>Min = Max × Fattore precisione ({fmtPct(exposure.methodology.min_factor)})</code>
+          </div>
         </div>
       )}
 

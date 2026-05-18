@@ -103,12 +103,13 @@ export async function executeCheckAsync(payload: {
 
     // Update system status + cache exposure for inventory dashboard
     await dynamo.updateSystem(companyId, systemId, {
-      compliance_status: finalStatus,
-      last_check_id:     checkId,
-      last_check_at:     completedAt,
-      last_exposure_min: result.total_exposure_estimate?.min ?? 0,
-      last_exposure_max: result.total_exposure_estimate?.max ?? 0,
-      updated_at:        completedAt,
+      compliance_status:       finalStatus,
+      last_check_id:           checkId,
+      last_check_at:           completedAt,
+      last_exposure_min:       result.total_exposure_estimate?.min ?? 0,
+      last_exposure_max:       result.total_exposure_estimate?.max ?? 0,
+      last_article_sanctions:  JSON.stringify(result.article_sanctions ?? {}),
+      updated_at:              completedAt,
     });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';

@@ -4,7 +4,10 @@ import {
   UpdateCommand, DeleteCommand, QueryCommand, QueryCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION ?? 'eu-central-1' }));
+const client = DynamoDBDocumentClient.from(
+  new DynamoDBClient({ region: process.env.AWS_REGION ?? 'eu-central-1' }),
+  { marshallOptions: { removeUndefinedValues: true } },
+);
 
 const TABLES = {
   companies: process.env.DYNAMODB_COMPANIES_TABLE!,

@@ -1,7 +1,7 @@
 'use client';
 
 import Script from 'next/script';
-import { logoSvg, markSvg } from '@/lib/branding';
+import { logoSvg, markSvg, badgeSvg } from '@/lib/branding';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -15,6 +15,11 @@ export default function Page() {
         <nav className="l-nav">
           <span dangerouslySetInnerHTML={{ __html: markSvg(52) }} />
           <span dangerouslySetInnerHTML={{ __html: logoSvg(288, 80) }} />
+          <div className="l-nav-links">
+            <a href="/perche-fidarti" className="l-nav-link">Perch&eacute; puoi fidarti</a>
+            <a href="/chi-siamo" className="l-nav-link">Chi siamo</a>
+            <a href="/faq" className="l-nav-link">FAQ</a>
+          </div>
           <div className="l-pill"><span className="pulse"></span>Enforcement Active &middot; Sanzioni fino a &euro;35M in vigore</div>
           <div className="l-nav-auth">
             <a href="/login" className="l-nav-login">Accedi</a>
@@ -220,11 +225,137 @@ export default function Page() {
           </div>
         </div>
 
+        {/* ═══ PERCHÉ PUOI FIDARTI ═══ */}
+        <div className="l-trust" id="trust">
+          <div className="l-trust-inner">
+            <div className="l-trust-head">
+              <div className="l-sol-badge">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 12 2 2 4-4"/><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/></svg>
+                Perch&eacute; puoi fidarti
+              </div>
+              <h2>Siamo i nostri <em>primi clienti</em></h2>
+              <p>Prima di chiederti di usare Actify, lo abbiamo usato su noi stessi. Ogni sistema AI che alimenta la nostra piattaforma &egrave; censito, classificato e verificato con il nostro stesso strumento. Questo &egrave; il risultato.</p>
+            </div>
+
+            <div className="l-trust-card">
+              <div className="l-trust-badge-col">
+                <span dangerouslySetInnerHTML={{ __html: badgeSvg(130) }} />
+                <div className="l-trust-verified-row">
+                  <span className="l-trust-v-chip">&#10003; Actify Verified Compliant</span>
+                  <span className="l-trust-v-date">Reg. UE 2024/1689 &middot; maggio 2026</span>
+                </div>
+              </div>
+              <div className="l-trust-right">
+                <div className="l-trust-stats">
+                  <div className="l-trust-stat"><div className="l-trust-stat-n">0</div><div className="l-trust-stat-l">Violazioni AI Act</div></div>
+                  <div className="l-trust-stat"><div className="l-trust-stat-n">11</div><div className="l-trust-stat-l">Articoli verificati</div></div>
+                  <div className="l-trust-stat"><div className="l-trust-stat-n">2</div><div className="l-trust-stat-l">Sistemi AI censiti</div></div>
+                  <div className="l-trust-stat"><div className="l-trust-stat-n">100%</div><div className="l-trust-stat-l">Score conformit&agrave;</div></div>
+                </div>
+                <div className="l-trust-systems">
+                  <div className="l-trust-sys">
+                    <div className="l-trust-sys-dot l-sys-blue"></div>
+                    <div className="l-trust-sys-info">
+                      <div className="l-trust-sys-name">Claude Code</div>
+                      <div className="l-trust-sys-vendor">Anthropic &middot; Uso interno sviluppatori</div>
+                    </div>
+                    <div className="comp-risk-badge comp-risk-min">Rischio Minimo</div>
+                  </div>
+                  <div className="l-trust-sys">
+                    <div className="l-trust-sys-dot l-sys-orange"></div>
+                    <div className="l-trust-sys-info">
+                      <div className="l-trust-sys-name">Amazon Nova Pro</div>
+                      <div className="l-trust-sys-vendor">AWS Bedrock &middot; Genera i tuoi report</div>
+                    </div>
+                    <div className="comp-risk-badge comp-risk-lim">Rischio Limitato</div>
+                  </div>
+                </div>
+                <div className="l-trust-footer-row">
+                  <a href="/perche-fidarti" className="comp-link-btn" style={{fontSize:'13px',padding:'9px 18px'}}>Scopri di pi&ugrave; &rarr;</a>
+                  <a href="/compliance" style={{fontSize:'12px',color:'var(--muted)',textDecoration:'none'}}>Tutta la documentazione compliance</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="l-cards">
           <div className="l-card"><div className="card-icon ci-green">&#128737;</div><h3>Classificazione del Rischio</h3><p>Mappa i tuoi sistemi AI alle categorie dell&rsquo;AI Act (Annex III) e scopri il livello di rischio: vietato, alto, limitato o minimale.</p></div>
           <div className="l-card"><div className="card-icon ci-purple">&#128196;</div><h3>Report PDF Professionale</h3><p>Documento audit-ready con analisi per sistema, timeline di adeguamento e azioni prioritarie specifiche per il tuo settore.</p></div>
           <div className="l-card"><div className="card-icon ci-blue">&#128506;</div><h3>Roadmap Personalizzata</h3><p>Piano d&rsquo;azione con scadenze AI Act, obblighi specifici per il tuo ruolo (Provider o Deployer) e gap di governance identificati.</p></div>
         </div>
+
+        {/* ═══ CHI SIAMO ═══ */}
+        <div className="l-team" id="team">
+          <div className="l-team-inner">
+            <div className="l-team-head">
+              <div className="l-sol-badge">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Chi siamo
+              </div>
+              <h2>Due persone, <em>un&rsquo;ossessione</em></h2>
+              <p>Siamo un team di due fondatori che hanno visto lo stesso problema da angolazioni diverse &mdash; e hanno deciso di risolverlo insieme.</p>
+            </div>
+
+            <div className="l-team-grid">
+
+              {/* CTO */}
+              <div className="l-team-card">
+                <div className="l-avatar">
+                  <div className="l-avatar-ring">
+                    <div className="l-avatar-circle">
+                      <svg className="l-avatar-placeholder" width="54" height="54" viewBox="0 0 54 54" fill="none">
+                        <circle cx="27" cy="19" r="11" fill="white" fillOpacity="0.14"/>
+                        <path d="M5 52C5 39.85 15.07 30 27 30C38.93 30 49 39.85 49 52" stroke="white" strokeOpacity="0.1" strokeWidth="2" fill="none"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="l-avatar-badge">CTO</div>
+                </div>
+                <h3 className="l-team-name">Co-Founder &amp; CTO</h3>
+                <div className="l-team-role">Ingegnere Cloud AI &middot; AWS Specialist</div>
+                <p className="l-team-bio">
+                  5+ anni di consulenza IT su architetture cloud AWS per PMI e scale-up europee. Specializzato in sistemi AI generativi su infrastruttura serverless, con focus su automazione, IaC e sicurezza cloud. Ha guidato la progettazione tecnica di sistemi AI in settori come fintech, healthcare e manifatturiero.
+                </p>
+                <div className="l-team-tags">
+                  {['AWS', 'AI/ML', 'Serverless', 'IaC', 'Python', 'TypeScript'].map(t => (
+                    <span key={t} className="l-team-tag">{t}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* CEO */}
+              <div className="l-team-card">
+                <div className="l-avatar">
+                  <div className="l-avatar-ring">
+                    <div className="l-avatar-circle">
+                      <svg className="l-avatar-placeholder" width="54" height="54" viewBox="0 0 54 54" fill="none">
+                        <circle cx="27" cy="19" r="11" fill="white" fillOpacity="0.14"/>
+                        <path d="M5 52C5 39.85 15.07 30 27 30C38.93 30 49 39.85 49 52" stroke="white" strokeOpacity="0.1" strokeWidth="2" fill="none"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="l-avatar-badge">CEO</div>
+                </div>
+                <h3 className="l-team-name">Co-Founder &amp; CEO</h3>
+                <div className="l-team-role">AI Strategy &middot; PMI Specialist</div>
+                <p className="l-team-bio">
+                  10+ anni nell&rsquo;adozione di soluzioni AI nelle PMI italiane ed europee. Ha accompagnato oltre 50 aziende in settori come retail, logistica, HR e servizi professionali nell&rsquo;integrazione di strumenti AI. Traduce complessit&agrave; normativa in opportunit&agrave; concreta di business.
+                </p>
+                <div className="l-team-tags">
+                  {['AI Strategy', 'PMI', 'AI Act', 'Business Dev', 'Operations'].map(t => (
+                    <span key={t} className="l-team-tag">{t}</span>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+            <div style={{textAlign:'center',marginTop:'40px'}}>
+              <a href="/chi-siamo" className="btn-ss">Chi siamo &rarr;</a>
+            </div>
+          </div>
+        </div>
+
       </section>
 
 

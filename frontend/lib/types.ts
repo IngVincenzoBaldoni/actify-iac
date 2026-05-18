@@ -4,6 +4,14 @@ export type AutomationType =
   | 'document_generation' | 'policy_template' | 'transparency_notice'
   | 'risk_assessment' | 'monitoring_plan' | 'conformity_declaration';
 
+export interface GapTierInfo {
+  tier_label: string;
+  tier_cap: number;
+  tier_pct: number;
+  theoretical_pct_amount: number;
+  theoretical_max: number;
+}
+
 export interface ComplianceGap {
   gap_id: string;
   article: string;
@@ -17,6 +25,14 @@ export interface ComplianceGap {
   automation_type: AutomationType | null;
   estimated_sanction_min?: number;
   estimated_sanction_max?: number;
+  tier_info?: GapTierInfo;
+}
+
+export interface SanctionMethodology {
+  is_sme: boolean;
+  sme_reduction: number;
+  min_factor: number;
+  turnover_source_label: string;
 }
 
 export interface TotalExposure {
@@ -25,7 +41,8 @@ export interface TotalExposure {
   currency: 'EUR';
   disclaimer: string;
   turnover_used: number;
-  turnover_source: 'declared' | 'estimated';
+  turnover_source: 'exact' | 'declared' | 'estimated';
+  methodology?: SanctionMethodology;
 }
 
 export interface ComplianceResult {

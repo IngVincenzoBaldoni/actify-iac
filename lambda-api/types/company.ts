@@ -17,7 +17,8 @@ export interface Company {
     has_ai_policy: boolean;
     has_training: boolean;
   };
-  annual_revenue_range?: 'under_500k' | '500k_2m' | '2m_10m' | '10m_50m' | '50m_250m' | 'over_250m';
+  annual_revenue_range?: 'under_100k' | '100k_500k' | '500k_1m' | '1m_3m' | '3m_10m' | '10m_30m' | '30m_100m' | '100m_500m' | '500m_1b' | 'over_1b';
+  annual_revenue_exact?: number;
   subscription_tier: 'trial' | 'starter' | 'pro' | 'enterprise';
   setup_completed: boolean;
   created_at: string;

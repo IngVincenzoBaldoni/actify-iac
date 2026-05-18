@@ -73,6 +73,11 @@ export default function LoginPage() {
           Non hai un account?{' '}
           <a href="/register">Registra la tua azienda</a>
         </p>
+        <p className="auth-comp-footer">
+          <a href="/compliance">Actify &egrave; conforme al Reg. UE 2024/1689 (AI Act)</a>
+          {' · '}
+          <a href="/compliance/trasparenza">Informativa AI</a>
+        </p>
       </div>
     </div>
   );

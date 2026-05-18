@@ -5,17 +5,22 @@ import * as dynamo from '../services/dynamoService';
 import * as cognitoSvc from '../services/cognitoService';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
-const REVENUE_RANGES = ['under_500k', '500k_2m', '2m_10m', '10m_50m', '50m_250m', 'over_250m'] as const;
+const REVENUE_RANGES = [
+  'under_100k', '100k_500k', '500k_1m', '1m_3m', '3m_10m', '10m_30m', '30m_100m', '100m_500m', '500m_1b', 'over_1b',
+  // legacy values (backward compat for existing DynamoDB records)
+  'under_500k', '500k_2m', '2m_10m', '10m_50m', '50m_250m', 'over_250m',
+] as const;
 
 const companyUpdateSchema = z.object({
-  name:                 z.string().min(1).max(200).optional(),
-  sector:               z.string().optional(),
-  employees_range:      z.string().optional(),
-  country:              z.string().optional(),
-  sede_legale:          z.string().optional(),
-  ai_role:              z.enum(['provider', 'deployer', 'both', 'unknown']).optional(),
-  annual_revenue_range: z.enum(REVENUE_RANGES).optional(),
-  context_notes:        z.string().max(5000).optional(),
+  name:                  z.string().min(1).max(200).optional(),
+  sector:                z.string().optional(),
+  employees_range:       z.string().optional(),
+  country:               z.string().optional(),
+  sede_legale:           z.string().optional(),
+  ai_role:               z.enum(['provider', 'deployer', 'both', 'unknown']).optional(),
+  annual_revenue_range:  z.enum(REVENUE_RANGES).nullable().optional(),
+  annual_revenue_exact:  z.number().positive().nullable().optional(),
+  context_notes:         z.string().max(5000).optional(),
   governance: z.object({
     has_dpo:                z.boolean(),
     dpo_status:             z.enum(['inhouse', 'service', 'none']),
