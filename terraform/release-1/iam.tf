@@ -58,6 +58,21 @@ data "aws_iam_policy_document" "lambda_permissions" {
     ]
   }
 
+  # SES — send report email via noreply@official-actify.com
+  # TODO: verify official-actify.com domain in SES console (eu-central-1)
+  #       before going to production. SES sandbox blocks unverified recipients.
+  statement {
+    sid    = "AllowSESSendEmail"
+    effect = "Allow"
+
+    actions = [
+      "ses:SendEmail",
+      "ses:SendRawEmail",
+    ]
+
+    resources = ["*"]
+  }
+
   # Bedrock — invoke Nova Pro
   # Covers: direct invocation in eu-central-1 + EU cross-region inference profile
   # (eu.amazon.nova-pro-v1:0 routes across eu-central-1, eu-west-1, eu-west-3)

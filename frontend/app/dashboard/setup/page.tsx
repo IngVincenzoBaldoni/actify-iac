@@ -57,41 +57,148 @@ const TARGET_USERS = [
   { v: 'third_parties', l: 'Terze Parti (es. candidati)' },
 ];
 
+const OUTPUT_TYPES = [
+  { v: 'content_generation', l: 'Genera contenuto', desc: 'Testo, codice, immagini, risposte automatiche' },
+  { v: 'recommendation', l: 'Raccomandazione', desc: 'Suggerisce opzioni — l\'umano decide' },
+  { v: 'scoring', l: 'Scoring / classificazione', desc: 'Assegna punteggi, categorie o priorità a persone/oggetti' },
+  { v: 'automated_decision', l: 'Decisione automatica', desc: 'Output applicato direttamente senza revisione umana' },
+];
+
+const ACCESS_MODES = [
+  { v: 'web_chat', l: 'Interfaccia web / chat', desc: 'Es. ChatGPT.com, Claude.ai — uso diretto da browser' },
+  { v: 'api', l: 'API / integrazione', desc: 'Chiamate programmatiche, embedding in altri software' },
+  { v: 'plugin', l: 'Plugin / add-on', desc: 'Es. Copilot in Word, estensioni browser' },
+  { v: 'integrated', l: 'Prodotto interno', desc: 'Il sistema è parte di un tool aziendale proprietario' },
+];
+
+const CUSTOMIZATIONS = [
+  { v: 'system_prompt', l: 'System prompt fissi', desc: 'Istruzioni permanenti che condizionano il comportamento del modello' },
+  { v: 'fine_tuning', l: 'Fine-tuning', desc: 'Modello ri-addestrato con dati aziendali propri' },
+  { v: 'rag', l: 'RAG / knowledge base', desc: 'Il modello recupera documenti aziendali per arricchire le risposte' },
+];
+
+const VULNERABLE_GROUPS = [
+  { v: 'minors', l: 'Minori (under 18)' },
+  { v: 'elderly', l: 'Anziani' },
+  { v: 'disabled', l: 'Persone con disabilità' },
+  { v: 'economic_hardship', l: 'Persone in difficoltà economica' },
+  { v: 'emotional_distress', l: 'Persone in difficoltà emotiva / psicologica' },
+];
+
 interface LlmEntry {
   id: string; label: string; vendor: string;
   custom_name: string; purpose: string;
-  target_users: string[];
+  output_type: string; access_mode: string;
+  customizations: string[]; users_aware_of_ai: boolean;
+  target_users: string[]; vulnerable_groups: string[];
   makes_automated_decisions: boolean; human_oversight_level: string;
   decision_domains: string[]; affects_vulnerable_groups: boolean; data_types: string[];
 }
 
 interface SpecializedTool {
   category: string; tool_name: string; vendor: string; purpose: string;
-  target_users: string[];
+  output_type: string; access_mode: string;
+  customizations: string[]; users_aware_of_ai: boolean;
+  target_users: string[]; vulnerable_groups: string[];
   makes_automated_decisions: boolean; human_oversight_level: string;
   decision_domains: string[]; affects_vulnerable_groups: boolean; data_types: string[];
 }
 
 interface ProviderSystem {
   tool_name: string; vendor: string; category: string; purpose: string;
-  target_users: string[];
+  output_type: string; access_mode: string;
+  customizations: string[]; users_aware_of_ai: boolean;
+  target_users: string[]; vulnerable_groups: string[];
   makes_automated_decisions: boolean; human_oversight_level: string;
   decision_domains: string[]; affects_vulnerable_groups: boolean; data_types: string[];
 }
 
 function emptySpecialized(): SpecializedTool {
-  return { category: 'hr', tool_name: '', vendor: '', purpose: '', target_users: [], makes_automated_decisions: false, human_oversight_level: 'na', decision_domains: [], affects_vulnerable_groups: false, data_types: [] };
-}
-function emptyProvider(): ProviderSystem {
-  return { tool_name: '', vendor: '', category: 'tech', purpose: '', target_users: [], makes_automated_decisions: false, human_oversight_level: 'na', decision_domains: [], affects_vulnerable_groups: false, data_types: [] };
+  return {
+    category: 'hr', tool_name: '', vendor: '', purpose: '',
+    output_type: '', access_mode: '',
+    customizations: [], users_aware_of_ai: false,
+    target_users: [], vulnerable_groups: [],
+    makes_automated_decisions: false, human_oversight_level: 'na',
+    decision_domains: [], affects_vulnerable_groups: false, data_types: [],
+  };
 }
 
-function DecisionFields({ item, onChange }: {
-  item: { target_users: string[]; makes_automated_decisions: boolean; human_oversight_level: string; decision_domains: string[]; affects_vulnerable_groups: boolean; data_types: string[] };
+function emptyProvider(): ProviderSystem {
+  return {
+    tool_name: '', vendor: '', category: 'tech', purpose: '',
+    output_type: '', access_mode: '',
+    customizations: [], users_aware_of_ai: false,
+    target_users: [], vulnerable_groups: [],
+    makes_automated_decisions: false, human_oversight_level: 'na',
+    decision_domains: [], affects_vulnerable_groups: false, data_types: [],
+  };
+}
+
+function SystemFields({ item, onChange }: {
+  item: {
+    output_type: string; access_mode: string;
+    customizations: string[]; users_aware_of_ai: boolean;
+    target_users: string[]; vulnerable_groups: string[];
+    makes_automated_decisions: boolean; human_oversight_level: string;
+    decision_domains: string[]; data_types: string[];
+  };
   onChange: (field: string, value: unknown) => void;
 }) {
   return (
     <div className="dec-section">
+
+      {/* ── 1. Configurazione & Accesso ── */}
+      <div className="dec-title">Configurazione &amp; Accesso</div>
+
+      <div className="dec-sub">Tipo di Output</div>
+      <div className="radio-grid">
+        {OUTPUT_TYPES.map(o => (
+          <label key={o.v} className="radio-card">
+            <input type="radio" checked={item.output_type === o.v} onChange={() => onChange('output_type', o.v)} />
+            <div className="rc-row">
+              <div className="rc-title">{o.l}</div>
+              <div className="rc-dot"></div>
+            </div>
+            <div className="rc-desc">{o.desc}</div>
+          </label>
+        ))}
+      </div>
+
+      <div className="dec-sub">Modalità di Accesso</div>
+      <div className="radio-grid">
+        {ACCESS_MODES.map(a => (
+          <label key={a.v} className="radio-card">
+            <input type="radio" checked={item.access_mode === a.v} onChange={() => onChange('access_mode', a.v)} />
+            <div className="rc-row">
+              <div className="rc-title">{a.l}</div>
+              <div className="rc-dot"></div>
+            </div>
+            <div className="rc-desc">{a.desc}</div>
+          </label>
+        ))}
+      </div>
+
+      <div className="dec-sub">Personalizzazioni</div>
+      <div className="check-cards">
+        {CUSTOMIZATIONS.map(c => (
+          <label key={c.v} className="check-card">
+            <input type="checkbox" checked={item.customizations.includes(c.v)}
+              onChange={e => {
+                const arr = item.customizations;
+                onChange('customizations', e.target.checked ? [...arr, c.v] : arr.filter(x => x !== c.v));
+              }} />
+            <div>
+              <div className="cc-title">{c.l}</div>
+              <div className="cc-desc">{c.desc}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+
+      {/* ── 2. Persone & Trasparenza ── */}
+      <div className="dec-title">Persone &amp; Trasparenza</div>
+
       <div className="dec-sub">Utenti Target</div>
       <div className="check-list">
         {TARGET_USERS.map(u => (
@@ -105,7 +212,35 @@ function DecisionFields({ item, onChange }: {
           </label>
         ))}
       </div>
+
+      <div className="dec-sub">Soggetti Vulnerabili Coinvolti</div>
+      <div className="check-list cl-2col">
+        {VULNERABLE_GROUPS.map(g => (
+          <label key={g.v} className="check-row">
+            <input type="checkbox" checked={item.vulnerable_groups.includes(g.v)}
+              onChange={e => {
+                const arr = item.vulnerable_groups;
+                onChange('vulnerable_groups', e.target.checked ? [...arr, g.v] : arr.filter(x => x !== g.v));
+              }} />
+            <span>{g.l}</span>
+          </label>
+        ))}
+      </div>
+
+      <div className="check-cards" style={{ marginTop: 10 }}>
+        <label className="check-card">
+          <input type="checkbox" checked={item.users_aware_of_ai}
+            onChange={e => onChange('users_aware_of_ai', e.target.checked)} />
+          <div>
+            <div className="cc-title">Gli utenti sono informati che stanno interagendo con un sistema AI</div>
+            <div className="cc-desc">Obbligo di trasparenza — Art. 50 AI Act</div>
+          </div>
+        </label>
+      </div>
+
+      {/* ── 3. Impatto Decisionale ── */}
       <div className="dec-title">Impatto Decisionale</div>
+
       <div className="check-cards">
         <label className="check-card">
           <input type="checkbox" checked={item.makes_automated_decisions}
@@ -115,16 +250,9 @@ function DecisionFields({ item, onChange }: {
             <div className="cc-desc">Assunzione, credito, diagnosi, valutazioni, accesso a servizi</div>
           </div>
         </label>
-        <label className="check-card">
-          <input type="checkbox" checked={item.affects_vulnerable_groups}
-            onChange={e => onChange('affects_vulnerable_groups', e.target.checked)} />
-          <div>
-            <div className="cc-title">Interagisce con soggetti vulnerabili</div>
-            <div className="cc-desc">Minori, anziani, persone con disabilità, in difficoltà economica</div>
-          </div>
-        </label>
       </div>
-      <div className="dec-sub">Supervisione Umana</div>
+
+      <div className="dec-sub">Supervisione Umana (Human-in-the-Loop)</div>
       <div className="radio-grid">
         {(['always', 'sometimes', 'never', 'na'] as const).map(v => (
           <label key={v} className="radio-card">
@@ -137,6 +265,7 @@ function DecisionFields({ item, onChange }: {
           </label>
         ))}
       </div>
+
       <div className="dec-sub">Ambiti di Decisione</div>
       <div className="check-list cl-2col">
         {DECISION_DOMAINS.map(d => (
@@ -150,7 +279,9 @@ function DecisionFields({ item, onChange }: {
           </label>
         ))}
       </div>
-      <div className="dec-sub">Tipologie di Dati</div>
+
+      {/* ── 4. Dati Trattati ── */}
+      <div className="dec-title">Dati Trattati</div>
       <div className="check-list cl-2col">
         {DATA_TYPES.map(d => (
           <label key={d.v} className="check-row">
@@ -163,6 +294,7 @@ function DecisionFields({ item, onChange }: {
           </label>
         ))}
       </div>
+
     </div>
   );
 }
@@ -195,7 +327,7 @@ function SetupContent() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (addMode) return; // skip redirect in add-mode
+    if (addMode) return;
     api.company.get().then((c) => {
       if ((c as { setup_completed?: boolean }).setup_completed) router.replace('/dashboard/inventory');
     }).catch(() => {});
@@ -211,7 +343,9 @@ function SetupContent() {
           ...d, [llm.id]: {
             id: llm.id, label: llm.label, vendor: llm.vendor,
             custom_name: '', purpose: '',
-            target_users: [],
+            output_type: '', access_mode: '',
+            customizations: [], users_aware_of_ai: false,
+            target_users: [], vulnerable_groups: [],
             makes_automated_decisions: false, human_oversight_level: 'na',
             decision_domains: [], affects_vulnerable_groups: false, data_types: [],
           }
@@ -239,7 +373,6 @@ function SetupContent() {
     try {
       const aiRole = isProvider && isDeployer ? 'both' : isProvider ? 'provider' : isDeployer ? 'deployer' : 'unknown';
 
-      // Build systems list
       const systems: Record<string, unknown>[] = [];
 
       // LLM entries
@@ -250,9 +383,14 @@ function SetupContent() {
         systems.push({
           tool_name: name, vendor: l.vendor || l.label,
           category: 'llm', role: 'deployer', purpose: l.purpose || `Uso di ${name}`,
-          target_users: l.target_users, makes_automated_decisions: l.makes_automated_decisions,
+          output_type: l.output_type, access_mode: l.access_mode,
+          customizations: l.customizations, users_aware_of_ai: l.users_aware_of_ai,
+          target_users: l.target_users,
+          vulnerable_groups: l.vulnerable_groups,
+          affects_vulnerable_groups: l.vulnerable_groups.length > 0,
+          makes_automated_decisions: l.makes_automated_decisions,
           human_oversight_level: l.human_oversight_level,
-          decision_domains: l.decision_domains, affects_vulnerable_groups: l.affects_vulnerable_groups,
+          decision_domains: l.decision_domains,
           data_types: l.data_types,
         });
       }
@@ -260,13 +398,21 @@ function SetupContent() {
       // Specialized deployer tools
       for (const s of specializedTools) {
         if (!s.tool_name.trim()) continue;
-        systems.push({ ...s, role: 'deployer', target_users: [] });
+        systems.push({
+          ...s,
+          role: 'deployer',
+          affects_vulnerable_groups: s.vulnerable_groups.length > 0,
+        });
       }
 
       // Provider systems
       for (const s of providerSystems) {
         if (!s.tool_name.trim()) continue;
-        systems.push({ ...s, role: 'provider', target_users: [] });
+        systems.push({
+          ...s,
+          role: 'provider',
+          affects_vulnerable_groups: s.vulnerable_groups.length > 0,
+        });
       }
 
       for (const sys of systems) {
@@ -380,7 +526,7 @@ function SetupContent() {
                                 placeholder={`Come usi ${l.label} nella tua organizzazione? Chi ne fa uso?`}
                                 onChange={e => updateLlm(id, 'purpose', e.target.value)} />
                             </div>
-                            <DecisionFields item={l} onChange={(f, v) => updateLlm(id, f, v)} />
+                            <SystemFields item={l} onChange={(f, v) => updateLlm(id, f, v)} />
                           </div>
                         );
                       })}
@@ -423,7 +569,7 @@ function SetupContent() {
                           placeholder="A cosa serve nella tua azienda? Chi lo usa? Quali decisioni supporta?"
                           onChange={e => updateSpecialized(idx, 'purpose', e.target.value)} />
                       </div>
-                      <DecisionFields item={s} onChange={(f, v) => updateSpecialized(idx, f, v)} />
+                      <SystemFields item={s} onChange={(f, v) => updateSpecialized(idx, f, v)} />
                     </div>
                   ))}
                   <button className="btn-add" onClick={() => setSpecializedTools(prev => [...prev, emptySpecialized()])}>
@@ -470,7 +616,7 @@ function SetupContent() {
                       <textarea rows={2} value={s.purpose} placeholder="Cosa fa il sistema? A chi è destinato?"
                         onChange={e => updateProvider(idx, 'purpose', e.target.value)} />
                     </div>
-                    <DecisionFields item={s} onChange={(f, v) => updateProvider(idx, f, v)} />
+                    <SystemFields item={s} onChange={(f, v) => updateProvider(idx, f, v)} />
                   </div>
                 ))}
                 <button className="btn-add" onClick={() => setProviderSystems(prev => [...prev, emptyProvider()])}>

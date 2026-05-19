@@ -7,6 +7,7 @@ import type {
 } from "../types/reportOutput";
 import type { IntakePayload } from "../types/intake";
 import { logoSvg, markSvg } from "./branding";
+import { computeSanctionsReport, formatEur } from "./sanctionsService";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -391,20 +392,66 @@ ${itemsHtml}
 </div>`;
 }
 
-function renderFinancialExposureTeaser(): string {
+function renderSanctionsSection(payload: IntakePayload): string {
+  const report = computeSanctionsReport(payload);
+  const { revenue, is_sme, tiers, total_min, total_max, disclaimer } = report;
+
+  const srcLabel: Record<string, string> = {
+    exact:     "Fatturato esatto dichiarato",
+    declared:  "Valore mediano del range dichiarato",
+    estimated: "Stima da dimensione e settore (meno precisa)",
+  };
+  const srcColor: Record<string, string> = {
+    exact: "#16A34A", declared: "#D97706", estimated: "#9CA3AF",
+  };
+
+  const rowsHtml = tiers
+    .map(
+      (t) => `
+    <tr>
+      <td style="padding:10px 12px;border:1px solid #FED7AA;font-size:12px;color:#92400E;background:#FFFBEB;">${escapeHtml(t.label)}</td>
+      <td style="padding:10px 12px;border:1px solid #FED7AA;font-size:12px;color:#374151;text-align:center;">${formatEur(t.cap_absolute)} / ${t.pct_label}</td>
+      <td style="padding:10px 12px;border:1px solid #FED7AA;font-size:12px;font-weight:700;color:#DC2626;text-align:center;">${formatEur(t.estimated_min)} – ${formatEur(t.estimated_max)}${t.is_sme_reduced ? ' <span style="font-size:10px;color:#6B7280;font-weight:400;">(PMI -50%)</span>' : ''}</td>
+    </tr>`
+    )
+    .join("");
+
   return `
 <div style="border:1px solid #FED7AA;border-radius:8px;overflow:hidden;margin:20px 0;">
   <div style="background:#FFF7ED;padding:14px 16px;border-bottom:1px solid #FED7AA;">
-    <div style="font-size:14px;font-weight:700;color:#9A3412;margin-bottom:4px;">&#128178; Valutazione Esposizione Economica</div>
-    <div style="font-size:12px;color:#C2410C;line-height:1.6;">
-      La stima dell&apos;esposizione a potenziali sanzioni economiche previste dall&apos;Art. 99 Reg. UE 2024/1689 richiede dati sul fatturato annuo e il profilo operativo dettagliato dell&apos;azienda.
+    <div style="font-size:15px;font-weight:700;color:#9A3412;margin-bottom:6px;">&#128178; Stima Esposizione a Sanzioni — Art. 99 Reg. UE 2024/1689</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+      <div style="font-size:12px;color:#C2410C;">
+        <strong>Fatturato usato:</strong> ${formatEur(revenue.amount)}
+        <span style="margin-left:6px;font-size:10px;font-weight:700;color:${srcColor[revenue.source] ?? "#9CA3AF"};">(${srcLabel[revenue.source] ?? revenue.label})</span>
+      </div>
+      ${is_sme ? '<div style="font-size:11px;color:#92400E;background:#FEF3C7;padding:3px 8px;border-radius:10px;border:1px solid #FDE68A;">&#9660; PMI — Art. 100 riduzione 50%</div>' : ""}
     </div>
   </div>
-  <div style="background:linear-gradient(135deg,#FFF7ED,#FEF3C7);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-    <div style="font-size:11px;color:#92400E;">
-      <strong>&#128274; Disponibile in Actify Pro</strong> &mdash; Stima personalizzata basata su fatturato e numero di sistemi AI
-    </div>
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#D97706;white-space:nowrap;">Pro Feature</div>
+
+  <!-- Tier table -->
+  <div style="padding:0;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="padding:8px 12px;background:#FFF7ED;border:1px solid #FED7AA;text-align:left;font-size:11px;color:#92400E;font-weight:700;">Categoria sanzionatoria</th>
+          <th style="padding:8px 12px;background:#FFF7ED;border:1px solid #FED7AA;text-align:center;font-size:11px;color:#92400E;font-weight:700;">Massimale Art. 99</th>
+          <th style="padding:8px 12px;background:#FFF7ED;border:1px solid #FED7AA;text-align:center;font-size:11px;color:#92400E;font-weight:700;">Stima per la tua azienda</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" style="padding:10px 12px;border:1px solid #FED7AA;font-size:13px;font-weight:700;color:#111827;background:#FEF2F2;">Esposizione totale stimata (cumulata)</td>
+          <td style="padding:10px 12px;border:1px solid #FED7AA;font-size:14px;font-weight:800;color:#DC2626;text-align:center;background:#FEF2F2;">${formatEur(total_min)} – ${formatEur(total_max)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Disclaimer -->
+  <div style="padding:10px 16px;background:#FFFBEB;border-top:1px solid #FDE68A;font-size:10px;color:#78350F;line-height:1.6;">
+    &#9888; <em>${escapeHtml(disclaimer)}</em>
   </div>
 </div>`;
 }
@@ -438,7 +485,7 @@ function renderAssessmentMetadata(companyName: string, generatedDate: string): s
 
 export function render(
   output: BedrockReportOutput,
-  payload: IntakePayload
+  payload: IntakePayload,
 ): string {
   const { company } = payload;
   const generatedDate = new Date().toLocaleDateString("it-IT", {
@@ -598,8 +645,8 @@ ${
 <!-- ─── RECOMMENDED DOCUMENTS ─── -->
 ${renderRecommendedDocs(output.recommended_documents)}
 
-<!-- ─── FINANCIAL EXPOSURE TEASER ─── -->
-${renderFinancialExposureTeaser()}
+<!-- ─── SANZIONI ART. 99 ─── -->
+${renderSanctionsSection(payload)}
 
 <!-- ─── CALL TO ACTION ─── -->
 <div style="background:linear-gradient(135deg,#0F172A,#1E293B);border:1px solid #22C55E;border-radius:12px;padding:36px 28px;margin:28px 0;text-align:center;">

@@ -14,7 +14,9 @@ const SECTORS = [
   'Sanità / Life Sciences', 'Istruzione / EdTech', 'Manifatturiero / Industria',
   'Tecnologia / SaaS', 'Retail / E-commerce', 'Pubblica Amministrazione',
   'Legale / Compliance', 'Marketing / Media', 'Logistica / Supply Chain',
-  'Energia / Utilities', 'Altro',
+  'Energia / Utilities', 'Immobiliare / PropTech', 'Trasporti / Mobilità',
+  'Costruzioni / Edilizia', 'Turismo / Hospitality', 'Telecomunicazioni',
+  'Agricoltura / Agritech', 'Altro - specifica',
 ];
 
 const SIZES = [
@@ -31,6 +33,7 @@ export default function RegisterPage() {
     company_name: '', email: '', password: '', confirm: '',
     sector: '', employees_range: '', country: 'Italia',
   });
+  const [sectorCustom, setSectorCustom] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,6 +46,9 @@ export default function RegisterPage() {
     setError('');
     if (form.password !== form.confirm) { setError('Le password non coincidono.'); return; }
     if (form.password.length < 8) { setError('La password deve avere almeno 8 caratteri.'); return; }
+    if (form.sector === 'Altro - specifica' && !sectorCustom.trim()) {
+      setError('Specifica il tuo settore nel campo di testo.'); return;
+    }
 
     setLoading(true);
     try {
@@ -50,7 +56,7 @@ export default function RegisterPage() {
         email:           form.email,
         password:        form.password,
         company_name:    form.company_name,
-        sector:          form.sector,
+        sector:          form.sector === 'Altro - specifica' ? sectorCustom.trim() : form.sector,
         employees_range: form.employees_range,
         country:         form.country,
       });
@@ -91,6 +97,16 @@ export default function RegisterPage() {
                 <option value="">— Seleziona —</option>
                 {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
+              {form.sector === 'Altro - specifica' && (
+                <input
+                  type="text"
+                  style={{ marginTop: 8 }}
+                  value={sectorCustom}
+                  onChange={e => setSectorCustom(e.target.value)}
+                  placeholder="Es. Agroalimentare, Moda, Sport..."
+                  required
+                />
+              )}
             </div>
             <div className="field">
               <label>Dimensione *</label>

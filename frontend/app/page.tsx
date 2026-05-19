@@ -387,10 +387,18 @@ export default function Page() {
                 <label>Nome Azienda *</label>
                 <input type="text" id="companyName" placeholder="Es. Acme S.r.l." />
               </div>
+              <div className="field">
+                <label>Email per ricevere il report *</label>
+                <input type="email" id="contactEmail" placeholder="mario@azienda.it (preferibilmente aziendale)" autoComplete="email" />
+                <div className="locked-note" style={{marginTop:6}}>Il PDF del report verrà inviato a questo indirizzo. Nessun account richiesto.</div>
+              </div>
               <div className="field-row">
                 <div className="field">
                   <label>Settore *</label>
-                  <select id="companySector">
+                  <select id="companySector" onChange={e => {
+                    const el = document.getElementById('companySectorCustom') as HTMLElement | null;
+                    if (el) el.style.display = e.target.value === 'Altro - specifica' ? 'block' : 'none';
+                  }}>
                     <option value="">&#8212; Seleziona settore &#8212;</option>
                     <option>Risorse Umane / Recruiting</option>
                     <option>Servizi Finanziari / Banca</option>
@@ -405,8 +413,20 @@ export default function Page() {
                     <option>Marketing / Media</option>
                     <option>Logistica / Supply Chain</option>
                     <option>Energia / Utilities</option>
-                    <option>Altro</option>
+                    <option>Immobiliare / PropTech</option>
+                    <option>Trasporti / Mobilit&agrave;</option>
+                    <option>Costruzioni / Edilizia</option>
+                    <option>Turismo / Hospitality</option>
+                    <option>Telecomunicazioni</option>
+                    <option>Agricoltura / Agritech</option>
+                    <option>Altro - specifica</option>
                   </select>
+                  <input
+                    type="text"
+                    id="companySectorCustom"
+                    style={{ display: 'none', marginTop: 8 }}
+                    placeholder="Es. Agroalimentare, Moda, Sport&hellip;"
+                  />
                 </div>
                 <div className="field">
                   <label>Dimensione *</label>
@@ -431,11 +451,41 @@ export default function Page() {
                   </select>
                 </div>
                 <div className="field">
-                  <label>Range Fatturato <span className="locked-badge">&#128274; Premium</span></label>
-                  <select className="locked-select" disabled>
-                    <option>&#8212; disponibile nella versione a pagamento &#8212;</option>
+                  <label>Fatturato annuo (opzionale)</label>
+                  <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                    <input
+                      type="number"
+                      id="revenueExact"
+                      placeholder="Es. 4500000"
+                      min="0"
+                      style={{flex:1}}
+                      onChange={e => {
+                        const rangeEl = document.getElementById('revenueRange') as HTMLSelectElement | null;
+                        if (rangeEl) rangeEl.disabled = !!e.target.value;
+                        if (rangeEl) rangeEl.style.opacity = e.target.value ? '0.45' : '1';
+                      }}
+                    />
+                    <span style={{fontSize:12,color:'var(--dim)',whiteSpace:'nowrap'}}>EUR / anno</span>
+                  </div>
+                  <select
+                    id="revenueRange"
+                    style={{marginTop:8}}
+                  >
+                    <option value="">&#8212; Oppure seleziona un range &#8212;</option>
+                    <option value="under_100k">Meno di &euro;100K</option>
+                    <option value="100k_500k">&euro;100K &ndash; &euro;500K</option>
+                    <option value="500k_1m">&euro;500K &ndash; &euro;1M</option>
+                    <option value="1m_3m">&euro;1M &ndash; &euro;3M</option>
+                    <option value="3m_10m">&euro;3M &ndash; &euro;10M</option>
+                    <option value="10m_30m">&euro;10M &ndash; &euro;30M</option>
+                    <option value="30m_100m">&euro;30M &ndash; &euro;100M</option>
+                    <option value="100m_500m">&euro;100M &ndash; &euro;500M</option>
+                    <option value="500m_1b">&euro;500M &ndash; &euro;1B</option>
+                    <option value="over_1b">Oltre &euro;1B</option>
                   </select>
-                  <div className="locked-note">Questa feature &egrave; abilitata nella versione a pagamento per permetterci di fare una stima delle sanzioni economiche in cui potresti incorrere.</div>
+                  <div className="locked-note" style={{marginTop:6}}>
+                    Usato esclusivamente per stimare le sanzioni economiche Art. 99 AI Act nel report. Il fatturato esatto ha priorità sul range. Nessun dato condiviso con terze parti.
+                  </div>
                 </div>
               </div>
             </div>
@@ -599,12 +649,10 @@ export default function Page() {
       <div id="success">
         <div className="sc-card">
           <div className="sc-icon"><span dangerouslySetInnerHTML={{ __html: markSvg(68) }} /></div>
-          <h2>Report Pronto!</h2>
-          <p>Il tuo report di compliance AI Act &egrave; stato generato. Il link di download &egrave; valido per 15 minuti.</p>
-          <a className="btn-dl" id="downloadBtn" href="#" target="_blank">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 7l4 4 4-4M2 13h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Scarica Report PDF
-          </a>
+          <h2>Report in Arrivo!</h2>
+          <p>Il tuo report di compliance AI Act &egrave; stato generato e inviato via email a:</p>
+          <div id="successEmail" style={{fontWeight:700,fontSize:18,color:'var(--green)',margin:'12px 0',letterSpacing:'-0.3px'}}></div>
+          <p style={{fontSize:13,color:'var(--muted)'}}>Controlla la tua casella (e la cartella spam). Il link nel report &egrave; valido per <strong>24 ore</strong>.</p>
           <button className="btn-restart" onClick={w('doRestart')}>Esegui un nuovo assessment</button>
         </div>
       </div>

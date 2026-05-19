@@ -4,6 +4,18 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { getAuthClaims } from '@/lib/auth';
 
+const SECTORS = [
+  'Risorse Umane / Recruiting', 'Servizi Finanziari / Banca', 'Assicurazioni',
+  'Sanità / Life Sciences', 'Istruzione / EdTech', 'Manifatturiero / Industria',
+  'Tecnologia / SaaS', 'Retail / E-commerce', 'Pubblica Amministrazione',
+  'Legale / Compliance', 'Marketing / Media', 'Logistica / Supply Chain',
+  'Energia / Utilities', 'Immobiliare / PropTech', 'Trasporti / Mobilità',
+  'Costruzioni / Edilizia', 'Turismo / Hospitality', 'Telecomunicazioni',
+  'Agricoltura / Agritech', 'Altro - specifica',
+];
+
+const PREDEFINED = SECTORS.filter(s => s !== 'Altro - specifica');
+
 interface CompanyUser {
   user_id: string; email: string; role: 'admin' | 'member'; status: string; joined_at: string | null;
 }
@@ -22,6 +34,10 @@ export default function SettingsPage() {
   const [revenueExact, setRevenueExact] = useState('');
   const [savingRevenue, setSavingRevenue] = useState(false);
   const [revenueMsg, setRevenueMsg] = useState('');
+  const [sector, setSector] = useState('');
+  const [sectorCustom, setSectorCustom] = useState('');
+  const [savingSector, setSavingSector] = useState(false);
+  const [sectorMsg, setSectorMsg] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -37,6 +53,13 @@ export default function SettingsPage() {
         setRevenueRange(NEW_RANGES.includes(storedRange) ? storedRange : '');
         const exact = companyData.value.annual_revenue_exact as number | undefined;
         setRevenueExact(exact ? String(exact) : '');
+        const storedSector = (companyData.value.sector as string) ?? '';
+        if (PREDEFINED.includes(storedSector)) {
+          setSector(storedSector);
+        } else if (storedSector) {
+          setSector('Altro - specifica');
+          setSectorCustom(storedSector);
+        }
       }
       if (usersData.status === 'fulfilled') setUsers(usersData.value as CompanyUser[]);
       if (claims.status === 'fulfilled' && claims.value) {
@@ -47,6 +70,26 @@ export default function SettingsPage() {
     }
     load();
   }, []);
+
+  async function handleSaveSector() {
+    if (sector === 'Altro - specifica' && !sectorCustom.trim()) {
+      setSectorMsg('✗ Specifica il settore nel campo di testo.');
+      return;
+    }
+    if (!sector) { setSectorMsg('✗ Seleziona un settore.'); return; }
+    setSavingSector(true);
+    setSectorMsg('');
+    try {
+      const value = sector === 'Altro - specifica' ? sectorCustom.trim() : sector;
+      await api.company.update({ sector: value });
+      setCompany(prev => prev ? { ...prev, sector: value } : prev);
+      setSectorMsg('✓ Settore aggiornato.');
+    } catch (err: unknown) {
+      setSectorMsg(`✗ ${(err as { message?: string }).message ?? 'Errore'}`);
+    } finally {
+      setSavingSector(false);
+    }
+  }
 
   async function handleSaveRevenue() {
     setSavingRevenue(true);
@@ -113,7 +156,44 @@ export default function SettingsPage() {
           <h3>Profilo Azienda</h3>
           <div className="settings-grid">
             <div className="rev-row"><span className="rk">Nome</span><span className="rv">{company.name as string}</span></div>
-            <div className="rev-row"><span className="rk">Settore</span><span className="rv">{company.sector as string}</span></div>
+            <div className="rev-row">
+              <span className="rk">Settore</span>
+              <span className="rv">
+                <select
+                  className="settings-select"
+                  style={{ minWidth: 220 }}
+                  value={sector}
+                  onChange={e => { setSector(e.target.value); setSectorMsg(''); }}
+                >
+                  <option value="">— Seleziona —</option>
+                  {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {sector === 'Altro - specifica' && (
+                  <input
+                    type="text"
+                    className="settings-input"
+                    style={{ marginTop: 8, display: 'block' }}
+                    value={sectorCustom}
+                    onChange={e => setSectorCustom(e.target.value)}
+                    placeholder="Es. Agroalimentare, Moda, Sport..."
+                  />
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                  <button
+                    className="btn-save-small"
+                    onClick={handleSaveSector}
+                    disabled={savingSector}
+                  >
+                    {savingSector ? 'Salvataggio…' : 'Aggiorna settore'}
+                  </button>
+                  {sectorMsg && (
+                    <span style={{ fontSize: 12, color: sectorMsg.startsWith('✓') ? 'var(--green)' : 'var(--red)' }}>
+                      {sectorMsg}
+                    </span>
+                  )}
+                </div>
+              </span>
+            </div>
             <div className="rev-row"><span className="rk">Dipendenti</span><span className="rv">{company.employees_range as string}</span></div>
             <div className="rev-row"><span className="rk">Sede Legale</span><span className="rv">{company.sede_legale as string}</span></div>
             <div className="rev-row"><span className="rk">Ruolo AI Act</span><span className="rv">{company.ai_role as string}</span></div>

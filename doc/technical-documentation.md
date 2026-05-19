@@ -705,6 +705,170 @@ actify-iac/
 
 ---
 
+## Release 1 — Free Assessment Tool (lambda-pdf)
+
+La Release 1 espone un assessment gratuito pubblico (no auth) che genera un report PDF personalizzato e lo recapita via email. È un layer di lead generation separato dall'infrastruttura SaaS Release 2.
+
+### Architettura
+
+```
+Browser (wizard.js)
+  │  POST /api/report/generate  { contact_email, company, ai_role, ai_tools, ... }
+  ▼
+API Gateway HTTP API  (stessa API di Release 2, route pubblica — no JWT)
+  ▼
+Lambda  actify-saas-pdf-generator
+  ├─ 1. Rate limit in-memory (5 req / 15 min per IP)
+  ├─ 2. Validazione Zod (intake payload)
+  ├─ 3. Bedrock Nova Pro  →  analisi conformità + stime sanzioni
+  ├─ 4. HTML template  →  render report con sezione Art. 99
+  ├─ 5. Puppeteer/Chromium  →  PDF buffer
+  ├─ 6. S3 PutObject (reports-temp)  →  presigned GET URL (TTL 24h)
+  ├─ 7. SES SendEmail  →  email con link PDF a contact_email
+  └─ 8. S3 PutObject (datalake)  →  bronze/prospects + company-reports (non-fatal)
+  ▼
+Risposta al browser: { success: true, email: "m***@domain.it" }
+(nessun download_url esposto al frontend)
+```
+
+### AWS Lambda — actify-saas-pdf-generator
+
+| Proprietà | Valore |
+|-----------|--------|
+| Nome | `actify-saas-pdf-generator` |
+| Runtime | Node.js 20.x |
+| Handler | `dist/handler.handler` |
+| Memory | 1024 MB |
+| Timeout | 30 s |
+| Bundle | `dist/function.zip` (~82 MB — Puppeteer/Chromium incluso) |
+| Deploy | S3 staging: `actify-saas-reports-temp/deploy/function.zip` |
+
+**Variabili d'ambiente:**
+
+| Variabile | Valore / Scopo |
+|-----------|----------------|
+| `S3_BUCKET` | `actify-saas-reports-temp` — bucket temp per presigned URL |
+| `PRESIGNED_URL_TTL` | `86400` (24h — link inviato via email) |
+| `DATALAKE_BUCKET` | `actify-saas-datalake` |
+| `BEDROCK_MODEL_ID` | `eu.amazon.nova-pro-v1:0` |
+| `BEDROCK_REGION` | `eu-central-1` |
+| `BEDROCK_MAX_TOKENS` | `5120` |
+| `BEDROCK_TEMPERATURE` | `0` |
+| `SES_SENDER_EMAIL` | `noreply@official-actify.com` |
+| `RATE_LIMIT_MAX` | `5` |
+| `RATE_LIMIT_WINDOW` | `900` (15 min) |
+| `LOG_LEVEL` | `info` |
+
+**Struttura interna (TypeScript):**
+
+```
+lambda-pdf/
+├── handler.ts                    # Orchestratore: rate limit → validate → bedrock → pdf → s3 → ses → datalake
+├── middleware/
+│   ├── rateLimiter.ts            # In-memory sliding window per IP
+│   └── validator.ts              # Zod schema intake payload (contact_email, revenue, ecc.)
+├── services/
+│   ├── bedrockService.ts         # analyze(payload) → BedrockOutput (structured JSON)
+│   ├── htmlTemplate.ts           # render(output, payload) → HTML string con sezione sanzioni
+│   ├── pdfService.ts             # htmlToPdf(html) → Buffer (Puppeteer/Chromium)
+│   ├── s3Service.ts              # uploadReport() → {key, presigned_url}; writeToDatalake()
+│   ├── sesService.ts             # sendReportEmail(to, company, url, ttlHours); maskEmail()
+│   ├── sanctionsService.ts       # computeSanctionsReport(payload) → SanctionsReport
+│   └── formHtml.ts               # HTML statico del form GET /
+└── types/
+    └── intake.ts                 # IntakePayload, CompanyData, AiToolEntry
+```
+
+### Amazon SES — Invio email report
+
+Il PDF non viene mai esposto come download diretto al frontend. La Lambda firma un presigned URL S3 valido 24h e lo recapita via SES all'email inserita nel form.
+
+| Proprietà | Valore |
+|-----------|--------|
+| Mittente | `noreply@official-actify.com` |
+| Oggetto | `Il tuo report AI Act è pronto — <NomeAzienda>` |
+| Formato | HTML + text/plain fallback |
+| CTA | Pulsante "Scarica il tuo Report PDF" (link presigned URL) |
+| Scadenza link | 24h (TTL indicato nell'email) |
+
+> ⚠ **TODO produzione:** verificare il dominio `official-actify.com` nella console AWS SES (eu-central-1) prima del go-live. SES opera in sandbox fino alla verifica — in sandbox solo i destinatari esplicitamente verificati ricevono le email.
+
+**Permessi IAM aggiunti (`terraform/release-1/iam.tf`):**
+
+```hcl
+statement {
+  sid    = "AllowSESSendEmail"
+  effect = "Allow"
+  actions = ["ses:SendEmail", "ses:SendRawEmail"]
+  resources = [
+    "arn:aws:ses:eu-central-1:<account_id>:identity/official-actify.com"
+  ]
+}
+```
+
+### Campi Form — Step 1 (free assessment)
+
+| Campo | ID HTML | Tipo | Obbligatorio | Note |
+|-------|---------|------|--------------|------|
+| Nome azienda | `companyName` | text | Sì | |
+| Email | `contactEmail` | email | Sì | Destinatario PDF — preferibilmente aziendale |
+| Settore | `companySector` | select | Sì | Include "Altro - specifica" con campo libero |
+| Dipendenti | `companySize` | select | Sì | Usato per stima Art. 100 PMI |
+| Sede legale | `companySede` | select | Sì | |
+| Fatturato esatto | `revenueExact` | number | No | Se compilato, disabilita il range |
+| Fatturato range | `revenueRange` | select | No | 10 fasce, disabilitato se esatto compilato |
+
+Il fatturato è usato esclusivamente per stimare le sanzioni Art. 99 nel PDF. Non viene mai incluso nel payload visibile all'utente.
+
+### Stime Sanzioni Art. 99 (sanctionsService.ts)
+
+Stesso motore del Release 2 (`lambda-api/services/sanctions.ts`) ma adattato al payload intake del form gratuito.
+
+**Gerarchia fonte fatturato:**
+
+| Priorità | Fonte | Min factor | Affidabilità |
+|----------|-------|-----------|--------------|
+| 1 | `annual_revenue_exact` (dichiarato) | 0.50 | Alta |
+| 2 | `annual_revenue_range` midpoint | 0.30 | Media |
+| 3 | Stima da dipendenti × settore | 0.08 | Bassa |
+
+Il PDF mostra la fonte usata e un disclaimer sulla precisione della stima.
+
+### Risposta API (nuovo formato)
+
+```json
+{ "success": true, "email": "m***@domain.it", "message": "Report inviato via email." }
+```
+
+Il frontend popola `#successEmail` con `data.email` e mostra la schermata di conferma. Non c'è mai un `download_url` esposto.
+
+### Deploy lambda-pdf
+
+```bash
+cd lambda-pdf
+npm install
+npm run build          # tsc + bundle → dist/function.zip (~82 MB)
+
+# Upload via S3 (direct upload bloccato sopra 70 MB)
+aws s3 cp dist/function.zip s3://actify-saas-reports-temp/deploy/function.zip --region eu-central-1
+
+aws lambda update-function-code \
+  --function-name actify-saas-pdf-generator \
+  --s3-bucket actify-saas-reports-temp \
+  --s3-key deploy/function.zip \
+  --region eu-central-1
+```
+
+### Log
+
+```bash
+aws logs tail /aws/lambda/actify-saas-pdf-generator --follow --region eu-central-1
+```
+
+Campi log strutturati (JSON): `level`, `msg`, `ts` + campi contestuali (`sector`, `risk_level`, `s3_key`, `masked` email, ecc.). Nessun PII.
+
+---
+
 ## Costi stimati (produzione leggera)
 
 | Servizio | Ipotesi | Costo stimato/mese |

@@ -11,12 +11,15 @@ const aiToolSchema = z.object({
 });
 
 export const intakePayloadSchema = z.object({
+  contact_email: z.string().email("Email non valida").max(254),
   company: z.object({
     name: z.string().min(1).max(200),
     sector: z.string().min(1).max(100),
     employees_range: z.enum(["1-10", "11-50", "51-250", "251-1000", "1000+"]),
     country: z.string().min(1).max(100),
     sede_legale: z.string().max(100).optional(),
+    annual_revenue_exact: z.number().positive().nullable().optional(),
+    annual_revenue_range: z.string().max(50).nullable().optional(),
   }),
   ai_tools: z.array(aiToolSchema).min(1).max(50),
   use_cases: z.array(z.string().max(500)).max(20),

@@ -10,6 +10,9 @@ export interface AITool {
 }
 
 export interface IntakePayload {
+  // Contact email — PDF delivered here instead of direct download
+  contact_email: string;
+
   // Step 1 — Company profile
   company: {
     name: string;
@@ -17,6 +20,8 @@ export interface IntakePayload {
     employees_range: "1-10" | "11-50" | "51-250" | "251-1000" | "1000+";
     country: string;
     sede_legale?: string;
+    annual_revenue_exact?: number | null;   // EUR / anno — fonte più precisa
+    annual_revenue_range?: string | null;   // slug range (es. "3m_10m")
   };
 
   // Step 2 — AI tools (provider + deployer combined)
