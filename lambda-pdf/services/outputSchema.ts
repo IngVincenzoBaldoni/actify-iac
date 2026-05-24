@@ -26,6 +26,8 @@ export const reportOutputSchema = z.object({
         declared_purpose: z.string().min(1),
         risk_classification: riskLevelSchema,
         applicable_articles: z.array(z.string()),
+        // RAG v2: specific articles/annexes that drove this classification
+        legal_basis: z.array(z.string()).optional(),
         rationale_compact: z.string().min(1),
         compliance_status: complianceStatusSchema,
         compliance_deadline: z.string().nullable(),
@@ -79,6 +81,8 @@ export const reportOutputSchema = z.object({
 
   key_findings_from_notes: z.string(),
   report_footer_note: z.string().min(1),
+  // RAG v2: chunk IDs used to assemble normative context — populated by bedrockService, not the LLM
+  context_chunks_used: z.array(z.string()).optional(),
 }) satisfies z.ZodType<BedrockReportOutput>;
 
 export type ReportOutputSchema = z.infer<typeof reportOutputSchema>;
@@ -98,6 +102,7 @@ export const OUTPUT_SCHEMA_TEMPLATE = {
       declared_purpose: "<max 10 parole>",
       risk_classification: "prohibited | high | limited | minimal",
       applicable_articles: ["Art. X", "Annex III cat. Y(z)"],
+      legal_basis: ["<articolo/allegato specifico dal contesto normativo recuperato che giustifica questa classificazione — es: 'Art. 6(2)', 'Allegato III cat. 4(a)', 'Art. 5(g)'>"],
       rationale_compact: "<max 20 parole — causa specifica del rischio>",
       compliance_status: "compliant | non_compliant | monitoring_needed | unknown",
       compliance_deadline: "YYYY-MM-DD | null",

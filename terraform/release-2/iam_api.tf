@@ -59,9 +59,9 @@ data "aws_iam_policy_document" "api_permissions" {
     resources = [aws_cognito_user_pool.actify.arn]
   }
 
-  # Bedrock — invoke Nova Pro for compliance check
+  # Bedrock — Nova Pro (LLM) + Titan Embed V2 (RAG embeddings)
   statement {
-    sid    = "AllowBedrockNovaProInvoke"
+    sid    = "AllowBedrockInvoke"
     effect = "Allow"
     actions = ["bedrock:InvokeModel"]
     resources = [
@@ -72,6 +72,24 @@ data "aws_iam_policy_document" "api_permissions" {
       "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0",
       "arn:aws:bedrock:us-west-2::foundation-model/amazon.nova-pro-v1:0",
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-pro-v1:0",
+      # Titan Text Embeddings V2 — for RAG query vectorisation
+      "arn:aws:bedrock:eu-central-1::foundation-model/amazon.titan-embed-text-v2:0",
+      "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0",
+    ]
+  }
+
+  # S3 Vectors — read-only access to the AI Act knowledge base (RAG)
+  statement {
+    sid    = "AllowS3VectorsRAGRead"
+    effect = "Allow"
+    actions = [
+      "s3vectors:QueryVectors",
+      "s3vectors:GetVectors",
+      "s3vectors:ListVectors",
+    ]
+    resources = [
+      "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/${local.s3_vectors_bucket_name}",
+      "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/${local.s3_vectors_bucket_name}/*",
     ]
   }
 

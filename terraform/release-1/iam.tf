@@ -73,7 +73,7 @@ data "aws_iam_policy_document" "lambda_permissions" {
     resources = ["*"]
   }
 
-  # Bedrock — invoke Nova Pro
+  # Bedrock — invoke Nova Pro (LLM) + Titan Embeddings V2 (RAG)
   # Covers: direct invocation in eu-central-1 + EU cross-region inference profile
   # (eu.amazon.nova-pro-v1:0 routes across eu-central-1, eu-west-1, eu-west-3)
   statement {
@@ -86,7 +86,7 @@ data "aws_iam_policy_document" "lambda_permissions" {
     ]
 
     resources = [
-      # Foundation model in EU and US regions (cross-region inference may route there)
+      # Nova Pro — LLM for assessment generation
       "arn:aws:bedrock:eu-central-1::foundation-model/amazon.nova-pro-v1:0",
       "arn:aws:bedrock:eu-west-1::foundation-model/amazon.nova-pro-v1:0",
       "arn:aws:bedrock:eu-west-3::foundation-model/amazon.nova-pro-v1:0",
@@ -95,6 +95,27 @@ data "aws_iam_policy_document" "lambda_permissions" {
       "arn:aws:bedrock:us-west-2::foundation-model/amazon.nova-pro-v1:0",
       # EU cross-region inference profile (account-scoped, system-defined by AWS)
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-pro-v1:0",
+      # Titan Text Embeddings V2 — used by RAG for query embedding
+      "arn:aws:bedrock:eu-central-1::foundation-model/amazon.titan-embed-text-v2:0",
+      "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0",
+    ]
+  }
+
+  # S3 Vectors — query and read vectors for RAG retrieval
+  # ARN pattern: arn:aws:s3vectors:<region>:<account>:bucket/<bucket-name>/index/<index>
+  statement {
+    sid    = "AllowS3VectorsRAGRead"
+    effect = "Allow"
+
+    actions = [
+      "s3vectors:QueryVectors",
+      "s3vectors:GetVectors",
+      "s3vectors:ListVectors",
+    ]
+
+    resources = [
+      "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/${local.s3_vectors_bucket_name}",
+      "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/${local.s3_vectors_bucket_name}/*",
     ]
   }
 }

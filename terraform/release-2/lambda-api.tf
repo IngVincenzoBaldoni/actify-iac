@@ -42,6 +42,17 @@ resource "aws_lambda_function" "saas_api" {
       BEDROCK_REGION             = var.aws_region
       LAMBDA_SELF_ARN            = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_api_name}"
       ENV                        = var.environment
+
+      # RAG — S3 Vectors knowledge base (shared with release-1)
+      S3_VECTORS_BUCKET     = local.s3_vectors_bucket_name
+      S3_VECTORS_INDEX      = "ai-act-it"
+      S3_VECTORS_REGION     = var.aws_region
+      EMBEDDING_MODEL_ID    = "amazon.titan-embed-text-v2:0"
+      EMBEDDING_REGION      = var.aws_region
+      TOP_K                 = "5"
+      MAX_CHUNKS            = "20"
+      SIMILARITY_THRESHOLD  = "0.72"
+      RAG_ENABLED           = "true"
     }
   }
 

@@ -367,28 +367,56 @@ function renderScoreBreakdown(breakdown: ScoreBreakdown): string {
 </div>`;
 }
 
+function docMeta(docName: string): { articles: string[]; automatable: boolean } {
+  const n = docName.toLowerCase();
+  if (n.includes("inventario") || n.includes("registro"))
+    return { articles: ["Art. 49", "Art. 17"], automatable: true };
+  if (n.includes("trasparenza") || n.includes("transparency") || n.includes("disclosure") || n.includes("notice"))
+    return { articles: ["Art. 50", "Art. 13"], automatable: true };
+  if (n.includes("tecnica") || n.includes("technical"))
+    return { articles: ["Art. 11", "Art. 13"], automatable: true };
+  if (n.includes("monitoraggio") || n.includes("monitoring") || n.includes("post-market"))
+    return { articles: ["Art. 9", "Art. 72"], automatable: true };
+  if (n.includes("policy") || n.includes("politica") || n.includes("utilizzo"))
+    return { articles: ["Art. 29", "Art. 28"], automatable: false };
+  if (n.includes("impatto") || n.includes("fria") || n.includes("valutazione"))
+    return { articles: ["Art. 9", "Art. 27"], automatable: false };
+  if (n.includes("governance") || n.includes("responsabil"))
+    return { articles: ["Art. 16", "Art. 29"], automatable: false };
+  return { articles: ["Reg. UE 2024/1689"], automatable: false };
+}
+
 function renderRecommendedDocs(docs: string[]): string {
   if (!docs || docs.length === 0) return "";
   const itemsHtml = docs
-    .map(
-      (doc) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #E5E7EB;border-radius:6px;margin-bottom:7px;background:#F9FAFB;">
-      <span style="color:#22C55E;font-size:14px;flex-shrink:0;">&#128196;</span>
-      <span style="font-size:13px;color:#111827;">${escapeHtml(doc)}</span>
-    </div>`
-    )
+    .map((doc) => {
+      const { articles, automatable } = docMeta(doc);
+      const articlesHtml = articles
+        .map((a) => `<span style="display:inline-block;background:#E5E7EB;border-radius:3px;padding:1px 5px;font-size:10px;margin-right:3px;color:#374151;">${escapeHtml(a)}</span>`)
+        .join("");
+      const autoLabel = automatable
+        ? `<span style="display:inline-block;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;color:#166534;">&#10003; Automatizzabile con Actify</span>`
+        : `<span style="display:inline-block;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;color:#6B7280;">&#9888; Non automatizzabile</span>`;
+      return `
+    <div style="border:1px solid #E5E7EB;border-radius:6px;padding:10px 14px;margin-bottom:8px;background:#F9FAFB;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:5px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#22C55E;font-size:14px;flex-shrink:0;">&#128196;</span>
+          <span style="font-size:13px;font-weight:600;color:#111827;">${escapeHtml(doc)}</span>
+        </div>
+        ${autoLabel}
+      </div>
+      <div style="margin-left:22px;">${articlesHtml}</div>
+    </div>`;
+    })
     .join("");
 
   return `
 <h2>Documenti di Compliance Raccomandati</h2>
-<p style="font-size:12px;color:#6B7280;margin-bottom:12px;">In base ai sistemi AI dichiarati e al profilo aziendale, potrebbero essere necessari i seguenti documenti per la conformità all&apos;AI Act:</p>
+<p style="font-size:12px;color:#6B7280;margin-bottom:12px;">In base ai sistemi AI dichiarati e al profilo aziendale, i seguenti documenti sono necessari per la conformit&agrave; all&apos;AI Act. I documenti marcati <strong style="color:#166534;">Automatizzabile con Actify</strong> potranno essere generati direttamente dalla piattaforma.</p>
 ${itemsHtml}
-<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:14px 16px;margin-top:4px;display:flex;align-items:center;gap:12px;">
-  <span style="font-size:18px;">&#128274;</span>
-  <div>
-    <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:2px;">Genera questi documenti automaticamente con Actify Pro</div>
-    <div style="font-size:11px;color:#4ADE80;">Template professionali pre-compilati, personalizzati per ogni sistema AI dichiarato &rarr; actify.io</div>
-  </div>
+<div style="background:#FEFCE8;border:1px solid #FDE68A;border-left:4px solid #CA8A04;border-radius:0 6px 6px 0;padding:12px 16px;margin-top:8px;font-size:11px;color:#713F12;line-height:1.6;">
+  &#9432; <strong>Actify sta costruendo un SaaS dedicato</strong> per automatizzare la generazione di tutti i documenti di compliance per ogni sistema AI censito, nel rispetto del Reg. UE 2024/1689. I documenti <em>non automatizzabili</em> richiedono supervisione umana o consulenza legale specializzata.
 </div>`;
 }
 
@@ -521,12 +549,10 @@ export function render(
 <div style="min-height:270mm;background:linear-gradient(135deg,#0F172A 0%,#1E293B 100%);padding:48px 40px;display:flex;flex-direction:column;justify-content:space-between;">
 
   <!-- Logo + tagline -->
-  <div style="display:flex;align-items:center;gap:16px;">
-    ${markSvg(52, "green")}
-    <div>
-      ${logoSvg(216, 60)}
-      <div style="font-size:11px;color:#94A3B8;margin-top:4px;letter-spacing:1.5px;text-transform:uppercase;">AI Act Compliance Platform</div>
-    </div>
+  <div style="text-align:center;">
+    <div style="display:block;line-height:0;">${markSvg(80, "green")}</div>
+    <div style="display:block;line-height:0;margin-top:16px;">${logoSvg(220, 56)}</div>
+    <div style="font-size:13px;color:#94A3B8;margin-top:14px;font-style:italic;letter-spacing:0.2px;">&ldquo;L&apos;AI &egrave; il tuo vantaggio. La compliance non deve essere il tuo problema.&rdquo;</div>
   </div>
 
   <!-- Main title block -->
@@ -550,7 +576,7 @@ export function render(
     <div style="text-align:right;font-size:11px;color:#64748B;">
       <div>Generato il ${generatedDate}</div>
       <div style="margin-top:2px;">Reg. UE 2024/1689 &mdash; EU AI Act</div>
-      <div style="margin-top:2px;color:#22C55E;">actify.io</div>
+      <div style="margin-top:2px;color:#22C55E;">official-actify.com</div>
     </div>
   </div>
 </div>
@@ -567,52 +593,6 @@ export function render(
 <p style="font-size:14px;line-height:1.7;color:#111827;background:#F0FDF4;border-left:4px solid #22C55E;padding:14px 16px;border-radius:0 6px 6px 0;">
   ${escapeHtml(output.executive_summary)}
 </p>
-
-<!-- ─── PANORAMICA COMPLIANCE ─── -->
-<h2>Panoramica Compliance</h2>
-<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-
-  <div style="flex:1;min-width:120px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:14px;text-align:center;">
-    <div style="font-size:28px;font-weight:800;color:#16A34A;">${cs.compliant_count}</div>
-    <div style="font-size:11px;color:#374151;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;">Conformi</div>
-  </div>
-
-  <div style="flex:1;min-width:120px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:14px;text-align:center;">
-    <div style="font-size:28px;font-weight:800;color:#DC2626;">${cs.non_compliant_count}</div>
-    <div style="font-size:11px;color:#374151;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;">Non Conformi</div>
-  </div>
-
-  <div style="flex:1;min-width:120px;background:#FEFCE8;border:1px solid #FDE68A;border-radius:8px;padding:14px;text-align:center;">
-    <div style="font-size:28px;font-weight:800;color:#CA8A04;">${cs.monitoring_count}</div>
-    <div style="font-size:11px;color:#374151;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;">Monitoraggio</div>
-  </div>
-
-  <div style="flex:1;min-width:120px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;">
-    <div style="font-size:28px;font-weight:800;color:#475569;">${totalTools}</div>
-    <div style="font-size:11px;color:#374151;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;">Sistemi AI</div>
-  </div>
-
-</div>
-
-${
-  cs.most_urgent_deadline
-    ? `
-<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:12px 16px;font-size:13px;color:#92400E;margin-bottom:20px;">
-  <strong>Deadline pi&ugrave; urgente:</strong> ${formatDate(cs.most_urgent_deadline)}
-  ${
-    cs.months_to_urgency != null
-      ? `<span style="margin-left:8px;background:#EA580C;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">${cs.months_to_urgency} ${cs.months_to_urgency === 1 ? "mese" : "mesi"}</span>`
-      : ""
-  }
-</div>`
-    : ""
-}
-
-<!-- ─── COMPLIANCE GAPS ─── -->
-${renderComplianceGaps(output.compliance_gaps)}
-
-<!-- ─── SCORE BREAKDOWN ─── -->
-${renderScoreBreakdown(output.score_breakdown)}
 
 <!-- ─── CATALOGO STRUMENTI AI ─── -->
 <div class="page-break"></div>
@@ -631,17 +611,6 @@ ${renderTimeline(output.ai_act_timeline, output.phase_relevance)}
 <p style="font-size:12px;color:#6B7280;margin-bottom:16px;">Azioni operative raccomandate, ordinate per urgenza, specifiche per i sistemi AI dichiarati.</p>
 ${renderPriorityActions(output.priority_actions)}
 
-<!-- ─── NOTE DAL COLLOQUIO ─── -->
-${
-  output.key_findings_from_notes
-    ? `
-<h2>Osservazioni dal Colloquio</h2>
-<div style="background:#FEFCE8;border:1px solid #FDE68A;border-left:4px solid #CA8A04;border-radius:0 6px 6px 0;padding:14px 16px;font-size:13px;color:#713F12;">
-  ${escapeHtml(output.key_findings_from_notes)}
-</div>`
-    : ""
-}
-
 <!-- ─── RECOMMENDED DOCUMENTS ─── -->
 ${renderRecommendedDocs(output.recommended_documents)}
 
@@ -654,15 +623,15 @@ ${renderSanctionsSection(payload)}
     ${markSvg(44, "green")}
   </div>
   <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#86EFAC;margin-bottom:10px;">Prossimo passo</div>
-  <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:10px;line-height:1.3;">Continua il tuo percorso<br>di AI Act Compliance</div>
-  <div style="font-size:13px;color:#94A3B8;margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto;">Passa ad Actify Pro per generare automaticamente i documenti di governance AI, stimare l&apos;esposizione a sanzioni e mantenere un inventario dei sistemi AI aggiornato nel tempo.</div>
+  <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:10px;line-height:1.3;">Actify SaaS &mdash; In Arrivo</div>
+  <div style="font-size:13px;color:#94A3B8;margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto;">Stiamo costruendo la piattaforma Actify per automatizzare la compliance AI Act della tua azienda. Non appena disponibile, sarai ricontattato all&apos;email fornita in questo assessment.</div>
   <div style="display:inline-block;text-align:left;margin-bottom:20px;">
     ${[
-      "Genera documenti AI governance automaticamente",
-      "Stima esposizione a potenziali sanzioni economiche",
-      "Mantieni l'inventario sistemi AI aggiornato",
-      "Traccia gli obblighi di compliance nel tempo",
-      "Centralizza le attività di governance AI",
+      "Generazione automatica documenti AI governance",
+      "Stima esposizione a potenziali sanzioni Art. 99",
+      "Inventario sistemi AI sempre aggiornato",
+      "Tracciamento obblighi di compliance nel tempo",
+      "Centralizzazione attività di governance AI",
     ]
       .map(
         (item) => `
@@ -672,9 +641,7 @@ ${renderSanctionsSection(payload)}
       )
       .join("")}
   </div>
-  <div style="display:inline-block;background:#22C55E;color:#fff;font-weight:700;font-size:15px;padding:12px 32px;border-radius:8px;letter-spacing:0.3px;">
-    Sblocca Actify Pro &rarr; actify.io
-  </div>
+  <div style="font-size:11px;color:#64748B;max-width:400px;margin:0 auto;">&#9432; Verrai ricontattato non appena la piattaforma sar&agrave; disponibile. Nel frattempo visita <span style="color:#22C55E;">official-actify.com</span></div>
 </div>
 
 <!-- ─── ASSESSMENT METADATA ─── -->
@@ -689,7 +656,7 @@ ${renderAssessmentMetadata(company.name, generatedDate)}
 <div style="border-top:1px solid #E5E7EB;padding:16px 0;margin-top:8px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#9CA3AF;flex-wrap:wrap;gap:8px;">
   <div style="display:flex;align-items:center;gap:8px;">
     ${markSvg(20, "dark-green")}
-    <span>Actify &mdash; AI Act Compliance Platform &mdash; actify.io</span>
+    <span>Actify &mdash; AI Act Compliance Platform &mdash; official-actify.com</span>
   </div>
   <span>Generato il ${generatedDate} &middot; Reg. UE 2024/1689</span>
   <span>Riservato a ${escapeHtml(company.name)}</span>

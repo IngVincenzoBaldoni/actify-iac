@@ -653,7 +653,7 @@ export default function Page() {
           <p>Il tuo report di compliance AI Act &egrave; stato generato e inviato via email a:</p>
           <div id="successEmail" style={{fontWeight:700,fontSize:18,color:'var(--green)',margin:'12px 0',letterSpacing:'-0.3px'}}></div>
           <p style={{fontSize:13,color:'var(--muted)'}}>Controlla la tua casella (e la cartella spam). Il link nel report &egrave; valido per <strong>24 ore</strong>.</p>
-          <button className="btn-restart" onClick={w('doRestart')}>Esegui un nuovo assessment</button>
+          <a href="/" className="btn-restart" style={{display:'inline-block',textDecoration:'none',textAlign:'center'}}>Torna alla home</a>
         </div>
       </div>
 

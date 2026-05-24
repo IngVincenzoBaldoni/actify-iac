@@ -19,6 +19,9 @@ locals {
   iam_api_role_name        = "${local.project}-api-role"
   iam_api_policy_name      = "${local.project}-api-policy"
 
+  # ─── Shared resources (created by release-1) ────────────────────────────────
+  s3_vectors_bucket_name = "actify-saas-ai-act-knowledge-base"
+
   # ─── DynamoDB table names ────────────────────────────────────────────────────
   table_companies          = "${local.project}-companies"
   table_company_users      = "${local.project}-company-users"

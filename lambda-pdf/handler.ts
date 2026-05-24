@@ -5,7 +5,6 @@ import { analyze } from "./services/bedrockService";
 import { render } from "./services/htmlTemplate";
 import { htmlToPdf } from "./services/pdfService";
 import { uploadReport, writeToDatalake } from "./services/s3Service";
-import { sendReportEmail, maskEmail } from "./services/sesService";
 import { formHtml } from "./services/formHtml";
 
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
@@ -124,26 +123,7 @@ export async function handler(
     s3_key: uploadResult.key,
   });
 
-  // ── 7. Send report via SES email ─────────────────────────────────────────────
-  try {
-    await sendReportEmail(
-      payload.contact_email,
-      payload.company.name,
-      uploadResult.presigned_url,
-      24,
-    );
-    log("info", "email_sent", { masked: maskEmail(payload.contact_email) });
-  } catch (err) {
-    log("error", "ses_failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return json(500, {
-      error: "email_failed",
-      message: "Report generato ma invio email fallito. Contatta support@actify.io.",
-    });
-  }
-
-  // ── 8. Write to data lake (non-fatal — failure never blocks the user) ────────
+  // ── 7. Write to data lake (non-fatal — failure never blocks the user) ────────
   try {
     await writeToDatalake(payload, pdfBuffer);
   } catch (err) {
@@ -153,10 +133,8 @@ export async function handler(
     });
   }
 
-  // ── 9. Return success — no download_url exposed to frontend ─────────────────
+  // ── 8. Return presigned URL — frontend triggers browser download directly ────
   return json(200, {
-    success: true,
-    email: maskEmail(payload.contact_email),
-    message: "Report inviato via email.",
+    download_url: uploadResult.presigned_url,
   });
 }

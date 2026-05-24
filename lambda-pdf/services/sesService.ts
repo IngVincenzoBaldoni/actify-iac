@@ -58,9 +58,10 @@ function buildHtmlEmail(companyName: string, downloadUrl: string, expiryHours: n
       <!-- Header -->
       <tr>
         <td style="background:linear-gradient(135deg,#0F172A,#1E293B);padding:32px 40px;text-align:center;">
-          <div style="font-size:13px;color:#94A3B8;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">AI Act Compliance Platform</div>
-          <div style="font-size:28px;font-weight:800;color:#fff;margin-bottom:4px;">Il tuo Report è Pronto</div>
-          <div style="width:40px;height:3px;background:#22C55E;border-radius:2px;margin:0 auto;"></div>
+          <div style="font-size:26px;font-weight:800;color:#fff;margin-bottom:6px;">Actify</div>
+          <div style="font-size:28px;font-weight:800;color:#fff;margin-bottom:6px;">Il tuo Report è Pronto</div>
+          <div style="width:40px;height:3px;background:#22C55E;border-radius:2px;margin:0 auto 10px;"></div>
+          <div style="font-size:12px;color:#94A3B8;font-style:italic;">&ldquo;L&apos;AI &egrave; il tuo vantaggio. La compliance non deve essere il tuo problema.&rdquo;</div>
         </td>
       </tr>
 
@@ -88,7 +89,7 @@ function buildHtmlEmail(companyName: string, downloadUrl: string, expiryHours: n
           <!-- Expiry notice -->
           <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:12px 16px;font-size:12px;color:#92400E;margin-bottom:24px;">
             ⚠️ <strong>Link valido per ${expiryHours} ore.</strong>
-            Se il link è scaduto, esegui di nuovo l'assessment gratuito su actify.io.
+            Se il link è scaduto, esegui di nuovo l'assessment gratuito su official-actify.com.
           </div>
 
           <!-- What's inside -->
@@ -116,7 +117,7 @@ function buildHtmlEmail(companyName: string, downloadUrl: string, expiryHours: n
       <tr>
         <td style="background:#F8FAFC;border-top:1px solid #E5E7EB;padding:20px 40px;text-align:center;">
           <p style="font-size:11px;color:#9CA3AF;margin:0 0 4px;">
-            Actify — AI Act Compliance Platform &mdash; <a href="https://actify.io" style="color:#22C55E;text-decoration:none;">actify.io</a>
+            Actify — AI Act Compliance Platform &mdash; <a href="https://official-actify.com" style="color:#22C55E;text-decoration:none;">official-actify.com</a>
           </p>
           <p style="font-size:10px;color:#CBD5E1;margin:0;">
             Questo report è generato automaticamente e non costituisce parere legale. Reg. UE 2024/1689.

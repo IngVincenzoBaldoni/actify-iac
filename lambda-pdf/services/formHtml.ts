@@ -542,9 +542,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       </div>
 
       <div class="fcard">
-        <div class="field">
-          <label>Nome Azienda *</label>
-          <input type="text" id="companyName" placeholder="Es. Acme S.r.l." />
+        <div class="field-row">
+          <div class="field">
+            <label>Nome Azienda *</label>
+            <input type="text" id="companyName" placeholder="Es. Acme S.r.l." autocomplete="organization" />
+          </div>
+          <div class="field">
+            <label>Email Aziendale *</label>
+            <input type="email" id="contactEmail" placeholder="Es. compliance@azienda.it" autocomplete="email" />
+          </div>
         </div>
         <div class="field-row">
           <div class="field">
@@ -1007,6 +1013,7 @@ function refreshUI() {
 function validate(s) {
   if (s === 1) {
     if (!fv('companyName'))   { alert('Inserisci il nome dell\\'azienda.'); return false; }
+    if (!fv('contactEmail') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fv('contactEmail'))) { alert('Inserisci un indirizzo email valido.'); return false; }
     if (!fv('companySector')) { alert('Seleziona il settore.'); return false; }
     if (!fv('companySize'))   { alert('Seleziona la dimensione aziendale.'); return false; }
     if (!fv('companySede'))   { alert('Seleziona la sede legale.'); return false; }
@@ -1205,6 +1212,7 @@ function renderReview() {
 
   var html = '<div class="rev-block"><h3>Profilo Azienda</h3>'
     + '<div class="rev-row"><span class="rk">Nome:</span><span class="rv">' + esc(fv('companyName')) + '</span></div>'
+    + '<div class="rev-row"><span class="rk">Email:</span><span class="rv">' + esc(fv('contactEmail')) + '</span></div>'
     + '<div class="rev-row"><span class="rk">Settore:</span><span class="rv">' + esc(fv('companySector')) + '</span></div>'
     + '<div class="rev-row"><span class="rk">Dimensione:</span><span class="rv">' + esc(fv('companySize')) + ' dipendenti</span></div>'
     + '<div class="rev-row"><span class="rk">Sede Legale:</span><span class="rv">' + esc(fv('companySede')) + '</span></div>'
@@ -1318,6 +1326,7 @@ async function submitForm() {
   }
 
   var payload = {
+    contact_email: fv('contactEmail'),
     company: {
       name: fv('companyName'),
       sector: fv('companySector'),

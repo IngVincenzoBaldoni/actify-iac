@@ -66,6 +66,8 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
   }
 
+  aliases = ["official-actify.com", "www.official-actify.com"]
+
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
@@ -81,6 +83,11 @@ resource "aws_cloudfront_distribution" "frontend" {
     min_ttl     = 0
     default_ttl = 86400
     max_ttl     = 31536000
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = "arn:aws:cloudfront::265020547280:function/actify-saas-url-rewrite"
+    }
   }
 
   # SPA routing: serve index.html for 403/404 (S3 OAC returns 403 for missing keys)
@@ -103,7 +110,9 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = "arn:aws:acm:us-east-1:265020547280:certificate/45be8f37-30ed-482c-bf10-8edb49852116"
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
 
   tags = merge(local.common_tags, { Name = "${local.project}-frontend" })

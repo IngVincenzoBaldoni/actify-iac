@@ -18,6 +18,8 @@ export interface ToolCatalogEntry {
   declared_purpose: string;
   risk_classification: RiskLevel;
   applicable_articles: string[];
+  // RAG v2: specific normative chunks that drove this classification
+  legal_basis?: string[];
   rationale_compact: string;
   compliance_status: ComplianceStatus;
   compliance_deadline: string | null;
@@ -73,4 +75,6 @@ export interface BedrockReportOutput {
   recommended_documents: string[];
   key_findings_from_notes: string;
   report_footer_note: string;
+  // RAG v2: chunk IDs used to assemble the normative context (for debug/audit)
+  context_chunks_used?: string[];
 }

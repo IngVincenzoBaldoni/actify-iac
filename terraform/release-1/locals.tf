@@ -22,6 +22,9 @@ locals {
   api_name              = "${local.project}-api"
   amplify_app_name      = "${local.project}-frontend"
 
+  # ─── RAG Knowledge Base (S3 Vectors) ────────────────────────────────────────
+  s3_vectors_bucket_name = "${local.project}-ai-act-knowledge-base"
+
   # ─── Data Lake (Bronze Layer) ────────────────────────────────────────────────
   datalake_bucket_name  = "${local.project}-datalake"
   glue_database_name    = "actify_datalake"

@@ -93,6 +93,7 @@ export async function writeToDatalake(
   // Including them in the JSON body too would cause HIVE_INVALID_METADATA: duplicate columns.
   const record = {
     submission_id: submissionId,
+    contact_email: payload.contact_email,
     company_name: payload.company.name,
     company_sector: payload.company.sector,
     company_employees: payload.company.employees_range,

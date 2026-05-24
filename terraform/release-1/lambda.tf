@@ -38,22 +38,41 @@ resource "aws_lambda_function" "pdf_generator" {
   runtime = "nodejs20.x"
 
   memory_size = 1024  # Puppeteer/headless Chromium requires ≥512 MB
-  timeout     = 30    # Max 29s for API GW, extra 1s safety margin for S3 upload
+  # RAG v2: embedding (1s) + vector retrieval (1-3s) + LLM (10-20s) + PDF (5-10s) → 60s
+  # API GW HTTP APIs support up to 29s; Lambda itself supports up to 900s.
+  # The API Gateway timeout is separate — Lambda timeout is a safety net only.
+  timeout     = 60
 
   environment {
     variables = {
+      # LLM (assessment generation)
       BEDROCK_MODEL_ID    = "eu.amazon.nova-pro-v1:0"
       BEDROCK_REGION      = var.aws_region
       BEDROCK_MAX_TOKENS  = "5120"
       BEDROCK_TEMPERATURE = "0"
-      S3_BUCKET           = aws_s3_bucket.reports_temp.bucket
-      S3_REGION           = var.aws_region
-      PRESIGNED_URL_TTL   = "900"
-      DATALAKE_BUCKET     = aws_s3_bucket.datalake.bucket
-      RATE_LIMIT_MAX      = "5"
-      RATE_LIMIT_WINDOW   = "900"
-      ENV                 = var.environment
-      LOG_LEVEL           = "info"
+
+      # S3 (PDF reports + presigned URLs)
+      S3_BUCKET         = aws_s3_bucket.reports_temp.bucket
+      S3_REGION         = var.aws_region
+      PRESIGNED_URL_TTL = "900"     # 15 min — direct browser download
+      DATALAKE_BUCKET   = aws_s3_bucket.datalake.bucket
+
+      # RAG (S3 Vectors knowledge base)
+      S3_VECTORS_BUCKET     = local.s3_vectors_bucket_name
+      S3_VECTORS_INDEX      = "ai-act-it"
+      S3_VECTORS_REGION     = var.aws_region
+      EMBEDDING_MODEL_ID    = "amazon.titan-embed-text-v2:0"
+      EMBEDDING_REGION      = var.aws_region
+      TOP_K                 = "5"
+      MAX_CHUNKS            = "20"
+      SIMILARITY_THRESHOLD  = "0.72"
+      RAG_ENABLED           = "true"
+
+      # Rate limiting + ops
+      RATE_LIMIT_MAX  = "5"
+      RATE_LIMIT_WINDOW = "900"
+      ENV             = var.environment
+      LOG_LEVEL       = "info"
     }
   }
 
