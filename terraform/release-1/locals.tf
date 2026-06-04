@@ -25,6 +25,9 @@ locals {
   # ─── RAG Knowledge Base (S3 Vectors) ────────────────────────────────────────
   s3_vectors_bucket_name = "${local.project}-ai-act-knowledge-base"
 
+  # ─── Free Assessment OTP table ───────────────────────────────────────────────
+  dynamo_assessments_table = "${local.project}-free-assessments"
+
   # ─── Data Lake (Bronze Layer) ────────────────────────────────────────────────
   datalake_bucket_name  = "${local.project}-datalake"
   glue_database_name    = "actify_datalake"

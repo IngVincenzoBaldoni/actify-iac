@@ -55,6 +55,22 @@ locals {
     "GET /api/systems/{systemId}/compliance-checks"               = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "GET /api/systems/{systemId}/compliance-checks/latest"        = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "PUT /api/company/setup"                                      = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    # ── Remediation Engine ───────────────────────────────────────────────────
+    "GET /api/company/documents"                                  = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/systems/{systemId}/remediation/generate"           = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/systems/{systemId}/documents"                       = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/documents/{documentId}"                             = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "DELETE /api/documents/{documentId}"                          = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "PUT /api/documents/{documentId}/finalize"                    = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/documents/{documentId}/regenerate"                 = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    # ── AI Literacy Tracker ──────────────────────────────────────────────────
+    "GET /api/literacy"                                              = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/literacy/departments"                                 = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "DELETE /api/literacy/departments/{deptId}"                      = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/literacy/departments/{deptId}/suggest"                = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/literacy/departments/{deptId}/certifications"          = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/literacy/departments/{deptId}/certifications"         = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "DELETE /api/literacy/departments/{deptId}/certifications/{certId}" = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
   }
 }
 

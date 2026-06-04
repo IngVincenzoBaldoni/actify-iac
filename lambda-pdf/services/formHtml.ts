@@ -550,6 +550,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
           <div class="field">
             <label>Email Aziendale *</label>
             <input type="email" id="contactEmail" placeholder="Es. compliance@azienda.it" autocomplete="email" />
+            <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5">Riceverai un codice OTP per verificare il tuo indirizzo. Il report verr&agrave; consegnato qui.</div>
           </div>
         </div>
         <div class="field-row">
@@ -602,6 +603,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
             </select>
             <div class="locked-note">Questa feature &egrave; abilitata nella versione a pagamento per permetterci di fare una stima delle sanzioni economiche in cui potresti incorrere.</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step OTP: Verifica Email ── -->
+    <div id="stepOtp" class="step-panel" style="display:none">
+      <div class="panel-head">
+        <h2>Verifica Email</h2>
+        <p>Abbiamo inviato un codice a 6 cifre al tuo indirizzo email. Inseriscilo qui sotto per continuare.</p>
+      </div>
+
+      <div class="fcard">
+        <div id="otpEmailDisplay" style="font-size:13px;color:var(--muted);margin-bottom:20px"></div>
+        <div class="field">
+          <label>Codice di verifica *</label>
+          <input type="text" id="otpCode" placeholder="000000" inputmode="numeric" pattern="[0-9]*" maxlength="6" oninput="onOtpInput()" onkeydown="if(event.key==='Enter')submitOtp()" autocomplete="one-time-code" style="font-size:24px;letter-spacing:8px;text-align:center;font-weight:700" />
+        </div>
+        <div id="otpError" style="display:none;color:#F87171;font-size:13px;margin-top:-10px;margin-bottom:16px"></div>
+        <button class="btn-next" onclick="submitOtp()" style="width:100%;justify-content:center;margin-bottom:16px">Verifica Codice</button>
+        <div style="text-align:center">
+          <button id="btnResendOtp" onclick="resendOtp()" style="background:none;border:none;color:var(--green);font-size:13px;font-family:inherit;cursor:pointer;font-weight:500">Invia di nuovo</button>
+          <div id="resendTimer" style="display:none;font-size:12px;color:var(--muted);margin-top:6px">Richiedi nuovo codice tra <span id="resendCountdown">60</span> secondi</div>
         </div>
       </div>
     </div>
@@ -865,7 +888,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       Indietro
     </button>
     <button class="btn-next" id="btnNext" onclick="goNext()">
-      Avanti
+      <span id="btnNextLabel">Avanti</span>
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 11l4-4-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <button class="btn-submit" id="btnSubmit" style="display:none" onclick="submitForm()">
@@ -944,6 +967,10 @@ var deployerLlmSelected = [];
 var deployerSpecialized = [];
 var loadTimer;
 var loadStep = 0;
+var otpVerified = false;
+var showingOtp = false;
+var otpResendAt = 0;
+var resendTimerInterval = null;
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 function startWizard() {
@@ -960,6 +987,8 @@ function exitWizard() {
 function doRestart() {
   cur = 1; isProvider = false; isDeployer = false;
   providerSystems = []; deployerLlmSelected = []; deployerSpecialized = [];
+  otpVerified = false; showingOtp = false; otpResendAt = 0;
+  clearInterval(resendTimerInterval);
   document.getElementById('success').style.display = 'none';
   document.getElementById('landing').style.display = 'flex';
 }
@@ -982,6 +1011,8 @@ function renderStepper() {
 // ── Navigation ────────────────────────────────────────────────────────────────
 function goNext() {
   if (!validate(cur)) return;
+  if (cur === 1 && !otpVerified) { sendOtp(); return; }
+  if (showingOtp) { submitOtp(); return; }
   if (cur < TOTAL_STEPS) {
     document.getElementById('step' + cur).style.display = 'none';
     cur++;
@@ -991,6 +1022,7 @@ function goNext() {
   }
 }
 function goBack() {
+  if (showingOtp) { hideOtpPanel(); return; }
   if (cur > 1) {
     document.getElementById('step' + cur).style.display = 'none';
     cur--;
@@ -998,6 +1030,167 @@ function goBack() {
     refreshUI();
     window.scrollTo({top: 0, behavior: 'smooth'});
   }
+}
+
+// ── OTP ───────────────────────────────────────────────────────────────────────
+async function sendOtp() {
+  var email = fv('contactEmail');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('Inserisci un indirizzo email valido per ricevere il codice OTP.');
+    return;
+  }
+  var company = fv('companyName') || 'Azienda';
+  var btn = document.getElementById('btnNext');
+  if (btn) { btn.disabled = true; btn.textContent = 'Invio codice…'; }
+  try {
+    var apiUrl = (window.ACTIFY_API_URL || '');
+    var res = await fetch(apiUrl + '/api/verify/send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email: email, company_name: company })
+    });
+    var data = await res.json();
+    if (!res.ok) {
+      alert(data.message || data.error || 'Errore nell\'invio del codice. Riprova.');
+      return;
+    }
+    if (data.status === 'already_verified') {
+      otpVerified = true;
+      document.getElementById('step1').style.display = 'none';
+      cur++;
+      document.getElementById('step' + cur).style.display = '';
+      refreshUI();
+      window.scrollTo({top: 0, behavior: 'smooth'});
+      return;
+    }
+    showOtpPanel(email);
+    startResendTimer(data.retry_after || 60);
+  } catch(err) {
+    alert('Errore di rete: ' + (err.message || 'Riprova tra qualche minuto.'));
+  } finally {
+    if (btn) btn.disabled = false;
+    var lbl = document.getElementById('btnNextLabel');
+    if (lbl && !showingOtp) lbl.textContent = 'Avanti';
+  }
+}
+function showOtpPanel(email) {
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('stepOtp').style.display = '';
+  var disp = document.getElementById('otpEmailDisplay');
+  if (disp) disp.textContent = 'Codice inviato a: ' + email;
+  var errEl = document.getElementById('otpError');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  var codeEl = document.getElementById('otpCode');
+  if (codeEl) { codeEl.value = ''; setTimeout(function(){ codeEl.focus(); }, 100); }
+  showingOtp = true;
+  var bBack = document.getElementById('btnBack');
+  var bNext = document.getElementById('btnNext');
+  var bLbl  = document.getElementById('btnNextLabel');
+  var bSub  = document.getElementById('btnSubmit');
+  if (bBack) bBack.style.display = '';
+  if (bNext) bNext.style.display = '';
+  if (bLbl)  bLbl.textContent = 'Verifica';
+  if (bSub)  bSub.style.display = 'none';
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+function hideOtpPanel() {
+  document.getElementById('stepOtp').style.display = 'none';
+  document.getElementById('step1').style.display = '';
+  showingOtp = false;
+  clearInterval(resendTimerInterval);
+  var bLbl = document.getElementById('btnNextLabel');
+  if (bLbl) bLbl.textContent = 'Avanti';
+  refreshUI();
+}
+function onOtpInput() {
+  var el = document.getElementById('otpCode');
+  if (!el) return;
+  el.value = el.value.replace(/[^0-9]/g, '').slice(0, 6);
+}
+async function submitOtp() {
+  var email = fv('contactEmail');
+  var codeEl = document.getElementById('otpCode');
+  var code = codeEl ? codeEl.value.trim() : '';
+  var errEl = document.getElementById('otpError');
+  if (!code || code.length !== 6) {
+    if (errEl) { errEl.textContent = 'Inserisci il codice a 6 cifre ricevuto via email.'; errEl.style.display = ''; }
+    return;
+  }
+  var btn = document.getElementById('btnNext');
+  if (btn) { btn.disabled = true; btn.textContent = 'Verifica…'; }
+  try {
+    var apiUrl = (window.ACTIFY_API_URL || '');
+    var res = await fetch(apiUrl + '/api/verify/check', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email: email, code: code })
+    });
+    var data = await res.json();
+    if (!res.ok) {
+      var msg = data.message || data.error || 'Codice non valido.';
+      if (data.attempts_remaining !== undefined) msg += ' (' + data.attempts_remaining + ' tentativi rimanenti)';
+      if (errEl) { errEl.textContent = msg; errEl.style.display = ''; }
+      return;
+    }
+    otpVerified = true;
+    clearInterval(resendTimerInterval);
+    hideOtpPanel();
+    document.getElementById('step' + cur).style.display = 'none';
+    cur++;
+    document.getElementById('step' + cur).style.display = '';
+    refreshUI();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  } catch(err) {
+    if (errEl) { errEl.textContent = 'Errore di rete: ' + (err.message || 'Riprova.'); errEl.style.display = ''; }
+  } finally {
+    if (btn) btn.disabled = false;
+    var lbl = document.getElementById('btnNextLabel');
+    if (lbl) lbl.textContent = 'Verifica';
+  }
+}
+async function resendOtp() {
+  if (Date.now() < otpResendAt) return;
+  var email = fv('contactEmail');
+  var company = fv('companyName') || 'Azienda';
+  var errEl = document.getElementById('otpError');
+  try {
+    var apiUrl = (window.ACTIFY_API_URL || '');
+    var res = await fetch(apiUrl + '/api/verify/send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email: email, company_name: company })
+    });
+    var data = await res.json();
+    if (!res.ok) {
+      if (errEl) { errEl.textContent = data.message || data.error || 'Errore nel reinvio.'; errEl.style.display = ''; }
+      return;
+    }
+    if (errEl) errEl.style.display = 'none';
+    startResendTimer(data.retry_after || 60);
+  } catch(err) {
+    if (errEl) { errEl.textContent = 'Errore di rete: ' + (err.message || 'Riprova.'); errEl.style.display = ''; }
+  }
+}
+function startResendTimer(seconds) {
+  otpResendAt = Date.now() + seconds * 1000;
+  clearInterval(resendTimerInterval);
+  var btn = document.getElementById('btnResendOtp');
+  var timerEl = document.getElementById('resendTimer');
+  var countEl = document.getElementById('resendCountdown');
+  if (btn) btn.disabled = true;
+  if (timerEl) timerEl.style.display = '';
+  function tick() {
+    var remaining = Math.ceil((otpResendAt - Date.now()) / 1000);
+    if (remaining <= 0) {
+      clearInterval(resendTimerInterval);
+      if (btn) btn.disabled = false;
+      if (timerEl) timerEl.style.display = 'none';
+      return;
+    }
+    if (countEl) countEl.textContent = String(remaining);
+  }
+  tick();
+  resendTimerInterval = setInterval(tick, 1000);
 }
 function refreshUI() {
   renderStepper();

@@ -89,6 +89,100 @@ resource "aws_dynamodb_table" "ai_systems" {
   }
 }
 
+# ─── documents ───────────────────────────────────────────────────────────────
+# PK: document_id (uuid-v4)
+# GSI company-index: company_id + generated_at → Document Vault per azienda
+# GSI system-index:  system_id  + generated_at → documenti per singolo tool
+resource "aws_dynamodb_table" "documents" {
+  name         = local.table_documents
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "document_id"
+
+  attribute {
+    name = "document_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "company_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "system_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "generated_at"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "company-index"
+    hash_key        = "company_id"
+    range_key       = "generated_at"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "system-index"
+    hash_key        = "system_id"
+    range_key       = "generated_at"
+    projection_type = "ALL"
+  }
+
+  # TTL attribute — used for draft documents (7 days), final docs have no TTL
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = {
+    Name = local.table_documents
+  }
+}
+
+# ─── literacy ─────────────────────────────────────────────────────────────────
+# Single-table design: PK = company_id, SK = record_id
+# record_id format: DEPT#<uuid> for departments, CERT#<dept_id>#<cert_id> for certifications
+resource "aws_dynamodb_table" "literacy" {
+  name         = local.table_literacy
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "company_id"
+  range_key    = "record_id"
+
+  attribute {
+    name = "company_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "record_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = {
+    Name = local.table_literacy
+  }
+}
+
 # ─── compliance-checks ────────────────────────────────────────────────────────
 # PK: "company_id#system_id", SK: "YYYYMMDDHHMMSS-uuid" (cronologico nativo)
 resource "aws_dynamodb_table" "compliance_checks" {

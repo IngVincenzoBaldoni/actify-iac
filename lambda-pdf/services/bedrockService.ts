@@ -4,6 +4,7 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 import { systemPrompt } from "./systemPrompt";
 import { buildRagContext } from "./ragService";
+import { determineApplicableArticles, type PdfRuleEngineResult } from "./articleRuleEngine";
 import { reportOutputSchema, OUTPUT_SCHEMA_TEMPLATE } from "./outputSchema";
 import type { IntakePayload } from "../types/intake";
 import type { BedrockReportOutput } from "../types/reportOutput";
@@ -17,13 +18,21 @@ const RAG_ENABLED = process.env.RAG_ENABLED !== "false" &&
                     !!process.env.S3_VECTORS_BUCKET;
 
 export async function analyze(payload: IntakePayload): Promise<BedrockReportOutput> {
-  // ── 1. Attempt RAG context retrieval ─────────────────────────────────────────
+  // ── 1. Deterministic rule engine — identify applicable articles ───────────────
+  const ruleResult = determineApplicableArticles(payload);
+  console.log("[bedrockService] Rule engine:", {
+    keys:   ruleResult.applicableKeys.length,
+    high:   ruleResult.isHighRisk,
+    annex:  ruleResult.annexIIICategories,
+  });
+
+  // ── 2. Attempt RAG context retrieval (article-key-targeted) ──────────────────
   let ragContextText: string | null = null;
   let chunksUsed: string[]          = [];
 
   if (RAG_ENABLED) {
     try {
-      const rag    = await buildRagContext(payload);
+      const rag    = await buildRagContext(payload, ruleResult.applicableKeys);
       ragContextText = rag.contextText;
       chunksUsed     = rag.chunksUsed;
     } catch (err) {
@@ -34,7 +43,7 @@ export async function analyze(payload: IntakePayload): Promise<BedrockReportOutp
     }
   }
 
-  const userMessage = buildUserMessage(payload, ragContextText, false);
+  const userMessage = buildUserMessage(payload, ruleResult, ragContextText, false);
 
   try {
     const output = await invokeModel(userMessage, ragContextText !== null);
@@ -44,7 +53,7 @@ export async function analyze(payload: IntakePayload): Promise<BedrockReportOutp
     console.warn("bedrockService: first attempt failed, retrying", {
       error: firstError instanceof Error ? firstError.message : String(firstError),
     });
-    const retryMessage = buildUserMessage(payload, ragContextText, true);
+    const retryMessage = buildUserMessage(payload, ruleResult, ragContextText, true);
     const output = await invokeModel(retryMessage, ragContextText !== null);
     return { ...output, context_chunks_used: chunksUsed };
   }
@@ -133,6 +142,7 @@ Il tuo ruolo è analizzare il profilo di un'azienda e produrre un assessment di 
 
 function buildUserMessage(
   payload: IntakePayload,
+  ruleResult: PdfRuleEngineResult,
   ragContext: string | null,
   retry: boolean,
 ): string {
@@ -145,8 +155,20 @@ function buildUserMessage(
     ? `\n\n---\n## CONTESTO NORMATIVO RECUPERATO (AI Act — Reg. UE 2024/1689)\n\nBasa le tue conclusioni ESCLUSIVAMENTE su questi passaggi normativi.\n\n${ragContext}\n\n---\n`
     : "";
 
+  // Deterministic pre-analysis block — guides the model towards correct article set
+  const ruleBlock =
+    `\n\n---\n## ANALISI NORMATIVA DETERMINISTICA (pre-calcolata)\n\n` +
+    `Il motore deterministico ha identificato i seguenti articoli applicabili per questo profilo:\n` +
+    ruleResult.reasoning.map(r => `- ${r}`).join('\n') + '\n' +
+    (ruleResult.isHighRisk ? `\n⚠ SISTEMA AD ALTO RISCHIO — obblighi Art. 9-15 pienamente applicabili.\n` : '') +
+    (ruleResult.annexIIICategories.length > 0
+      ? `Allegato III categorie applicabili: ${ruleResult.annexIIICategories.join(', ')}\n`
+      : '') +
+    `\nUsa questa analisi come punto di partenza e arricchisci con i dettagli del contesto normativo recuperato.\n---\n`;
+
   return (
     `Analizza il seguente profilo aziendale e restituisci ESCLUSIVAMENTE il JSON con lo schema specificato. Nessun testo fuori dal JSON.${retryNote}` +
+    ruleBlock +
     contextBlock +
     `\n\nPROFILO AZIENDA:\n${JSON.stringify(payload, null, 2)}` +
     `\n\nOUTPUT RICHIESTO — rispondi con questo schema JSON esatto, nessun testo fuori dal JSON:\n${JSON.stringify(OUTPUT_SCHEMA_TEMPLATE, null, 2)}`

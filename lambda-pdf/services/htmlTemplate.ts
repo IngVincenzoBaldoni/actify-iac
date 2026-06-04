@@ -8,6 +8,7 @@ import type {
 import type { IntakePayload } from "../types/intake";
 import { logoSvg, markSvg } from "./branding";
 import { computeSanctionsReport, formatEur } from "./sanctionsService";
+import { determineApplicableArticles } from "./articleRuleEngine";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -509,6 +510,204 @@ function renderAssessmentMetadata(companyName: string, generatedDate: string): s
 </div>`;
 }
 
+// ─── Actify Remediation Capabilities ─────────────────────────────────────────
+
+interface ActifyCapability {
+  article: string;
+  description: string;
+  documents: string[];       // documents Actify auto-generates
+  riskReduction: number;     // estimated % risk reduction
+  automatable: boolean;
+}
+
+const ARTICLE_CAPABILITIES: ActifyCapability[] = [
+  {
+    article: 'Art. 4 — AI Literacy',
+    description: 'Formazione e alfabetizzazione AI del personale',
+    documents: ['Piano di Formazione AI Literacy', 'Registro Partecipanti Formazione AI', 'Modulo Presa Visione Sistemi AI'],
+    riskReduction: 12,
+    automatable: true,
+  },
+  {
+    article: 'Art. 11 — Documentazione Tecnica',
+    description: 'Documentazione tecnica completa per sistemi ad alto rischio',
+    documents: ['Documentazione Tecnica del Sistema AI (Art. 11)', 'Scheda Architettura e Dati Training'],
+    riskReduction: 22,
+    automatable: true,
+  },
+  {
+    article: 'Art. 12 — Log-Book',
+    description: 'Registri automatici delle attività del sistema AI',
+    documents: ['Log-Book Automatico Attività AI', 'Registro Versioni e Modifiche'],
+    riskReduction: 15,
+    automatable: true,
+  },
+  {
+    article: 'Art. 13 + 50 — Trasparenza',
+    description: 'Obblighi di trasparenza verso utenti e dipendenti',
+    documents: ['AI Transparency Notice Personalizzata', 'Informativa AI per Dipendenti', 'Disclosure AI per Utenti Finali'],
+    riskReduction: 18,
+    automatable: true,
+  },
+  {
+    article: 'Art. 17 — Quality Management',
+    description: 'Sistema di gestione della qualità per provider',
+    documents: ['Quality Management System AI (QMS)', 'Procedure di Validazione e Testing'],
+    riskReduction: 20,
+    automatable: false,
+  },
+  {
+    article: 'Art. 26/29 — Obblighi Deployer',
+    description: 'Policy interne e procedure per l\'uso responsabile dell\'AI',
+    documents: ['Policy Utilizzo AI Interno', 'Procedura Supervisione Umana Output AI', 'Registro Decisioni Automatizzate'],
+    riskReduction: 20,
+    automatable: true,
+  },
+  {
+    article: 'Art. 9/10 — Risk Management',
+    description: 'Sistema di gestione del rischio e governance dati',
+    documents: ['Piano di Gestione Rischio AI', 'Data Governance Framework per Training AI'],
+    riskReduction: 25,
+    automatable: false,
+  },
+  {
+    article: 'Art. 27 — FRIA',
+    description: 'Valutazione d\'impatto sui diritti fondamentali',
+    documents: ['FRIA — Fundamental Rights Impact Assessment'],
+    riskReduction: 18,
+    automatable: false,
+  },
+  {
+    article: 'Art. 49 — Registrazione EU',
+    description: 'Registrazione nella banca dati UE per sistemi ad alto rischio',
+    documents: ['Scheda Registrazione EU AI Database', 'Dichiarazione di Conformità UE'],
+    riskReduction: 10,
+    automatable: true,
+  },
+];
+
+// Selects applicable capabilities based on compliance gaps and applicable articles
+function selectCapabilities(
+  output: BedrockReportOutput,
+  payload: IntakePayload,
+): ActifyCapability[] {
+  const ruleResult = determineApplicableArticles(payload);
+  const keys       = new Set(ruleResult.applicableKeys);
+  const gaps       = output.compliance_gaps.join(' ').toLowerCase();
+
+  return ARTICLE_CAPABILITIES.filter(cap => {
+    const artLower = cap.article.toLowerCase();
+    if (artLower.includes('art. 4'))                        return keys.has('art_4');
+    if (artLower.includes('art. 11'))                       return keys.has('art_11');
+    if (artLower.includes('art. 12'))                       return keys.has('art_12');
+    if (artLower.includes('art. 13') || artLower.includes('50')) return keys.has('art_50') || keys.has('art_13_p1');
+    if (artLower.includes('art. 17'))                       return keys.has('art_16') && ruleResult.isHighRisk;
+    if (artLower.includes('art. 26') || artLower.includes('29')) return keys.has('art_26_p1') || keys.has('art_29');
+    if (artLower.includes('art. 9') || artLower.includes('10')) return keys.has('art_9') || gaps.includes('rischio');
+    if (artLower.includes('art. 27'))                       return keys.has('art_27');
+    if (artLower.includes('art. 49'))                       return keys.has('art_49');
+    return false;
+  });
+}
+
+function renderActifyRemediation(
+  output: BedrockReportOutput,
+  payload: IntakePayload,
+): string {
+  const capabilities = selectCapabilities(output, payload);
+  if (capabilities.length === 0) return '';
+
+  const automatableCount  = capabilities.filter(c => c.automatable).length;
+  const totalDocs         = capabilities.reduce((n, c) => n + c.documents.length, 0);
+  const avgRiskReduction  = Math.min(
+    65,
+    Math.round(capabilities.reduce((n, c) => n + c.riskReduction, 0) / 1.5)
+  );
+
+  const rows = capabilities.map(cap => {
+    const docsHtml = cap.documents
+      .map(d => `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+        <span style="color:${cap.automatable ? '#22C55E' : '#CA8A04'};font-size:12px;">
+          ${cap.automatable ? '&#128196;' : '&#9998;'}
+        </span>
+        <span style="font-size:12px;color:#111827;">${escapeHtml(d)}</span>
+      </div>`)
+      .join('');
+
+    const badgeHtml = cap.automatable
+      ? `<span style="display:inline-block;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700;color:#166534;">&#10003; Automatizzabile</span>`
+      : `<span style="display:inline-block;background:#FEFCE8;border:1px solid #FDE68A;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:600;color:#713F12;">&#9998; Con supporto</span>`;
+
+    return `
+    <tr>
+      <td style="padding:12px;border:1px solid #D1FAE5;vertical-align:top;">
+        <div style="font-size:12px;font-weight:700;color:#065F46;margin-bottom:3px;">${escapeHtml(cap.article)}</div>
+        <div style="font-size:11px;color:#6B7280;">${escapeHtml(cap.description)}</div>
+        <div style="margin-top:6px;">${badgeHtml}</div>
+      </td>
+      <td style="padding:12px;border:1px solid #D1FAE5;vertical-align:top;">${docsHtml}</td>
+      <td style="padding:12px;border:1px solid #D1FAE5;vertical-align:top;text-align:center;white-space:nowrap;">
+        <div style="font-size:20px;font-weight:800;color:#22C55E;">-${cap.riskReduction}%</div>
+        <div style="font-size:10px;color:#9CA3AF;">stima rischio</div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `
+<div style="border:2px solid #22C55E;border-radius:12px;overflow:hidden;margin:28px 0;">
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#052e16,#14532d);padding:18px 20px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      ${markSvg(36, 'green')}
+      <div>
+        <div style="font-size:16px;font-weight:800;color:#fff;">Come Actify riduce il tuo rischio</div>
+        <div style="font-size:12px;color:#86EFAC;margin-top:2px;">Automazione compliance AI Act su misura per il tuo profilo</div>
+      </div>
+    </div>
+    <!-- KPI strip -->
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;">
+      <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px 16px;min-width:120px;text-align:center;">
+        <div style="font-size:26px;font-weight:900;color:#22C55E;">${totalDocs}</div>
+        <div style="font-size:10px;color:#86EFAC;text-transform:uppercase;letter-spacing:0.5px;">documenti generabili</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px 16px;min-width:120px;text-align:center;">
+        <div style="font-size:26px;font-weight:900;color:#22C55E;">${automatableCount}</div>
+        <div style="font-size:10px;color:#86EFAC;text-transform:uppercase;letter-spacing:0.5px;">aree automatizzabili</div>
+      </div>
+      <div style="background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);border-radius:8px;padding:10px 16px;min-width:160px;text-align:center;">
+        <div style="font-size:26px;font-weight:900;color:#4ADE80;">-${avgRiskReduction}%</div>
+        <div style="font-size:10px;color:#86EFAC;text-transform:uppercase;letter-spacing:0.5px;">riduzione rischio stimata</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div style="background:#fff;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#F0FDF4;">
+          <th style="padding:10px 12px;border:1px solid #D1FAE5;text-align:left;font-size:11px;color:#065F46;font-weight:700;width:28%;">Articolo AI Act</th>
+          <th style="padding:10px 12px;border:1px solid #D1FAE5;text-align:left;font-size:11px;color:#065F46;font-weight:700;width:57%;">Documenti Actify genera automaticamente</th>
+          <th style="padding:10px 12px;border:1px solid #D1FAE5;text-align:center;font-size:11px;color:#065F46;font-weight:700;width:15%;">Riduzione rischio</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+
+  <!-- Footer CTA -->
+  <div style="background:#F0FDF4;padding:14px 20px;border-top:1px solid #D1FAE5;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#065F46;">Accedi alla piattaforma Actify</div>
+      <div style="font-size:11px;color:#6B7280;margin-top:2px;">Genera tutti i documenti sopra in pochi minuti. Inventario AI, report compliance, monitoraggio scadenze.</div>
+    </div>
+    <div style="background:#22C55E;color:#fff;font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px;white-space:nowrap;">
+      Inizia su official-actify.com →
+    </div>
+  </div>
+</div>`;
+}
+
 // ─── Main render ──────────────────────────────────────────────────────────────
 
 export function render(
@@ -613,6 +812,9 @@ ${renderPriorityActions(output.priority_actions)}
 
 <!-- ─── RECOMMENDED DOCUMENTS ─── -->
 ${renderRecommendedDocs(output.recommended_documents)}
+
+<!-- ─── ACTIFY REMEDIATION CAPABILITIES ─── -->
+${renderActifyRemediation(output, payload)}
 
 <!-- ─── SANZIONI ART. 99 ─── -->
 ${renderSanctionsSection(payload)}

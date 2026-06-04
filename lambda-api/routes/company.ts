@@ -31,7 +31,8 @@ const companyUpdateSchema = z.object({
     has_ai_policy:          z.boolean(),
     has_training:           z.boolean(),
   }).optional(),
-  setup_completed: z.boolean().optional(),
+  setup_completed:       z.boolean().optional(),
+  subscription_tier:     z.enum(['trial', 'base', 'premium', 'enterprise']).optional(),
 });
 
 const setupSchema = z.object({

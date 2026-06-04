@@ -58,19 +58,19 @@ data "aws_iam_policy_document" "lambda_permissions" {
     ]
   }
 
-  # SES — send report email via noreply@official-actify.com
-  # TODO: verify official-actify.com domain in SES console (eu-central-1)
-  #       before going to production. SES sandbox blocks unverified recipients.
+  # DynamoDB — read/write free assessment OTP records
+  # (Resend email is sent via HTTPS REST API call — no AWS resource needed for it)
   statement {
-    sid    = "AllowSESSendEmail"
+    sid    = "AllowDynamoAssessments"
     effect = "Allow"
 
     actions = [
-      "ses:SendEmail",
-      "ses:SendRawEmail",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
     ]
 
-    resources = ["*"]
+    resources = [aws_dynamodb_table.free_assessments.arn]
   }
 
   # Bedrock — invoke Nova Pro (LLM) + Titan Embeddings V2 (RAG)

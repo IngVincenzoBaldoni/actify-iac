@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { configureAmplify } from '@/lib/amplify';
 import { isAuthenticated, doSignOut, getAuthClaims } from '@/lib/auth';
 import { markSvg } from '@/lib/branding';
+import { api } from '@/lib/api';
 
 configureAmplify();
 
@@ -14,6 +15,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
   const [checking, setChecking] = useState(true);
+  const [showSettingsBadge, setShowSettingsBadge] = useState(false);
+  const [showInventoryBadge, setShowInventoryBadge] = useState(false);
 
   useEffect(() => {
     async function check() {
@@ -22,6 +25,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const claims = await getAuthClaims();
       if (claims) { setEmail(claims.email); setRole(claims.role); }
       setChecking(false);
+
+      try {
+        const [company, systems] = await Promise.all([
+          api.company.get(),
+          api.systems.list(),
+        ]);
+        const c = company as Record<string, unknown>;
+        setShowSettingsBadge(!c?.annual_revenue_range && !c?.annual_revenue_exact);
+        setShowInventoryBadge((systems as unknown[]).length === 0);
+      } catch {
+        // badges stay hidden on error
+      }
     }
     check();
   }, [router]);
@@ -40,9 +55,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const nav = [
-    { href: '/dashboard/inventory', label: 'AI Inventory', icon: '⬡' },
-    { href: '/dashboard/roadmap', label: 'Compliance Roadmap', icon: '⊙' },
-    { href: '/dashboard/settings', label: 'Impostazioni', icon: '⚙' },
+    { href: '/dashboard/inventory', label: 'AI Inventory', icon: '⬡', badge: showInventoryBadge, callout: 'Aggiungi i tuoi strumenti AI' },
+    { href: '/dashboard/literacy', label: 'AI Literacy', icon: '🎓', badge: false, callout: '' },
+    { href: '/dashboard/documents', label: 'Document Vault', icon: '⊟', badge: false, callout: '' },
+    { href: '/dashboard/fines', label: 'Fine Board', icon: '📈', badge: false, callout: '' },
+    { href: '/dashboard/settings', label: 'Impostazioni', icon: '⚙', badge: showSettingsBadge, callout: 'Completa il profilo aziendale' },
   ];
 
   return (
@@ -60,7 +77,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className={`db-nav-link ${pathname?.startsWith(item.href) ? 'active' : ''}`}
             >
               <span className="db-nav-icon">{item.icon}</span>
-              {item.label}
+              <span className="db-nav-label">{item.label}</span>
+              {item.badge && (
+                <span className="nav-callout">
+                  <span className="nav-callout-dot" />
+                  {item.callout}
+                </span>
+              )}
             </a>
           ))}
         </nav>

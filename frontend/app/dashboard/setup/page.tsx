@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 
+// ─── Static data ──────────────────────────────────────────────────────────────
+
 const LLM_LIST = [
   { id: 'chatgpt',    label: 'ChatGPT',    vendor: 'OpenAI' },
   { id: 'claude',     label: 'Claude',     vendor: 'Anthropic' },
@@ -14,7 +16,6 @@ const LLM_LIST = [
   { id: 'mistral',    label: 'Mistral',    vendor: 'Mistral AI' },
   { id: 'perplexity', label: 'Perplexity', vendor: 'Perplexity AI' },
   { id: 'grok',       label: 'Grok',       vendor: 'xAI' },
-  { id: 'other_llm',  label: 'Altro LLM',  vendor: '' },
 ];
 
 const AI_CATS = [
@@ -85,81 +86,77 @@ const VULNERABLE_GROUPS = [
   { v: 'emotional_distress', l: 'Persone in difficoltà emotiva / psicologica' },
 ];
 
-interface LlmEntry {
-  id: string; label: string; vendor: string;
-  custom_name: string; purpose: string;
-  output_type: string; access_mode: string;
-  customizations: string[]; users_aware_of_ai: boolean;
-  target_users: string[]; vulnerable_groups: string[];
-  makes_automated_decisions: boolean; human_oversight_level: string;
-  decision_domains: string[]; affects_vulnerable_groups: boolean; data_types: string[];
-}
+const ANNEX_III_OPTIONS = [
+  { v: 'biometric_identification',    l: 'Identificazione biometrica remota',    cat: '1 — Biometria' },
+  { v: 'biometric_categorization',    l: 'Categorizzazione biometrica',           cat: '1 — Biometria' },
+  { v: 'emotion_recognition',         l: 'Riconoscimento emozioni',               cat: '1 — Biometria' },
+  { v: 'critical_infrastructure',     l: 'Infrastruttura critica (energia, acqua, trasporti)', cat: '2 — Infrastruttura critica' },
+  { v: 'education_admission',         l: 'Ammissione/accesso a percorsi formativi', cat: '3 — Istruzione' },
+  { v: 'education_assessment',        l: 'Valutazione studenti, esami, proctoring', cat: '3 — Istruzione' },
+  { v: 'recruitment',                 l: 'Assunzione e selezione personale',        cat: '4 — Occupazione/HR' },
+  { v: 'work_performance',            l: 'Valutazione/promozione/cessazione lavoratori', cat: '4 — Occupazione/HR' },
+  { v: 'work_monitoring',             l: 'Monitoraggio lavoratori (task allocation)', cat: '4 — Occupazione/HR' },
+  { v: 'credit_scoring',              l: 'Valutazione merito creditizio',            cat: '5 — Servizi essenziali' },
+  { v: 'insurance_pricing',           l: 'Pricing assicurativo (vita / salute)',     cat: '5 — Servizi essenziali' },
+  { v: 'public_services_eligibility', l: 'Accesso a servizi pubblici (benefici, sussidi)', cat: '5 — Servizi essenziali' },
+  { v: 'emergency_dispatch',          l: 'Dispatch servizi di emergenza',            cat: '5 — Servizi essenziali' },
+  { v: 'law_enforcement_risk',        l: 'Valutazione rischio criminalità (contrasto)', cat: '6 — Contrasto' },
+  { v: 'criminal_investigation',      l: 'Indagini penali / profilazione criminale',    cat: '6 — Contrasto' },
+  { v: 'migration_assessment',        l: 'Valutazione domande asilo / visto',         cat: '7 — Migrazione' },
+  { v: 'border_control',              l: 'Controllo frontiere / lie detection',        cat: '7 — Migrazione' },
+  { v: 'justice_administration',      l: 'Sistemi per amministrazione della giustizia', cat: '8 — Giustizia' },
+];
 
-interface SpecializedTool {
-  category: string; tool_name: string; vendor: string; purpose: string;
-  output_type: string; access_mode: string;
-  customizations: string[]; users_aware_of_ai: boolean;
-  target_users: string[]; vulnerable_groups: string[];
-  makes_automated_decisions: boolean; human_oversight_level: string;
-  decision_domains: string[]; affects_vulnerable_groups: boolean; data_types: string[];
-}
+// ─── Default system state ─────────────────────────────────────────────────────
 
-interface ProviderSystem {
-  tool_name: string; vendor: string; category: string; purpose: string;
-  output_type: string; access_mode: string;
-  customizations: string[]; users_aware_of_ai: boolean;
-  target_users: string[]; vulnerable_groups: string[];
-  makes_automated_decisions: boolean; human_oversight_level: string;
-  decision_domains: string[]; affects_vulnerable_groups: boolean; data_types: string[];
-}
-
-function emptySpecialized(): SpecializedTool {
+function emptySystem() {
   return {
-    category: 'hr', tool_name: '', vendor: '', purpose: '',
-    output_type: '', access_mode: '',
-    customizations: [], users_aware_of_ai: false,
-    target_users: [], vulnerable_groups: [],
-    makes_automated_decisions: false, human_oversight_level: 'na',
-    decision_domains: [], affects_vulnerable_groups: false, data_types: [],
+    role: 'deployer' as 'deployer' | 'provider',
+    is_llm: false,
+    llm_preset: '',
+    tool_name: '',
+    vendor: '',
+    category: 'altro' as string,
+    purpose: '',
+    department: '',
+    headcount: '' as string | number,
+    output_type: '',
+    access_mode: '',
+    customizations: [] as string[],
+    users_aware_of_ai: false,
+    target_users: [] as string[],
+    vulnerable_groups: [] as string[],
+    makes_automated_decisions: false,
+    human_oversight_level: 'na' as string,
+    decision_domains: [] as string[],
+    affects_vulnerable_groups: false,
+    data_types: [] as string[],
+    annex_iii_domains: [] as string[],
+    is_safety_component: false,
   };
 }
 
-function emptyProvider(): ProviderSystem {
-  return {
-    tool_name: '', vendor: '', category: 'tech', purpose: '',
-    output_type: '', access_mode: '',
-    customizations: [], users_aware_of_ai: false,
-    target_users: [], vulnerable_groups: [],
-    makes_automated_decisions: false, human_oversight_level: 'na',
-    decision_domains: [], affects_vulnerable_groups: false, data_types: [],
-  };
-}
+type SystemState = ReturnType<typeof emptySystem>;
+
+// ─── SystemFields component ───────────────────────────────────────────────────
 
 function SystemFields({ item, onChange }: {
-  item: {
-    output_type: string; access_mode: string;
-    customizations: string[]; users_aware_of_ai: boolean;
-    target_users: string[]; vulnerable_groups: string[];
-    makes_automated_decisions: boolean; human_oversight_level: string;
-    decision_domains: string[]; data_types: string[];
-  };
+  item: SystemState;
   onChange: (field: string, value: unknown) => void;
 }) {
+  function tog<T>(arr: T[], v: T): T[] {
+    return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+  }
+
   return (
     <div className="dec-section">
-
-      {/* ── 1. Configurazione & Accesso ── */}
       <div className="dec-title">Configurazione &amp; Accesso</div>
-
       <div className="dec-sub">Tipo di Output</div>
       <div className="radio-grid">
         {OUTPUT_TYPES.map(o => (
           <label key={o.v} className="radio-card">
             <input type="radio" checked={item.output_type === o.v} onChange={() => onChange('output_type', o.v)} />
-            <div className="rc-row">
-              <div className="rc-title">{o.l}</div>
-              <div className="rc-dot"></div>
-            </div>
+            <div className="rc-row"><div className="rc-title">{o.l}</div><div className="rc-dot"></div></div>
             <div className="rc-desc">{o.desc}</div>
           </label>
         ))}
@@ -170,10 +167,7 @@ function SystemFields({ item, onChange }: {
         {ACCESS_MODES.map(a => (
           <label key={a.v} className="radio-card">
             <input type="radio" checked={item.access_mode === a.v} onChange={() => onChange('access_mode', a.v)} />
-            <div className="rc-row">
-              <div className="rc-title">{a.l}</div>
-              <div className="rc-dot"></div>
-            </div>
+            <div className="rc-row"><div className="rc-title">{a.l}</div><div className="rc-dot"></div></div>
             <div className="rc-desc">{a.desc}</div>
           </label>
         ))}
@@ -184,30 +178,19 @@ function SystemFields({ item, onChange }: {
         {CUSTOMIZATIONS.map(c => (
           <label key={c.v} className="check-card">
             <input type="checkbox" checked={item.customizations.includes(c.v)}
-              onChange={e => {
-                const arr = item.customizations;
-                onChange('customizations', e.target.checked ? [...arr, c.v] : arr.filter(x => x !== c.v));
-              }} />
-            <div>
-              <div className="cc-title">{c.l}</div>
-              <div className="cc-desc">{c.desc}</div>
-            </div>
+              onChange={e => onChange('customizations', e.target.checked ? [...item.customizations, c.v] : item.customizations.filter(x => x !== c.v))} />
+            <div><div className="cc-title">{c.l}</div><div className="cc-desc">{c.desc}</div></div>
           </label>
         ))}
       </div>
 
-      {/* ── 2. Persone & Trasparenza ── */}
       <div className="dec-title">Persone &amp; Trasparenza</div>
-
       <div className="dec-sub">Utenti Target</div>
       <div className="check-list">
         {TARGET_USERS.map(u => (
           <label key={u.v} className="check-row">
             <input type="checkbox" checked={item.target_users.includes(u.v)}
-              onChange={e => {
-                const arr = item.target_users;
-                onChange('target_users', e.target.checked ? [...arr, u.v] : arr.filter(x => x !== u.v));
-              }} />
+              onChange={() => onChange('target_users', tog(item.target_users, u.v))} />
             <span>{u.l}</span>
           </label>
         ))}
@@ -218,10 +201,7 @@ function SystemFields({ item, onChange }: {
         {VULNERABLE_GROUPS.map(g => (
           <label key={g.v} className="check-row">
             <input type="checkbox" checked={item.vulnerable_groups.includes(g.v)}
-              onChange={e => {
-                const arr = item.vulnerable_groups;
-                onChange('vulnerable_groups', e.target.checked ? [...arr, g.v] : arr.filter(x => x !== g.v));
-              }} />
+              onChange={() => onChange('vulnerable_groups', tog(item.vulnerable_groups, g.v))} />
             <span>{g.l}</span>
           </label>
         ))}
@@ -238,9 +218,7 @@ function SystemFields({ item, onChange }: {
         </label>
       </div>
 
-      {/* ── 3. Impatto Decisionale ── */}
       <div className="dec-title">Impatto Decisionale</div>
-
       <div className="check-cards">
         <label className="check-card">
           <input type="checkbox" checked={item.makes_automated_decisions}
@@ -271,49 +249,83 @@ function SystemFields({ item, onChange }: {
         {DECISION_DOMAINS.map(d => (
           <label key={d.v} className="check-row">
             <input type="checkbox" checked={item.decision_domains.includes(d.v)}
-              onChange={e => {
-                const arr = item.decision_domains;
-                onChange('decision_domains', e.target.checked ? [...arr, d.v] : arr.filter(x => x !== d.v));
-              }} />
+              onChange={() => onChange('decision_domains', tog(item.decision_domains, d.v))} />
             <span>{d.l}</span>
           </label>
         ))}
       </div>
 
-      {/* ── 4. Dati Trattati ── */}
+      <div className="dec-title">Classificazione AI Act — Alto Rischio</div>
+
+      <div className="dec-sub">Componente di sicurezza (Art. 6 §1)</div>
+      <div className="check-cards">
+        <label className="check-card">
+          <input type="checkbox" checked={item.is_safety_component}
+            onChange={e => onChange('is_safety_component', e.target.checked)} />
+          <div>
+            <div className="cc-title">Componente di sicurezza in prodotto regolamentato</div>
+            <div className="cc-desc">Il sistema è integrato in un prodotto soggetto a normativa UE di armonizzazione (dispositivo medico, macchinario, veicolo, aviazione, ecc.)</div>
+          </div>
+        </label>
+      </div>
+
+      <div className="dec-sub">Categorie Allegato III (Art. 6 §2)</div>
+      {(() => {
+        const grouped = ANNEX_III_OPTIONS.reduce((acc, o) => {
+          if (!acc[o.cat]) acc[o.cat] = [];
+          acc[o.cat].push(o);
+          return acc;
+        }, {} as Record<string, typeof ANNEX_III_OPTIONS>);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Object.entries(grouped).map(([cat, opts]) => (
+              <div key={cat}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Cat. {cat}
+                </div>
+                <div className="check-list cl-2col">
+                  {opts.map(o => (
+                    <label key={o.v} className="check-row">
+                      <input type="checkbox"
+                        checked={item.annex_iii_domains.includes(o.v)}
+                        onChange={() => onChange('annex_iii_domains', tog(item.annex_iii_domains, o.v))} />
+                      <span>{o.l}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       <div className="dec-title">Dati Trattati</div>
       <div className="check-list cl-2col">
         {DATA_TYPES.map(d => (
           <label key={d.v} className="check-row">
             <input type="checkbox" checked={item.data_types.includes(d.v)}
-              onChange={e => {
-                const arr = item.data_types;
-                onChange('data_types', e.target.checked ? [...arr, d.v] : arr.filter(x => x !== d.v));
-              }} />
+              onChange={() => onChange('data_types', tog(item.data_types, d.v))} />
             <span>{d.l}</span>
           </label>
         ))}
       </div>
-
     </div>
   );
 }
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 function SetupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const addMode = searchParams.get('add') === '1';
+
+  // add mode: 1 step only; initial setup: 3 steps
   const [step, setStep] = useState(1);
 
-  // Step 1 state
-  const [isDeployer, setIsDeployer] = useState(false);
-  const [isProvider, setIsProvider] = useState(false);
-  const [selectedLlmIds, setSelectedLlmIds] = useState<string[]>([]);
-  const [llmDetails, setLlmDetails] = useState<Record<string, LlmEntry>>({});
-  const [specializedTools, setSpecializedTools] = useState<SpecializedTool[]>([]);
-  const [providerSystems, setProviderSystems] = useState<ProviderSystem[]>([]);
+  const [sys, setSys] = useState<SystemState>(emptySystem());
 
-  // Step 2 state
+  // Step 2: governance (initial setup only)
   const [governance, setGov] = useState({
     has_dpo: false, dpo_status: 'none' as 'inhouse' | 'service' | 'none',
     has_ai_inventory: false, has_impact_assessment: false,
@@ -321,10 +333,11 @@ function SetupContent() {
     has_ai_policy: false, has_training: false,
   });
 
-  // Step 3 state
+  // Step 3: notes (initial setup only)
   const [contextNotes, setContextNotes] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]           = useState('');
 
   useEffect(() => {
     if (addMode) return;
@@ -333,310 +346,218 @@ function SetupContent() {
     }).catch(() => {});
   }, [router, addMode]);
 
-  function toggleLlm(llm: typeof LLM_LIST[0]) {
-    setSelectedLlmIds(prev => {
-      if (prev.includes(llm.id)) {
-        setLlmDetails(d => { const n = { ...d }; delete n[llm.id]; return n; });
-        return prev.filter(id => id !== llm.id);
-      } else {
-        setLlmDetails(d => ({
-          ...d, [llm.id]: {
-            id: llm.id, label: llm.label, vendor: llm.vendor,
-            custom_name: '', purpose: '',
-            output_type: '', access_mode: '',
-            customizations: [], users_aware_of_ai: false,
-            target_users: [], vulnerable_groups: [],
-            makes_automated_decisions: false, human_oversight_level: 'na',
-            decision_domains: [], affects_vulnerable_groups: false, data_types: [],
-          }
-        }));
-        return [...prev, llm.id];
+  function update(field: string, value: unknown) {
+    setSys(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'llm_preset' && value) {
+        const llm = LLM_LIST.find(l => l.id === value);
+        if (llm) { next.tool_name = llm.label; next.vendor = llm.vendor; next.category = 'llm'; next.is_llm = true; }
       }
+      if (field === 'is_llm' && !value) next.llm_preset = '';
+      return next;
     });
   }
 
-  function updateLlm(id: string, field: string, value: unknown) {
-    setLlmDetails(d => ({ ...d, [id]: { ...d[id], [field]: value } }));
-  }
-
-  function updateSpecialized(idx: number, field: string, value: unknown) {
-    setSpecializedTools(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
-  }
-
-  function updateProvider(idx: number, field: string, value: unknown) {
-    setProviderSystems(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+  function buildSystemPayload() {
+    return {
+      tool_name:                 sys.tool_name.trim() || (sys.is_llm ? sys.llm_preset : 'Sistema AI'),
+      vendor:                    sys.vendor.trim(),
+      category:                  sys.category,
+      role:                      sys.role,
+      purpose:                   sys.purpose.trim() || 'Uso interno aziendale',
+      target_users:              sys.target_users,
+      makes_automated_decisions: sys.makes_automated_decisions,
+      human_oversight_level:     sys.human_oversight_level,
+      decision_domains:          sys.decision_domains,
+      affects_vulnerable_groups: sys.vulnerable_groups.length > 0,
+      data_types:                sys.data_types,
+      ...(sys.department?.trim() ? { department: sys.department.trim() } : {}),
+      ...(sys.headcount && Number(sys.headcount) > 0 ? { headcount: Number(sys.headcount) } : {}),
+      ...(sys.output_type  ? { output_type: sys.output_type }           : {}),
+      ...(sys.vulnerable_groups.length > 0 ? { vulnerable_groups: sys.vulnerable_groups } : {}),
+      ...(sys.customizations.length > 0    ? { customizations: sys.customizations }        : {}),
+      ...(sys.annex_iii_domains.length > 0 ? { annex_iii_domains: sys.annex_iii_domains } : {}),
+      ...(sys.is_safety_component           ? { is_safety_component: sys.is_safety_component } : {}),
+    };
   }
 
   async function handleSubmit() {
     setError('');
     setSubmitting(true);
     try {
-      const aiRole = isProvider && isDeployer ? 'both' : isProvider ? 'provider' : isDeployer ? 'deployer' : 'unknown';
-
-      const systems: Record<string, unknown>[] = [];
-
-      // LLM entries
-      for (const id of selectedLlmIds) {
-        const l = llmDetails[id];
-        if (!l) continue;
-        const name = id === 'other_llm' ? (l.custom_name || 'LLM Non specificato') : l.label;
-        systems.push({
-          tool_name: name, vendor: l.vendor || l.label,
-          category: 'llm', role: 'deployer', purpose: l.purpose || `Uso di ${name}`,
-          output_type: l.output_type, access_mode: l.access_mode,
-          customizations: l.customizations, users_aware_of_ai: l.users_aware_of_ai,
-          target_users: l.target_users,
-          vulnerable_groups: l.vulnerable_groups,
-          affects_vulnerable_groups: l.vulnerable_groups.length > 0,
-          makes_automated_decisions: l.makes_automated_decisions,
-          human_oversight_level: l.human_oversight_level,
-          decision_domains: l.decision_domains,
-          data_types: l.data_types,
-        });
-      }
-
-      // Specialized deployer tools
-      for (const s of specializedTools) {
-        if (!s.tool_name.trim()) continue;
-        systems.push({
-          ...s,
-          role: 'deployer',
-          affects_vulnerable_groups: s.vulnerable_groups.length > 0,
-        });
-      }
-
-      // Provider systems
-      for (const s of providerSystems) {
-        if (!s.tool_name.trim()) continue;
-        systems.push({
-          ...s,
-          role: 'provider',
-          affects_vulnerable_groups: s.vulnerable_groups.length > 0,
-        });
-      }
-
-      for (const sys of systems) {
-        await api.systems.create(sys);
-      }
-
+      await api.systems.create(buildSystemPayload());
       if (!addMode) {
-        await api.company.setup({ ai_role: aiRole, context_notes: contextNotes, governance });
+        await api.company.setup({ ai_role: sys.role, context_notes: contextNotes, governance });
       }
       router.push('/dashboard/inventory');
-    } catch (err: unknown) {
-      setError((err as { message?: string }).message ?? 'Errore durante il salvataggio.');
+    } catch (e: unknown) {
+      setError((e as { message?: string }).message ?? 'Errore durante il salvataggio.');
     } finally {
       setSubmitting(false);
     }
   }
 
-  const totalSystems = selectedLlmIds.length + specializedTools.filter(s => s.tool_name).length + providerSystems.filter(s => s.tool_name).length;
+  // ─── Step labels ─────────────────────────────────────────────────────────────
+  const steps = addMode
+    ? ['Sistema AI']
+    : ['Sistema AI', 'AI Readiness', 'Conferma'];
 
   return (
     <div className="setup-page">
       <div className="setup-header">
         {addMode
-          ? <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>Aggiungi Sistemi AI</h2>
-          : null}
-        {!addMode && <div className="setup-steps">
-          {['Ruolo & Sistemi AI', 'AI Readiness', 'Note & Conferma'].map((name, i) => (
-            <div key={i} className={`setup-step ${step === i + 1 ? 'active' : step > i + 1 ? 'done' : ''}`}>
-              <div className="setup-step-dot">{step > i + 1 ? '✓' : i + 1}</div>
-              <span>{name}</span>
+          ? <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>Aggiungi Sistema AI</h2>
+          : (
+            <div className="setup-steps">
+              {steps.map((name, i) => (
+                <div key={i} className={`setup-step ${step === i + 1 ? 'active' : step > i + 1 ? 'done' : ''}`}>
+                  <div className="setup-step-dot">{step > i + 1 ? '✓' : i + 1}</div>
+                  <span>{name}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>}
+          )}
       </div>
 
       <div className="setup-body">
 
-        {/* ── Step 1 ── */}
+        {/* ── Step 1: Sistema AI ─────────────────────────────────────────────── */}
         {step === 1 && (
           <>
             <div className="panel-head">
-              <h2>Ruolo &amp; Sistemi AI</h2>
-              <p>Seleziona il tuo ruolo e censisci i sistemi AI della tua organizzazione.</p>
+              <h2>Sistema AI</h2>
+              <p>Censisci un sistema AI alla volta. Potrai aggiungerne altri in seguito.</p>
             </div>
 
+            {/* Role */}
             <div className="fcard">
-              <h3>Il tuo ruolo rispetto ai sistemi AI</h3>
+              <h3>Ruolo rispetto a questo sistema</h3>
               <div className="check-cards">
                 <label className="check-card">
-                  <input type="checkbox" checked={isDeployer} onChange={e => setIsDeployer(e.target.checked)} />
+                  <input type="radio" name="role" checked={sys.role === 'deployer'} onChange={() => update('role', 'deployer')} />
                   <div>
                     <div className="cc-title">Deployer (Utilizzatore)</div>
-                    <div className="cc-desc">Usi sistemi AI di terzi: API, SaaS, LLM, software specializzati</div>
+                    <div className="cc-desc">Usi un sistema AI di terzi: API, SaaS, LLM, software specializzato</div>
                   </div>
                 </label>
                 <label className="check-card">
-                  <input type="checkbox" checked={isProvider} onChange={e => setIsProvider(e.target.checked)} />
+                  <input type="radio" name="role" checked={sys.role === 'provider'} onChange={() => update('role', 'provider')} />
                   <div>
                     <div className="cc-title">Provider (Fornitore)</div>
-                    <div className="cc-desc">Sviluppi e commercializzi sistemi AI con il tuo marchio</div>
+                    <div className="cc-desc">Sviluppi e commercializzi questo sistema AI con il tuo marchio</div>
                   </div>
                 </label>
               </div>
             </div>
 
-            {/* ── Deployer section ── */}
-            {isDeployer && (
-              <>
-                <div className="fcard">
-                  <h3>Strumenti LLM / AI Generativa</h3>
-                  <p className="fcard-sub">Seleziona i modelli che usi nella tua organizzazione</p>
-                  <div className="llm-grid">
-                    {LLM_LIST.map(llm => (
-                      <button key={llm.id} type="button"
-                        className={`llm-chip ${selectedLlmIds.includes(llm.id) ? 'sel' : ''}`}
-                        onClick={() => toggleLlm(llm)}>
-                        <span className="llm-chip-name">{llm.label}</span>
-                        {llm.vendor && <span className="llm-chip-vendor">{llm.vendor}</span>}
-                      </button>
-                    ))}
+            {/* System identity */}
+            <div className="fcard">
+              <h3>Identità del Sistema</h3>
+
+              {sys.role === 'deployer' && (
+                <>
+                  <div className="dec-sub" style={{ marginBottom: 8 }}>È un LLM / AI Generativa?</div>
+                  <div className="check-cards" style={{ marginBottom: 16 }}>
+                    <label className="check-card">
+                      <input type="checkbox" checked={sys.is_llm}
+                        onChange={e => update('is_llm', e.target.checked)} />
+                      <div>
+                        <div className="cc-title">Sì, è un modello LLM / AI Generativa</div>
+                        <div className="cc-desc">ChatGPT, Claude, Gemini, Copilot, Llama, ecc.</div>
+                      </div>
+                    </label>
                   </div>
 
-                  {selectedLlmIds.length > 0 && (
-                    <div style={{ marginTop: 20 }}>
-                      {selectedLlmIds.map(id => {
-                        const l = llmDetails[id];
-                        if (!l) return null;
-                        return (
-                          <div key={id} className="tool-card" style={{ marginBottom: 16 }}>
-                            <div className="tc-head">
-                              <span className="tc-num">{l.label}{l.vendor ? ` — ${l.vendor}` : ''}</span>
-                              <button className="btn-rm" onClick={() => toggleLlm(LLM_LIST.find(x => x.id === id)!)}>✕</button>
-                            </div>
-                            {id === 'other_llm' && (
-                              <div className="field-row">
-                                <div className="field">
-                                  <label>Nome strumento *</label>
-                                  <input type="text" value={l.custom_name} placeholder="Nome dello strumento LLM..."
-                                    onChange={e => updateLlm(id, 'custom_name', e.target.value)} />
-                                </div>
-                                <div className="field">
-                                  <label>Vendor / Fornitore</label>
-                                  <input type="text" value={l.vendor} placeholder="Es. Together AI, Cohere..."
-                                    onChange={e => updateLlm(id, 'vendor', e.target.value)} />
-                                </div>
-                              </div>
-                            )}
-                            <div className="field">
-                              <label>Come lo usi? Per quali processi?</label>
-                              <textarea rows={2} value={l.purpose}
-                                placeholder={`Come usi ${l.label} nella tua organizzazione? Chi ne fa uso?`}
-                                onChange={e => updateLlm(id, 'purpose', e.target.value)} />
-                            </div>
-                            <SystemFields item={l} onChange={(f, v) => updateLlm(id, f, v)} />
-                          </div>
-                        );
-                      })}
+                  {sys.is_llm && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div className="dec-sub" style={{ marginBottom: 8 }}>Seleziona il modello</div>
+                      <div className="llm-grid">
+                        {LLM_LIST.map(llm => (
+                          <button key={llm.id} type="button"
+                            className={`llm-chip ${sys.llm_preset === llm.id ? 'sel' : ''}`}
+                            onClick={() => update('llm_preset', llm.id)}>
+                            <span className="llm-chip-name">{llm.label}</span>
+                            {llm.vendor && <span className="llm-chip-vendor">{llm.vendor}</span>}
+                          </button>
+                        ))}
+                        <button type="button"
+                          className={`llm-chip ${sys.llm_preset === 'other' ? 'sel' : ''}`}
+                          onClick={() => update('llm_preset', 'other')}>
+                          <span className="llm-chip-name">Altro LLM</span>
+                        </button>
+                      </div>
                     </div>
                   )}
-                </div>
+                </>
+              )}
 
-                <div className="fcard">
-                  <h3>Strumenti AI Specializzati</h3>
-                  <p className="fcard-sub">Software AI verticali: HR, finanza, CRM, ecc. (es. HireVue, Salesforce Einstein)</p>
-                  {specializedTools.map((s, idx) => (
-                    <div key={idx} className="tool-card" style={{ marginBottom: 16 }}>
-                      <div className="tc-head">
-                        <span className="tc-num">Strumento {idx + 1}</span>
-                        <button className="btn-rm" onClick={() => setSpecializedTools(prev => prev.filter((_, i) => i !== idx))}>✕ Rimuovi</button>
-                      </div>
-                      <div className="field-row">
-                        <div className="field">
-                          <label>Categoria</label>
-                          <select value={s.category} onChange={e => updateSpecialized(idx, 'category', e.target.value)}>
-                            {AI_CATS.map(c => <option key={c.v} value={c.v}>{c.l}</option>)}
-                          </select>
-                        </div>
-                        <div className="field">
-                          <label>Nome Sistema *</label>
-                          <input type="text" value={s.tool_name} placeholder="Es. HireVue, Salesforce Einstein..."
-                            onChange={e => updateSpecialized(idx, 'tool_name', e.target.value)} />
-                        </div>
-                      </div>
-                      <div className="field-row">
-                        <div className="field">
-                          <label>Vendor / Fornitore</label>
-                          <input type="text" value={s.vendor} placeholder="Es. HireVue Inc., Salesforce..."
-                            onChange={e => updateSpecialized(idx, 'vendor', e.target.value)} />
-                        </div>
-                      </div>
-                      <div className="field">
-                        <label>Scopo d'uso</label>
-                        <textarea rows={2} value={s.purpose}
-                          placeholder="A cosa serve nella tua azienda? Chi lo usa? Quali decisioni supporta?"
-                          onChange={e => updateSpecialized(idx, 'purpose', e.target.value)} />
-                      </div>
-                      <SystemFields item={s} onChange={(f, v) => updateSpecialized(idx, f, v)} />
-                    </div>
-                  ))}
-                  <button className="btn-add" onClick={() => setSpecializedTools(prev => [...prev, emptySpecialized()])}>
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-                    Aggiungi Strumento Specializzato
-                  </button>
+              <div className="field-row">
+                <div className="field">
+                  <label>Nome Sistema *</label>
+                  <input type="text" value={sys.tool_name}
+                    placeholder={sys.is_llm ? 'Es. ChatGPT, Claude…' : 'Es. HireVue, Salesforce Einstein…'}
+                    onChange={e => update('tool_name', e.target.value)} />
                 </div>
-              </>
-            )}
-
-            {/* ── Provider section ── */}
-            {isProvider && (
-              <div className="fcard">
-                <h3>Sistemi AI Proprietari</h3>
-                <p className="fcard-sub">Sistemi che sviluppi e distribuisci con il tuo marchio</p>
-                {providerSystems.map((s, idx) => (
-                  <div key={idx} className="tool-card" style={{ marginBottom: 16 }}>
-                    <div className="tc-head">
-                      <span className="tc-num">Sistema {idx + 1}</span>
-                      <button className="btn-rm" onClick={() => setProviderSystems(prev => prev.filter((_, i) => i !== idx))}>✕ Rimuovi</button>
-                    </div>
-                    <div className="field-row">
-                      <div className="field">
-                        <label>Nome Sistema *</label>
-                        <input type="text" value={s.tool_name} placeholder="Es. Actify Analytics, SmartHire..."
-                          onChange={e => updateProvider(idx, 'tool_name', e.target.value)} />
-                      </div>
-                      <div className="field">
-                        <label>Vendor / Marchio</label>
-                        <input type="text" value={s.vendor} placeholder="Il tuo nome o brand..."
-                          onChange={e => updateProvider(idx, 'vendor', e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="field-row">
-                      <div className="field">
-                        <label>Categoria</label>
-                        <select value={s.category} onChange={e => updateProvider(idx, 'category', e.target.value)}>
-                          {AI_CATS.map(c => <option key={c.v} value={c.v}>{c.l}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="field">
-                      <label>Descrizione e scopo</label>
-                      <textarea rows={2} value={s.purpose} placeholder="Cosa fa il sistema? A chi è destinato?"
-                        onChange={e => updateProvider(idx, 'purpose', e.target.value)} />
-                    </div>
-                    <SystemFields item={s} onChange={(f, v) => updateProvider(idx, f, v)} />
-                  </div>
-                ))}
-                <button className="btn-add" onClick={() => setProviderSystems(prev => [...prev, emptyProvider()])}>
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-                  Aggiungi Sistema Proprietario
-                </button>
+                <div className="field">
+                  <label>Vendor / Fornitore</label>
+                  <input type="text" value={sys.vendor}
+                    placeholder="Es. OpenAI, HireVue Inc…"
+                    onChange={e => update('vendor', e.target.value)} />
+                </div>
               </div>
-            )}
+
+              <div className="field-row">
+                <div className="field">
+                  <label>Categoria</label>
+                  <select value={sys.category} onChange={e => update('category', e.target.value)}>
+                    {sys.is_llm && <option value="llm">LLM / AI Generativa</option>}
+                    {AI_CATS.map(c => <option key={c.v} value={c.v}>{c.l}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="field">
+                <label>Come lo usi? Per quali processi?</label>
+                <textarea rows={3} value={sys.purpose}
+                  placeholder="Descrivi l'uso: chi lo usa, per quali attività, che tipo di decisioni supporta…"
+                  onChange={e => update('purpose', e.target.value)} />
+              </div>
+
+              <div className="field-row">
+                <div className="field">
+                  <label>Dipartimento che lo utilizza <span style={{color:'var(--muted)',fontWeight:400,fontSize:12}}>(AI Literacy — Art. 4)</span></label>
+                  <input type="text" value={sys.department}
+                    placeholder="Es. HR, Marketing, Finance, Operations…"
+                    onChange={e => update('department', e.target.value)} />
+                </div>
+                <div className="field" style={{maxWidth:180}}>
+                  <label>N° persone nel dipartimento</label>
+                  <input type="number" min={1} value={sys.headcount}
+                    placeholder="Es. 12"
+                    onChange={e => update('headcount', e.target.value ? parseInt(e.target.value, 10) : '')} />
+                </div>
+              </div>
+
+              <SystemFields item={sys} onChange={update} />
+            </div>
 
             <div className="setup-nav">
-              {addMode
-                ? <button className="btn-submit" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Salvataggio…' : '✓ Aggiungi Sistemi →'}</button>
-                : <button className="btn-next" onClick={() => setStep(2)}>Avanti →</button>
-              }
+              {addMode ? (
+                <>
+                  {error && <div className="alert-err show">{error}</div>}
+                  <button className="btn-submit" onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? 'Salvataggio…' : '+ Aggiungi all\'Inventory →'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-next" onClick={() => setStep(2)}>Avanti →</button>
+              )}
             </div>
           </>
         )}
 
-        {/* ── Step 2 ── */}
-        {step === 2 && (
+        {/* ── Step 2: AI Readiness (initial setup only) ──────────────────────── */}
+        {step === 2 && !addMode && (
           <>
             <div className="panel-head">
               <h2>AI Readiness</h2>
@@ -650,10 +571,7 @@ function SetupContent() {
                     <input type="radio" name="dpo" value={v}
                       checked={governance.dpo_status === v}
                       onChange={() => setGov(g => ({ ...g, dpo_status: v, has_dpo: v !== 'none' }))} />
-                    <div className="rc-row">
-                      <div className="rc-title">{v === 'inhouse' ? 'In-house' : v === 'service' ? 'As a Service' : 'Non presente'}</div>
-                      <div className="rc-dot"></div>
-                    </div>
+                    <div className="rc-row"><div className="rc-title">{v === 'inhouse' ? 'In-house' : v === 'service' ? 'As a Service' : 'Non presente'}</div><div className="rc-dot"></div></div>
                     <div className="rc-desc">{v === 'inhouse' ? 'DPO dipendente o figura interna' : v === 'service' ? 'DPO esterno / consulente' : 'Nessun DPO formalmente designato'}</div>
                   </label>
                 ))}
@@ -668,14 +586,12 @@ function SetupContent() {
                   { key: 'has_incident_procedure', title: 'Procedura gestione incidenti AI', desc: 'Processo per segnalare e gestire malfunzionamenti AI' },
                   { key: 'has_ai_policy', title: 'Policy interna sull\'uso dell\'AI', desc: 'Regole, responsabilità e limiti nell\'adozione AI' },
                   { key: 'has_training', title: 'Formazione del personale sull\'AI', desc: 'Formazione sull\'uso sicuro e consapevole dell\'AI' },
+                  { key: 'has_human_oversight', title: 'Supervisione umana documentata', desc: 'Procedure documentate di controllo umano sulle decisioni AI' },
                 ] as { key: keyof typeof governance; title: string; desc: string }[]).map(item => (
                   <label key={item.key} className="check-card">
                     <input type="checkbox" checked={governance[item.key] as boolean}
                       onChange={e => setGov(g => ({ ...g, [item.key]: e.target.checked }))} />
-                    <div>
-                      <div className="cc-title">{item.title}</div>
-                      <div className="cc-desc">{item.desc}</div>
-                    </div>
+                    <div><div className="cc-title">{item.title}</div><div className="cc-desc">{item.desc}</div></div>
                   </label>
                 ))}
               </div>
@@ -687,29 +603,30 @@ function SetupContent() {
           </>
         )}
 
-        {/* ── Step 3 ── */}
-        {step === 3 && (
+        {/* ── Step 3: Note & Conferma (initial setup only) ───────────────────── */}
+        {step === 3 && !addMode && (
           <>
             <div className="panel-head">
               <h2>Note &amp; Conferma</h2>
-              <p>Aggiungi contesto specifico che l'AI utilizzerà per l'analisi.</p>
+              <p>Aggiungi contesto specifico opzionale e completa il setup.</p>
             </div>
             <div className="fcard">
               <div className="hint">
                 <span className="hint-icon">🎯</span>
-                <span>Descrivi come usi esattamente i sistemi AI, chi ne è impattato, aspetti critici del tuo settore. <strong>Garbage in, garbage out.</strong></span>
+                <span>Descrivi dettagli critici del tuo settore o uso specifico. Il motore AI userà queste note nell'analisi di compliance.</span>
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
-                <label>Note Libere — Contesto Specifico</label>
-                <textarea rows={6} value={contextNotes}
+                <label>Note Libere — Contesto Specifico (opzionale)</label>
+                <textarea rows={5} value={contextNotes}
                   onChange={e => setContextNotes(e.target.value)}
-                  placeholder="Es: Usiamo HireVue per lo screening candidati. Il sistema produce un punteggio e chi scende sotto 60 non viene mai contattato. Operiamo nel settore bancario..." />
+                  placeholder="Es: Usiamo questo sistema per lo screening candidati nel settore bancario. L'output determina chi riceve un colloquio…" />
               </div>
             </div>
             <div className="fcard">
               <h3>Riepilogo</h3>
-              <div className="rev-row"><span className="rk">Sistemi AI censiti</span><span className="rv">{totalSystems}</span></div>
-              <div className="rev-row"><span className="rk">LLM selezionati</span><span className="rv">{selectedLlmIds.length}</span></div>
+              <div className="rev-row"><span className="rk">Sistema censito</span><span className="rv">{sys.tool_name || '—'}</span></div>
+              <div className="rev-row"><span className="rk">Ruolo</span><span className="rv">{sys.role}</span></div>
+              <div className="rev-row"><span className="rk">Categoria</span><span className="rv">{sys.category}</span></div>
               <div className="rev-row"><span className="rk">DPO</span><span className="rv">{governance.dpo_status}</span></div>
               <div className="rev-row"><span className="rk">Policy AI</span><span className="rv">{governance.has_ai_policy ? 'Sì' : 'No'}</span></div>
             </div>

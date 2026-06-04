@@ -489,6 +489,7 @@ export default function Page() {
                 </div>
               </div>
             </div>
+            <div id="emailError" style={{display:'none',color:'#DC2626',fontSize:13,marginTop:12,padding:'10px 14px',background:'rgba(220,38,38,0.08)',borderRadius:8,border:'1px solid rgba(220,38,38,0.25)'}}></div>
           </div>
 
           {/* Step 2 */}
@@ -517,6 +518,20 @@ export default function Page() {
                 </label>
               </div>
             </div>
+            {/* 1-tool limit banner — shown by wizard.js when limit is reached */}
+            <div id="toolLimitNotice" style={{display:'none'}} className="fcard" aria-live="polite">
+              <div style={{display:'flex',alignItems:'flex-start',gap:'12px',background:'#FFF7ED',border:'1px solid #FED7AA',borderLeft:'4px solid #EA580C',borderRadius:'8px',padding:'14px 16px'}}>
+                <span style={{fontSize:'20px',flexShrink:0}}>🔒</span>
+                <div>
+                  <div style={{fontWeight:700,fontSize:'14px',color:'#9A3412',marginBottom:'4px'}}>
+                    Form gratuito: 1 sistema AI
+                  </div>
+                  <div style={{fontSize:'13px',color:'#92400E',lineHeight:'1.6'}}>
+                    Hai già aggiunto il sistema AI per questo assessment gratuito. Per censire più tool e ottenere un&rsquo;analisi completa del tuo inventario AI, <a href="/register" style={{color:'#EA580C',fontWeight:600}}>crea un account Actify</a>.
+                  </div>
+                </div>
+              </div>
+            </div>
             <div id="providerSection" style={{display:'none'}}>
               <div className="fcard">
                 <div className="rs-head">
@@ -538,13 +553,13 @@ export default function Page() {
                   <span className="rs-badge dep">Deployer</span>
                 </div>
                 <h3 style={{marginBottom:'10px'}}>A. LLM / AI Generativa &mdash; Strumenti Standard</h3>
-                <p>Seleziona tutti gli strumenti GenAI che la tua organizzazione utilizza.</p>
+                <p>Seleziona l&rsquo;LLM che la tua organizzazione utilizza.</p>
                 <div className="llm-grid" id="llmGrid"></div>
                 <div id="llmDetails"></div>
               </div>
               <div className="fcard">
                 <h3>B. Sistemi AI Specializzati</h3>
-                <p>Sistemi AI verticali per funzioni specifiche (recruiting AI, credit scoring, diagnostica, ecc.).</p>
+                <p>Sistema AI verticale per funzioni specifiche (recruiting AI, credit scoring, diagnostica, ecc.).</p>
                 <div id="depSpecList"></div>
                 <button className="btn-add" onClick={w('addDeployerSpecialized')}>
                   <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>

@@ -38,6 +38,10 @@ resource "aws_lambda_function" "saas_api" {
       DYNAMODB_USERS_TABLE       = aws_dynamodb_table.company_users.name
       DYNAMODB_SYSTEMS_TABLE     = aws_dynamodb_table.ai_systems.name
       DYNAMODB_CHECKS_TABLE      = aws_dynamodb_table.compliance_checks.name
+      DYNAMODB_DOCUMENTS_TABLE   = aws_dynamodb_table.documents.name
+      DYNAMODB_LITERACY_TABLE    = aws_dynamodb_table.literacy.name
+      DOCUMENTS_BUCKET           = aws_s3_bucket.actify_documents.bucket
+      LAMBDA_PDF_ARN             = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_pdf_name}"
       BEDROCK_MODEL_ID           = "eu.amazon.nova-pro-v1:0"
       BEDROCK_REGION             = var.aws_region
       LAMBDA_SELF_ARN            = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_api_name}"

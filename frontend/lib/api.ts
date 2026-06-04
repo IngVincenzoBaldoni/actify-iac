@@ -72,4 +72,45 @@ export const api = {
       'GET', `/api/systems/${systemId}/compliance-checks`
     ),
   },
+
+  // ─── Documents (Remediation Engine) ─────────────────────────────────────────
+  documents: {
+    generate: (systemId: string, gapId: string) =>
+      request<{ document_id: string; status: string }>(
+        'POST', `/api/systems/${systemId}/remediation/generate`, { gap_id: gapId }
+      ),
+    get: (documentId: string) =>
+      request<Record<string, unknown>>('GET', `/api/documents/${documentId}`),
+    finalize: (documentId: string) =>
+      request<{ success: boolean }>('PUT', `/api/documents/${documentId}/finalize`, {}),
+    delete: (documentId: string) =>
+      request<{ success: boolean }>('DELETE', `/api/documents/${documentId}`),
+    regenerate: (documentId: string) =>
+      request<{ document_id: string; status: string }>(
+        'POST', `/api/documents/${documentId}/regenerate`, {}
+      ),
+    listBySystem: (systemId: string) =>
+      request<{ documents: unknown[] }>('GET', `/api/systems/${systemId}/documents`),
+    listByCompany: () =>
+      request<{ documents: unknown[] }>('GET', '/api/company/documents'),
+  },
+
+  // ─── AI Literacy ────────────────────────────────────────────────────────────
+  literacy: {
+    list: () => request<{ departments: unknown[]; systems: unknown[] }>('GET', '/api/literacy'),
+    createDept: (body: { name: string; headcount: number; system_ids: string[] }) =>
+      request<{ dept_id: string }>('POST', '/api/literacy/departments', body),
+    deleteDept: (deptId: string) =>
+      request<{ message: string }>('DELETE', `/api/literacy/departments/${deptId}`),
+    suggest: (deptId: string) =>
+      request<{ suggestions: unknown[] }>('POST', `/api/literacy/departments/${deptId}/suggest`, {}),
+    listCerts: (deptId: string) =>
+      request<{ certifications: unknown[] }>('GET', `/api/literacy/departments/${deptId}/certifications`),
+    addCert: (deptId: string, body: {
+      certification_name: string; issued_date: string;
+      url?: string; people_count?: number; notes?: string;
+    }) => request<{ cert_id: string }>('POST', `/api/literacy/departments/${deptId}/certifications`, body),
+    deleteCert: (deptId: string, certId: string) =>
+      request<{ message: string }>('DELETE', `/api/literacy/departments/${deptId}/certifications/${certId}`),
+  },
 };

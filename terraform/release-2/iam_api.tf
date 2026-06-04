@@ -24,7 +24,7 @@ data "aws_iam_policy_document" "api_permissions" {
     resources = ["${aws_cloudwatch_log_group.lambda_api.arn}:*"]
   }
 
-  # DynamoDB — full CRUD on the 4 actify-saas tables
+  # DynamoDB — full CRUD on all actify-saas tables (core + documents)
   statement {
     sid    = "AllowDynamoDBCRUD"
     effect = "Allow"
@@ -42,7 +42,22 @@ data "aws_iam_policy_document" "api_permissions" {
       "${aws_dynamodb_table.company_users.arn}/index/*",
       aws_dynamodb_table.ai_systems.arn,
       aws_dynamodb_table.compliance_checks.arn,
+      aws_dynamodb_table.documents.arn,
+      "${aws_dynamodb_table.documents.arn}/index/*",
+      aws_dynamodb_table.literacy.arn,
     ]
+  }
+
+  # S3 — Document Vault (read/write generated PDFs + presigned URL generation)
+  statement {
+    sid    = "AllowS3DocumentVault"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+    ]
+    resources = ["${aws_s3_bucket.actify_documents.arn}/documents/*"]
   }
 
   # Cognito — user management for this User Pool only
@@ -93,13 +108,14 @@ data "aws_iam_policy_document" "api_permissions" {
     ]
   }
 
-  # Lambda self-invoke — for async compliance check
+  # Lambda self-invoke (async compliance check) + invoke pdf-generator (document generation)
   statement {
-    sid    = "AllowLambdaSelfInvoke"
+    sid    = "AllowLambdaInvoke"
     effect = "Allow"
     actions = ["lambda:InvokeFunction"]
     resources = [
       "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_api_name}",
+      "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_pdf_name}",
     ]
   }
 }

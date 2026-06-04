@@ -27,4 +27,12 @@ locals {
   table_company_users      = "${local.project}-company-users"
   table_ai_systems         = "${local.project}-ai-systems"
   table_compliance_checks  = "${local.project}-compliance-checks"
+  table_documents          = "${local.project}-documents"
+  table_literacy           = "${local.project}-literacy"
+
+  # ─── S3 — Document Vault ────────────────────────────────────────────────────
+  s3_documents_bucket_name = "${local.project}-documents"
+
+  # ─── Lambda PDF Generator (release-1 resource, referenced by release-2) ────
+  lambda_pdf_name          = "${local.project}-pdf-generator"
 }

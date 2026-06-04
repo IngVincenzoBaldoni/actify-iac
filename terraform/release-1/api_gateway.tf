@@ -72,3 +72,10 @@ resource "aws_apigatewayv2_route" "generate_report" {
   route_key = "POST /api/report/generate"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
+
+# ─── Route: POST /api/check-email ────────────────────────────────────────────
+resource "aws_apigatewayv2_route" "check_email" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /api/check-email"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}

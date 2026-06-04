@@ -82,6 +82,24 @@ Principi operativi:
 
 ---
 
+## [AI LITERACY — Art. 4]
+### Applicazione: dal 2 febbraio 2025. Si applica a TUTTI i provider e deployer, indipendentemente dal livello di rischio del sistema AI.
+
+**Testo normativo (Art. 4)**: "I fornitori e i deployer di sistemi di IA adottano misure per garantire, nella misura del possibile, un livello sufficiente di alfabetizzazione in materia di IA del proprio personale e di tutte le altre persone che si occupano del funzionamento e dell'uso di sistemi di IA per loro conto, tenuto conto delle loro conoscenze tecniche, della loro esperienza, della loro formazione e istruzione, nonché del contesto in cui i sistemi di IA saranno utilizzati."
+
+**Obblighi concreti Art. 4:**
+1. **Censimento ruoli AI**: identificare tutte le funzioni aziendali che utilizzano, supervisionano o sono impattate da sistemi AI.
+2. **Programma di formazione documentato**: definire e attuare un piano di formazione adeguato al livello tecnico dei destinatari (non necessariamente tecnica approfondita — sufficiente "alfabetizzazione" contestuale).
+3. **Registrazione delle attività formative**: documentare chi ha ricevuto formazione, quando e su quale sistema AI (necessario per dimostrare compliance).
+4. **Aggiornamento periodico**: la formazione deve essere aggiornata quando cambiano i sistemi AI o le normative.
+5. **Onboarding**: i nuovi dipendenti che useranno sistemi AI devono ricevere formazione prima dell'utilizzo.
+
+**Per le PMI**: non è richiesta una struttura universitaria — è sufficiente un documento interno che descriva i sistemi AI in uso, i rischi, le limitazioni e le istruzioni d'uso appropriate per i lavoratori. Una sessione di sensibilizzazione di poche ore, documentata con firma di presa visione, è già conforme.
+
+**Sanzione**: violazione Art. 4 rientra nella categoria generale (Art. 99, par. 3) — fino a 15.000.000 EUR o 3% fatturato globale annuo.
+
+---
+
 ## [PRATICHE VIETATE — Art. 5]
 ### Applicazione: dal 2 febbraio 2025. Violazione: sanzione fino a 35.000.000 EUR o 7% fatturato globale annuo.
 

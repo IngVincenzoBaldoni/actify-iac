@@ -244,12 +244,56 @@ function assembleLegalContext(chunks: RetrievedChunk[]): string {
     .join("\n\n---\n\n");
 }
 
+// ─── Article-key targeted queries ────────────────────────────────────────────
+
+const ARTICLE_KEY_QUERIES: Record<string, string> = {
+  art_4:              'AI literacy formazione personale obblighi Art. 4 EU AI Act',
+  art_5_p1:           'pratiche vietate manipolazione subliminale Art. 5',
+  art_5_p2:           'pratiche vietate sfruttamento vulnerabilità Art. 5',
+  art_6_classification:'classificazione rischio alto Art. 6 Allegato III',
+  art_9:              'sistema gestione rischio Art. 9 alto rischio',
+  art_10:             'governance dati training Art. 10 alto rischio',
+  art_11:             'documentazione tecnica Art. 11 provider',
+  art_12:             'log-book registri automatici Art. 12',
+  art_13_p1:          'trasparenza informazioni utenti Art. 13',
+  art_14:             'supervisione umana Art. 14 obblighi',
+  art_15:             'accuratezza robustezza cybersecurity Art. 15',
+  'art_16':           'obblighi provider Art. 16 responsabilità',
+  art_26_p1:          'obblighi deployer Art. 26 adempimenti',
+  art_27:             'valutazione impatto diritti fondamentali Art. 27 FRIA',
+  art_29:             'obblighi utilizzo deployer Art. 29',
+  art_49:             'registrazione banca dati UE Art. 49',
+  art_50:             'obblighi trasparenza utenti AI disclosure Art. 50',
+  art_51:             'modelli GPAI uso generale Art. 51-55 obblighi',
+  annex_iii_p1:       'Allegato III categorie 4 occupazione lavoro',
+  annex_iii_cat3:     'Allegato III categoria 3 istruzione formazione',
+  annex_iii_cat5:     'Allegato III categoria 5 servizi essenziali credito',
+  annex_iii_cat1:     'Allegato III categoria 1 biometria identificazione',
+  annex_iii_p2:       'Allegato III categoria 6 contrasto law enforcement',
+};
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function buildRagContext(
   payload: IntakePayload,
+  articleKeys?: string[],
 ): Promise<RagContext> {
-  const queries = buildQueries(payload);
+  const baseQueries = buildQueries(payload);
+
+  // Add targeted queries for each pre-determined article key (deduped)
+  const targetedQueries: Query[] = [];
+  if (articleKeys && articleKeys.length > 0) {
+    const seen = new Set<string>();
+    for (const key of articleKeys) {
+      const queryText = ARTICLE_KEY_QUERIES[key];
+      if (queryText && !seen.has(queryText)) {
+        seen.add(queryText);
+        targetedQueries.push({ text: queryText, weight: 1.4 });
+      }
+    }
+  }
+
+  const queries = [...targetedQueries, ...baseQueries];
 
   // Retrieve in parallel (all queries at once)
   const retrievalResults = await Promise.allSettled(

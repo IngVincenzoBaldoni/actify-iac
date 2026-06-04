@@ -68,11 +68,20 @@ resource "aws_lambda_function" "pdf_generator" {
       SIMILARITY_THRESHOLD  = "0.72"
       RAG_ENABLED           = "true"
 
+      # OTP + Email delivery (Resend)
+      DYNAMO_ASSESSMENTS_TABLE = aws_dynamodb_table.free_assessments.name
+      DYNAMO_REGION            = var.aws_region
+      RESEND_API_KEY           = var.resend_api_key     # set via terraform.tfvars (never in git)
+      FROM_EMAIL               = "noreply@official-actify.com"
+
+      # Presigned URL TTL — 24h for email delivery
+      PRESIGNED_URL_TTL = "86400"
+
       # Rate limiting + ops
-      RATE_LIMIT_MAX  = "5"
+      RATE_LIMIT_MAX    = "10"
       RATE_LIMIT_WINDOW = "900"
-      ENV             = var.environment
-      LOG_LEVEL       = "info"
+      ENV               = var.environment
+      LOG_LEVEL         = "info"
     }
   }
 

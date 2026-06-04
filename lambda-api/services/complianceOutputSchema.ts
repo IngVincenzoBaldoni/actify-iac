@@ -17,6 +17,10 @@ export const complianceGapSchema = z.object({
       'risk_assessment', 'monitoring_plan', 'conformity_declaration',
     ]).nullable(),
   ),
+  // FIX-03: source attribution — chunk IDs that support this gap
+  source_chunks: z.array(z.string()).optional(),
+  // FIX-03: set by verifyGrounding() post-LLM — true if no retrieved chunk supports this gap
+  ungrounded: z.boolean().optional(),
 });
 
 export const complianceResultSchema = z.object({

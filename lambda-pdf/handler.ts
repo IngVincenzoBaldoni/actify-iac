@@ -3,9 +3,11 @@ import { checkRateLimit } from "./middleware/rateLimiter";
 import { validatePayload } from "./middleware/validator";
 import { analyze } from "./services/bedrockService";
 import { render } from "./services/htmlTemplate";
-import { htmlToPdf } from "./services/pdfService";
+import { htmlToPdf, buildNormativeDocumentHtml } from "./services/pdfService";
 import { uploadReport, writeToDatalake } from "./services/s3Service";
 import { formHtml } from "./services/formHtml";
+import { checkEmailAlreadyUsed, markReportGenerated } from "./services/otpService";
+import { sendEmail, buildReportEmail } from "./services/resendService";
 
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
 
@@ -31,66 +33,123 @@ function extractIp(event: APIGatewayProxyEventV2): string {
   );
 }
 
+// ─── Direct invocation from lambda-api (normative document PDF generation) ────
+
+interface NormativeDocumentRequest {
+  _normativeDocumentRequest: {
+    content:       string;
+    title:         string;
+    company_name:  string;
+    document_type: string;
+    generated_at:  string;
+    article:       string;
+  };
+}
+
 export async function handler(
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> {
-  // ── 0. Serve form on GET / ───────────────────────────────────────────────────
-  if (event.requestContext.http.method === "GET") {
+  event: APIGatewayProxyEventV2 | NormativeDocumentRequest
+): Promise<APIGatewayProxyResultV2 | { pdfBase64: string }> {
+
+  // ── Normative document request from lambda-api ───────────────────────────────
+  if ("_normativeDocumentRequest" in event && event._normativeDocumentRequest) {
+    const req = event._normativeDocumentRequest;
+    const html = buildNormativeDocumentHtml(req);
+    const pdfBuffer = await htmlToPdf(html);
+    return { pdfBase64: pdfBuffer.toString("base64") };
+  }
+
+  const httpEvent = event as APIGatewayProxyEventV2;
+  const method    = httpEvent.requestContext.http.method;
+  const path      = httpEvent.requestContext.http.path;
+
+  // ── GET / — serve assessment form ────────────────────────────────────────────
+  if (method === "GET") {
     return {
       statusCode: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
       body: formHtml,
     };
   }
 
-  // ── 1. Rate limit ────────────────────────────────────────────────────────────
-  const ip = extractIp(event);
+  // ── Rate limit (all POST routes) ─────────────────────────────────────────────
+  const ip        = extractIp(httpEvent);
   const rateLimit = checkRateLimit(ip);
   if (!rateLimit.allowed) {
     log("warn", "rate_limit_exceeded", { ip });
     return json(429, {
-      error: "rate_limit_exceeded",
+      error:               "rate_limit_exceeded",
       retry_after_seconds: rateLimit.retry_after_seconds,
     });
   }
 
-  // ── 2. Parse + validate payload ──────────────────────────────────────────────
+  // ── Parse body ───────────────────────────────────────────────────────────────
   let rawBody: unknown;
   try {
-    rawBody = JSON.parse(event.body ?? "{}");
+    rawBody = JSON.parse(httpEvent.body ?? "{}");
   } catch {
     return json(400, { error: "payload_invalid", details: ["body is not valid JSON"] });
   }
 
+  // ── POST /api/check-email ────────────────────────────────────────────────────
+  if (method === "POST" && path === "/api/check-email") {
+    return handleCheckEmail(rawBody);
+  }
+
+  // ── POST /api/report/generate ────────────────────────────────────────────────
+  if (method === "POST" && path === "/api/report/generate") {
+    return handleGenerate(rawBody);
+  }
+
+  return json(404, { error: "not_found" });
+}
+
+// ─── Handler: check if email already used ────────────────────────────────────
+
+async function handleCheckEmail(rawBody: unknown): Promise<APIGatewayProxyResultV2> {
+  const body  = rawBody as Record<string, unknown>;
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : null;
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json(400, { error: "invalid_email", message: "Inserisci un indirizzo email valido." });
+  }
+
+  const used = await checkEmailAlreadyUsed(email);
+  return json(200, { already_used: used });
+}
+
+// ─── Handler: generate report ─────────────────────────────────────────────────
+
+async function handleGenerate(rawBody: unknown): Promise<APIGatewayProxyResultV2> {
   const { data: payload, errors } = validatePayload(rawBody);
   if (!payload) {
     return json(400, { error: "payload_invalid", details: errors });
   }
 
-  // Anonymous log — no PII, only aggregate metadata
-  log("info", "request_received", {
-    sector: payload.company.sector,
-    ai_role: payload.ai_role,
+  // ── Duplicate gate ───────────────────────────────────────────────────────────
+  const email = payload.contact_email.trim().toLowerCase();
+  if (await checkEmailAlreadyUsed(email)) {
+    return json(409, {
+      error:   "already_used",
+      message: "Hai già ricevuto un assessment gratuito con questa email. Registrati su Actify per analisi illimitate.",
+    });
+  }
+
+  log("info", "report_requested", {
+    sector:     payload.company.sector,
+    ai_role:    payload.ai_role,
     tool_count: payload.ai_tools.length,
   });
 
-  // ── 3. Bedrock analysis ──────────────────────────────────────────────────────
+  // ── Bedrock analysis ──────────────────────────────────────────────────────────
   let claudeOutput;
   try {
     claudeOutput = await analyze(payload);
   } catch (err) {
-    log("error", "bedrock_failed", {
-      error: err instanceof Error ? err.message : String(err),
-      sector: payload.company.sector,
-      tool_count: payload.ai_tools.length,
-    });
-    return json(500, {
-      error: "generation_failed",
-      message: "Analisi AI momentaneamente non disponibile. Riprova tra qualche minuto.",
-    });
+    log("error", "bedrock_failed", { error: err instanceof Error ? err.message : String(err) });
+    return json(500, { error: "generation_failed", message: "Analisi AI momentaneamente non disponibile. Riprova tra qualche minuto." });
   }
 
-  // ── 4. HTML template ─────────────────────────────────────────────────────────
+  // ── HTML template ─────────────────────────────────────────────────────────────
   let html: string;
   try {
     html = render(claudeOutput, payload);
@@ -99,7 +158,7 @@ export async function handler(
     return json(500, { error: "generation_failed", message: "Errore nella generazione del template." });
   }
 
-  // ── 5. PDF generation ────────────────────────────────────────────────────────
+  // ── PDF generation ────────────────────────────────────────────────────────────
   let pdfBuffer: Buffer;
   try {
     pdfBuffer = await htmlToPdf(html);
@@ -108,7 +167,7 @@ export async function handler(
     return json(500, { error: "generation_failed", message: "Errore nella generazione del PDF." });
   }
 
-  // ── 6. S3 upload + presigned URL ─────────────────────────────────────────────
+  // ── S3 upload ─────────────────────────────────────────────────────────────────
   let uploadResult;
   try {
     uploadResult = await uploadReport(pdfBuffer, payload.company.name);
@@ -117,24 +176,33 @@ export async function handler(
     return json(500, { error: "generation_failed", message: "Errore nel salvataggio del report." });
   }
 
-  log("info", "report_generated", {
-    sector: payload.company.sector,
-    risk_level: claudeOutput.overall_risk_level,
-    s3_key: uploadResult.key,
-  });
+  // ── Mark email as consumed (before sending — avoids race conditions) ──────────
+  await markReportGenerated(email).catch(err =>
+    log("warn", "mark_report_failed", { error: err instanceof Error ? err.message : String(err) })
+  );
 
-  // ── 7. Write to data lake (non-fatal — failure never blocks the user) ────────
+  // ── Send report via Resend ────────────────────────────────────────────────────
   try {
-    await writeToDatalake(payload, pdfBuffer);
-  } catch (err) {
-    log("error", "datalake_write_failed", {
-      error: err instanceof Error ? err.message : String(err),
-      company: payload.company.name,
+    await sendEmail({
+      to:      email,
+      subject: `Il tuo report AI Act Compliance è pronto — ${payload.company.name}`,
+      html:    buildReportEmail(payload.company.name, uploadResult.presigned_url, claudeOutput.overall_risk_level),
     });
+    log("info", "report_sent", {
+      email_domain: email.split("@")[1],
+      risk_level:   claudeOutput.overall_risk_level,
+      s3_key:       uploadResult.key,
+    });
+  } catch (err) {
+    // Non-fatal: the PDF is already generated. Log and continue.
+    log("error", "report_email_failed", { error: err instanceof Error ? err.message : String(err) });
   }
 
-  // ── 8. Return presigned URL — frontend triggers browser download directly ────
-  return json(200, {
-    download_url: uploadResult.presigned_url,
-  });
+  // ── Data lake (non-fatal) ─────────────────────────────────────────────────────
+  writeToDatalake(payload, pdfBuffer).catch(err =>
+    log("error", "datalake_write_failed", { error: err instanceof Error ? err.message : String(err) })
+  );
+
+  // Return email so the frontend success screen can display it
+  return json(200, { email });
 }

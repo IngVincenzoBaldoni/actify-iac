@@ -14,6 +14,8 @@ const TABLES = {
   users:     process.env.DYNAMODB_USERS_TABLE!,
   systems:   process.env.DYNAMODB_SYSTEMS_TABLE!,
   checks:    process.env.DYNAMODB_CHECKS_TABLE!,
+  documents: process.env.DYNAMODB_DOCUMENTS_TABLE!,
+  literacy:  process.env.DYNAMODB_LITERACY_TABLE!,
 };
 
 // ─── Company ──────────────────────────────────────────────────────────────────
@@ -114,6 +116,19 @@ export async function deleteSystem(companyId: string, systemId: string) {
   }));
 }
 
+export async function appendSanctionSnapshot(
+  companyId: string,
+  systemId: string,
+  snapshot: { at: string; min: number; max: number; source: string },
+) {
+  await client.send(new UpdateCommand({
+    TableName: TABLES.systems,
+    Key: { company_id: companyId, system_id: systemId },
+    UpdateExpression: 'SET sanction_timeline = list_append(if_not_exists(sanction_timeline, :empty), :snap)',
+    ExpressionAttributeValues: { ':empty': [], ':snap': [snapshot] },
+  }));
+}
+
 // ─── Compliance Checks ────────────────────────────────────────────────────────
 export async function putComplianceCheck(item: Record<string, unknown>) {
   await client.send(new PutCommand({ TableName: TABLES.checks, Item: item }));
@@ -156,6 +171,97 @@ export async function deleteComplianceChecksForSystem(companyId: string, systemI
     lastKey = r.LastEvaluatedKey as Record<string, unknown> | undefined;
   } while (lastKey);
 }
+
+// ─── Documents ────────────────────────────────────────────────────────────────
+
+export async function putDocument(item: Record<string, unknown>) {
+  await client.send(new PutCommand({ TableName: TABLES.documents, Item: item }));
+}
+
+export async function getDocument(documentId: string) {
+  const r = await client.send(new GetCommand({
+    TableName: TABLES.documents,
+    Key: { document_id: documentId },
+  }));
+  return r.Item ?? null;
+}
+
+export async function updateDocument(documentId: string, updates: Record<string, unknown>) {
+  const entries = Object.entries(updates);
+  const expr = 'SET ' + entries.map((_, i) => `#k${i} = :v${i}`).join(', ');
+  const names = Object.fromEntries(entries.map(([k], i) => [`#k${i}`, k]));
+  const values = Object.fromEntries(entries.map(([, v], i) => [`:v${i}`, v]));
+  await client.send(new UpdateCommand({
+    TableName: TABLES.documents,
+    Key: { document_id: documentId },
+    UpdateExpression: expr,
+    ExpressionAttributeNames: names,
+    ExpressionAttributeValues: values,
+  }));
+}
+
+export async function deleteDocument(documentId: string) {
+  await client.send(new DeleteCommand({
+    TableName: TABLES.documents,
+    Key: { document_id: documentId },
+  }));
+}
+
+export async function listDocumentsBySystem(systemId: string, limit = 50) {
+  const r = await client.send(new QueryCommand({
+    TableName: TABLES.documents,
+    IndexName: 'system-index',
+    KeyConditionExpression: 'system_id = :sid',
+    ExpressionAttributeValues: { ':sid': systemId },
+    ScanIndexForward: false,
+    Limit: limit,
+  }));
+  return r.Items ?? [];
+}
+
+export async function listDocumentsByCompany(companyId: string, limit = 100) {
+  const r = await client.send(new QueryCommand({
+    TableName: TABLES.documents,
+    IndexName: 'company-index',
+    KeyConditionExpression: 'company_id = :cid',
+    ExpressionAttributeValues: { ':cid': companyId },
+    ScanIndexForward: false,
+    Limit: limit,
+  }));
+  return r.Items ?? [];
+}
+
+// ─── AI Literacy ──────────────────────────────────────────────────────────────
+
+export async function listLiteracyRecords(companyId: string) {
+  const r = await client.send(new QueryCommand({
+    TableName: TABLES.literacy,
+    KeyConditionExpression: 'company_id = :cid',
+    ExpressionAttributeValues: { ':cid': companyId },
+  }));
+  return r.Items ?? [];
+}
+
+export async function putLiteracyRecord(item: Record<string, unknown>) {
+  await client.send(new PutCommand({ TableName: TABLES.literacy, Item: item }));
+}
+
+export async function deleteLiteracyRecord(companyId: string, recordId: string) {
+  await client.send(new DeleteCommand({
+    TableName: TABLES.literacy,
+    Key: { company_id: companyId, record_id: recordId },
+  }));
+}
+
+export async function getLiteracyRecord(companyId: string, recordId: string) {
+  const r = await client.send(new GetCommand({
+    TableName: TABLES.literacy,
+    Key: { company_id: companyId, record_id: recordId },
+  }));
+  return r.Item ?? null;
+}
+
+// ─── Compliance Checks ────────────────────────────────────────────────────────
 
 export async function updateComplianceCheck(
   pk: string, checkId: string, updates: Record<string, unknown>

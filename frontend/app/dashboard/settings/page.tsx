@@ -197,9 +197,26 @@ export default function SettingsPage() {
             <div className="rev-row"><span className="rk">Dipendenti</span><span className="rv">{company.employees_range as string}</span></div>
             <div className="rev-row"><span className="rk">Sede Legale</span><span className="rv">{company.sede_legale as string}</span></div>
             <div className="rev-row"><span className="rk">Ruolo AI Act</span><span className="rv">{company.ai_role as string}</span></div>
-            <div className="rev-row"><span className="rk">Piano</span><span className="rv">
+            <div className="rev-row"><span className="rk">Piano attivo</span><span className="rv">
               <span className={`tier-badge tier-${company.subscription_tier}`}>{String(company.subscription_tier).toUpperCase()}</span>
             </span></div>
+          </div>
+
+          <div className="plan-settings-card">
+            <div className="plan-settings-left">
+              <div className="plan-settings-name">
+                Piano {String(company.subscription_tier ?? 'trial').charAt(0).toUpperCase() + String(company.subscription_tier ?? 'trial').slice(1)}
+              </div>
+              <div className="plan-settings-sub">
+                {company.subscription_tier === 'base' && 'Fino a 5 tool AI · Document Vault limitato'}
+                {company.subscription_tier === 'premium' && 'Fino a 20 tool AI · Tutte le funzionalità core'}
+                {company.subscription_tier === 'enterprise' && 'Tool illimitati · Accesso completo a tutte le feature'}
+                {(company.subscription_tier === 'trial' || !company.subscription_tier) && 'Account di prova — scegli un piano per sbloccare tutte le funzionalità'}
+              </div>
+            </div>
+            <a href="/plan" className="btn-change-plan">
+              {(company.subscription_tier === 'trial' || !company.subscription_tier) ? 'Scegli piano →' : 'Cambia piano →'}
+            </a>
           </div>
 
           <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>

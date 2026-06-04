@@ -82,6 +82,33 @@ Principi operativi:
 
 ---
 
+## [AI LITERACY — Art. 4]
+### Applicazione: dal 2 febbraio 2025. Obbligo universale per TUTTI i provider e deployer. Violazione: sanzione fino a 15.000.000 EUR o 3% fatturato globale annuo (Art. 99(4)).
+
+**Art. 4 — Alfabetizzazione in materia di IA**: i provider e i deployer adottano misure per garantire, nella misura del possibile, un livello sufficiente di alfabetizzazione in materia di IA (AI literacy) del proprio personale e di tutte le altre persone che operano sotto la loro responsabilità e che utilizzano o sviluppano sistemi di IA.
+
+**Contenuto dell'obbligo**:
+- **Formazione tecnica**: il personale che usa, supervisiona o sviluppa sistemi di IA deve avere conoscenze adeguate sul funzionamento dei sistemi, le loro capacità, i loro limiti e i rischi potenziali.
+- **Conoscenza normativa**: il personale deve conoscere gli obblighi dell'AI Act applicabili al ruolo dell'organizzazione (provider o deployer) e ai sistemi specifici utilizzati.
+- **Consapevolezza del rischio**: il personale deve essere in grado di identificare situazioni in cui l'output del sistema di IA potrebbe essere errato, parziale o fuorviante, e sapere come intervenire.
+- **Contesto e proporzionalità**: il livello di alfabetizzazione richiesto deve essere proporzionato al ruolo, alla competenza tecnica, al livello di istruzione e al contesto specifico in cui il personale opera. Non è richiesta competenza tecnica approfondita per tutti, ma tutti devono avere consapevolezza sufficiente per usare i sistemi in modo responsabile.
+- **Applicazione pratica**: include la comprensione di: quando fidarsi o non fidarsi dell'output del sistema, come segnalare anomalie, chi contattare in caso di incidente, e quali dati è appropriato inserire nel sistema.
+
+**Perché questo obbligo è critico per le PMI**:
+- Entra in vigore dal **2 febbraio 2025** — è già obbligatorio ora, prima degli obblighi sui sistemi ad alto rischio (agosto 2026).
+- Si applica a **ogni sistema di IA** censito, indipendentemente dal livello di rischio — anche tool "limitato rischio" come chatbot interni, assistenti alla scrittura, strumenti di analisi dati.
+- Non richiede una certificazione formale, ma richiede **evidenza documentale**: policy di formazione, registri dei corsi completati, materiale formativo specifico per il contesto AI, procedure di onboarding per nuovi dipendenti che usano strumenti AI.
+- Tipici gap nelle PMI: uso di ChatGPT/Copilot/strumenti AI senza nessuna formazione dedicata, nessuna policy interna su come usare questi strumenti, nessun processo per aggiornare la formazione quando i sistemi cambiano.
+
+**Conformità richiede**:
+1. Censimento dei ruoli che interagiscono con sistemi di IA
+2. Programma di formazione documentato, proporzionato al ruolo
+3. Registrazione delle attività formative completate
+4. Aggiornamento della formazione al cambiare dei sistemi o della normativa
+5. Procedura di onboarding per nuovo personale che usa strumenti AI
+
+---
+
 ## [PRATICHE VIETATE — Art. 5]
 ### Applicazione: dal 2 febbraio 2025. Violazione: sanzione fino a 35.000.000 EUR o 7% fatturato globale annuo.
 

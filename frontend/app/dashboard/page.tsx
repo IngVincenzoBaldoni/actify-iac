@@ -12,7 +12,7 @@ export default function DashboardRootPage() {
       .then((company) => {
         const c = company as { setup_completed?: boolean };
         if (!c.setup_completed) {
-          router.replace('/dashboard/setup');
+          router.replace('/dashboard/settings');
         } else {
           router.replace('/dashboard/inventory');
         }

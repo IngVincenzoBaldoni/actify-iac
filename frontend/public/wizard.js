@@ -86,6 +86,14 @@ var deployerSpecialized = [];
 var loadTimer;
 var loadStep = 0;
 
+var FREE_TOOL_LIMIT = 1;
+function totalTools() {
+  return providerSystems.length + deployerLlmSelected.length + deployerSpecialized.length;
+}
+function showToolLimitAlert() {
+  alert('Il form gratuito permette di analizzare 1 solo sistema AI.\nRegistrati su Actify per censire più tool e ottenere un\'analisi completa del tuo inventario AI.');
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 function startWizard() {
   document.getElementById('landing').style.display = 'none';
@@ -123,6 +131,7 @@ function renderStepper() {
 // ── Navigation ────────────────────────────────────────────────────────────────
 function goNext() {
   if (!validate(cur)) return;
+  if (cur === 1) { checkEmailAndProceed(); return; }
   if (cur < TOTAL_STEPS) {
     document.getElementById('step' + cur).style.display = 'none';
     cur++;
@@ -371,6 +380,7 @@ function renderDecisionSection(type, idx, sys) {
 
 // ── Provider Systems ──────────────────────────────────────────────────────────
 function addProviderSystem() {
+  if (totalTools() >= FREE_TOOL_LIMIT) { showToolLimitAlert(); return; }
   providerSystems.push({
     tool_name: '', category: 'tech', purpose: '', target_users: [],
     ai_system_type: '', is_tested: false, has_tech_docs: false, has_monitoring: false, distribution_countries: [],
@@ -379,9 +389,12 @@ function addProviderSystem() {
   });
   renderProviderSystems();
 }
-function removeProviderSystem(i) { providerSystems.splice(i, 1); renderProviderSystems(); }
+function removeProviderSystem(i) { providerSystems.splice(i, 1); renderLlmGrid(); renderProviderSystems(); }
 function renderProviderSystems() {
   var c = document.getElementById('providerList'); if (!c) return;
+  // Sync tool limit notice
+  var notice = document.getElementById('toolLimitNotice');
+  if (notice) notice.style.display = totalTools() >= FREE_TOOL_LIMIT ? '' : 'none';
   if (!providerSystems.length) {
     c.innerHTML = '<div class="empty"><svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="8" y="12" width="24" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M14 20h12M14 26h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><p>Nessun sistema proprietario aggiunto.</p></div>';
     return;
@@ -423,6 +436,7 @@ function toggleLlm(id) {
   if (existing >= 0) {
     deployerLlmSelected.splice(existing, 1);
   } else {
+    if (totalTools() >= FREE_TOOL_LIMIT) { showToolLimitAlert(); return; }
     deployerLlmSelected.push({
       id: id, label: llm.l, vendor: llm.v, custom_name: '', purpose: '', target_users: [],
       output_type: '', access_modes: [], is_customized: false, users_aware: false,
@@ -435,14 +449,21 @@ function toggleLlm(id) {
 }
 function renderLlmGrid() {
   var g = document.getElementById('llmGrid'); if (!g) return;
+  var atLimit = totalTools() >= FREE_TOOL_LIMIT;
   g.innerHTML = LLM_LIST.map(function(llm) {
     var sel = false;
     for (var k = 0; k < deployerLlmSelected.length; k++) { if (deployerLlmSelected[k].id === llm.id) { sel = true; break; } }
-    return '<button type="button" class="llm-chip' + (sel ? ' sel' : '') + '" onclick="toggleLlm(\'' + llm.id + '\')">'
+    var disabled = atLimit && !sel;
+    return '<button type="button" class="llm-chip' + (sel ? ' sel' : '') + (disabled ? ' disabled' : '') + '"'
+      + (disabled ? ' style="opacity:.35;cursor:not-allowed"' : '')
+      + ' onclick="toggleLlm(\'' + llm.id + '\')">'
       + '<span class="llm-chip-name">' + llm.l + '</span>'
       + '<span class="llm-chip-vendor">' + llm.v + '</span>'
       + '</button>';
   }).join('');
+  // Show / hide limit notice
+  var notice = document.getElementById('toolLimitNotice');
+  if (notice) notice.style.display = atLimit ? '' : 'none';
 }
 function renderLlmDetails() {
   var c = document.getElementById('llmDetails'); if (!c) return;
@@ -472,6 +493,7 @@ function renderLlmDetails() {
 
 // ── Deployer Specialized ──────────────────────────────────────────────────────
 function addDeployerSpecialized() {
+  if (totalTools() >= FREE_TOOL_LIMIT) { showToolLimitAlert(); return; }
   deployerSpecialized.push({
     subcategory: 'hr', tool_name: '', vendor: '', purpose: '', target_users: [],
     output_type: '', access_modes: [], is_customized: false, users_aware: false,
@@ -480,7 +502,7 @@ function addDeployerSpecialized() {
   });
   renderDeployerSpecialized();
 }
-function removeDeployerSpecialized(i) { deployerSpecialized.splice(i, 1); renderDeployerSpecialized(); }
+function removeDeployerSpecialized(i) { deployerSpecialized.splice(i, 1); renderLlmGrid(); renderDeployerSpecialized(); }
 function renderDeployerSpecialized() {
   var c = document.getElementById('depSpecList'); if (!c) return;
   if (!deployerSpecialized.length) {
@@ -778,6 +800,47 @@ async function submitForm() {
     ea.className = 'alert-err show';
     ea.textContent = String(err.message || 'Generazione non disponibile. Riprova tra qualche minuto.');
     document.getElementById('btnSubmit').disabled = false;
+  }
+}
+
+// ── Email duplicate check (step 1 → step 2) ───────────────────────────────────
+async function checkEmailAndProceed() {
+  var email = fv('contactEmail');
+  var btn   = document.getElementById('btnNext');
+  var errEl = document.getElementById('emailError');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  if (btn) { btn.disabled = true; }
+  try {
+    var apiUrl = (window.ACTIFY_API_URL || '');
+    var res = await fetch(apiUrl + '/api/check-email', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email: email })
+    });
+    var data = await res.json();
+    if (data.already_used) {
+      if (errEl) {
+        errEl.textContent = 'Questa email ha già ricevuto un assessment gratuito. Controlla la tua casella di posta o registrati su Actify per censire tutti i tuoi strumenti AI.';
+        errEl.style.display = '';
+      }
+      return;
+    }
+    var s1 = document.getElementById('step1');
+    if (s1) s1.style.display = 'none';
+    cur++;
+    document.getElementById('step' + cur).style.display = '';
+    refreshUI();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  } catch(err) {
+    // On network error proceed anyway — duplicate guard is also at submit
+    var s1 = document.getElementById('step1');
+    if (s1) s1.style.display = 'none';
+    cur++;
+    document.getElementById('step' + cur).style.display = '';
+    refreshUI();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 

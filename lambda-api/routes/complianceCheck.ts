@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { createHash } from 'crypto';
 import { extractAuth } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
 import { runComplianceCheck } from '../services/complianceEngine';
@@ -6,6 +7,29 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import type { AISystem } from '../types/aiSystem';
 import type { Company } from '../types/company';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
+
+// ─── Profile hash ─────────────────────────────────────────────────────────────
+// Only fields that drive which articles apply and how the LLM analyzes them.
+// tool_name/vendor/timestamps are intentionally excluded.
+function computeProfileHash(system: Record<string, unknown>): string {
+  const sig = {
+    category:                  system.category,
+    role:                      system.role,
+    purpose:                   system.purpose,
+    output_type:               system.output_type ?? null,
+    target_users:              [...((system.target_users as string[]) ?? [])].sort(),
+    vulnerable_groups:         [...((system.vulnerable_groups as string[]) ?? [])].sort(),
+    customizations:            [...((system.customizations as string[]) ?? [])].sort(),
+    makes_automated_decisions: system.makes_automated_decisions,
+    human_oversight_level:     system.human_oversight_level,
+    decision_domains:          [...((system.decision_domains as string[]) ?? [])].sort(),
+    affects_vulnerable_groups: system.affects_vulnerable_groups,
+    data_types:                [...((system.data_types as string[]) ?? [])].sort(),
+    is_safety_component:       system.is_safety_component,
+    annex_iii_domains:         [...((system.annex_iii_domains as string[]) ?? [])].sort(),
+  };
+  return createHash('sha256').update(JSON.stringify(sig)).digest('hex').slice(0, 16);
+}
 
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION ?? 'eu-central-1' });
 
@@ -24,11 +48,27 @@ export async function triggerCheck(event: APIGatewayProxyEventV2WithJWTAuthorize
   const system = await dynamo.getSystem(auth.companyId, systemId);
   if (!system) return { statusCode: 404, body: JSON.stringify({ error: 'system_not_found' }) };
 
+  const profileHash = computeProfileHash(system);
+
+  // ── Cache check: same profile → return existing completed result ──────────
+  const latest = await dynamo.getLatestComplianceCheck(auth.companyId, systemId);
+  if (latest?.status === 'completed' && latest.profile_hash === profileHash) {
+    return {
+      statusCode: 202,
+      body: JSON.stringify({
+        check_id:  latest.check_id,
+        status:    'running',
+        cache_hit: true,
+        message:   'Profilo invariato — risultato precedente disponibile.',
+        poll_url:  `/api/systems/${systemId}/compliance-checks/latest`,
+      }),
+    };
+  }
+
   const checkId = makeCheckId();
   const pk = `${auth.companyId}#${systemId}`;
   const now = new Date().toISOString();
 
-  // Save running check record
   await dynamo.putComplianceCheck({
     pk, check_id: checkId,
     company_id:   auth.companyId,
@@ -36,22 +76,22 @@ export async function triggerCheck(event: APIGatewayProxyEventV2WithJWTAuthorize
     triggered_by: auth.userId,
     status:       'running',
     created_at:   now,
+    profile_hash: profileHash,
   });
 
-  // Mark system as checking
   await dynamo.updateSystem(auth.companyId, systemId, {
     compliance_status: 'checking',
     last_check_id:     checkId,
     updated_at:        now,
   });
 
-  // Self-invoke Lambda asynchronously (Event invocation type = fire & forget)
   const asyncPayload = {
     _asyncComplianceCheck: true,
-    companyId:  auth.companyId,
+    companyId:    auth.companyId,
     systemId,
     checkId,
     pk,
+    profile_hash: profileHash,
   };
 
   await lambdaClient.send(new InvokeCommand({
@@ -73,12 +113,13 @@ export async function triggerCheck(event: APIGatewayProxyEventV2WithJWTAuthorize
 
 // ─── Async execution (called from self-invoke) ────────────────────────────────
 export async function executeCheckAsync(payload: {
-  companyId: string;
-  systemId:  string;
-  checkId:   string;
-  pk:        string;
+  companyId:    string;
+  systemId:     string;
+  checkId:      string;
+  pk:           string;
+  profile_hash?: string;
 }) {
-  const { companyId, systemId, checkId, pk } = payload;
+  const { companyId, systemId, checkId, pk, profile_hash } = payload;
 
   try {
     const [systemRaw, companyRaw] = await Promise.all([
@@ -88,17 +129,23 @@ export async function executeCheckAsync(payload: {
 
     if (!systemRaw || !companyRaw) throw new Error('System or company not found');
 
-    const result = await runComplianceCheck(systemRaw as unknown as AISystem, companyRaw as unknown as Company);
+    const typedSystem = systemRaw as unknown as AISystem;
+    const result = await runComplianceCheck(
+      typedSystem,
+      companyRaw as unknown as Company,
+      typedSystem.compliance_checklist,
+    );
 
     const completedAt = new Date().toISOString();
     const finalStatus = result.compliance_gaps.some(g => g.status !== 'compliant')
       ? 'gap_found' : 'compliant';
 
-    // Update compliance check record
+    // Update compliance check record (persist profile_hash for future cache lookups)
     await dynamo.updateComplianceCheck(pk, checkId, {
       status:       'completed',
       result,
       completed_at: completedAt,
+      ...(profile_hash ? { profile_hash } : {}),
     });
 
     // Update system status + cache exposure for inventory dashboard
@@ -110,6 +157,13 @@ export async function executeCheckAsync(payload: {
       last_exposure_max:       result.total_exposure_estimate?.max ?? 0,
       last_article_sanctions:  JSON.stringify(result.article_sanctions ?? {}),
       updated_at:              completedAt,
+    });
+
+    await dynamo.appendSanctionSnapshot(companyId, systemId, {
+      at: completedAt,
+      min: result.total_exposure_estimate?.min ?? 0,
+      max: result.total_exposure_estimate?.max ?? 0,
+      source: 'check',
     });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';

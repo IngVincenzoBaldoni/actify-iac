@@ -381,15 +381,16 @@ Il motore di analisi usa **AWS Bedrock** con il modello **Amazon Nova Pro** (`am
 ### 5.1 Perché serve un LLM e non un rule engine
 
 > **La risposta breve**
-> Un rule engine deterministico (`if settore == 'HR' && tool == 'CV screening' → high_risk`)
-> produce output identici per tutte le aziende con le stesse selezioni.
+> Un approccio basato su regole statiche produce output identici per tutte le aziende
+> con le stesse selezioni, senza tener conto del contesto specifico.
 >
 > Il report deve essere **specifico**: deve menzionare 'HireVue' per nome, spiegare
 > perché quel vendor in quel settore con quella finalità è high-risk per l'AI Act,
 > citare gli articoli esatti (Art. 6(2)(a), Annex III cat. 4(a)), e incorporare
 > le note libere (es: 'valutiamo candidati per clienti banca').
 >
-> Questo ragionamento contestuale è impossibile senza un LLM.
+> Questo ragionamento contestuale è possibile solo con un LLM supportato da RAG
+> sul testo normativo dell'AI Act.
 > Nova Pro via Bedrock lo fa in ~8 secondi a ~$0.015 per report.
 
 ### 5.2 Modello scelto — Amazon Nova Pro

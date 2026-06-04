@@ -10,6 +10,16 @@ import { listSystems, createSystem, getSystem, updateSystem, deleteSystem } from
 import {
   triggerCheck, getLatestCheck, listChecks, executeCheckAsync,
 } from './routes/complianceCheck';
+import {
+  generateDocument, getDocument, finalizeDocument,
+  listCompanyDocuments, listSystemDocuments,
+  deleteDocument, regenerateDocument,
+} from './routes/remediation';
+import { generateDocumentAsync } from './services/remediationService';
+import {
+  listDepartments, createDepartment, deleteDepartment,
+  suggestCerts, addCertification, listCertifications, deleteCertification,
+} from './routes/literacy';
 
 const CORS = {
   'Content-Type': 'application/json',
@@ -31,9 +41,18 @@ export const handler = async (
   event: APIGatewayProxyEventV2 | APIGatewayProxyEventV2WithJWTAuthorizer | Record<string, unknown>
 ): Promise<APIGatewayProxyResultV2 | void> => {
 
-  // ── Async self-invoke for compliance check ────────────────────────────────
+  // ── Async self-invoke: compliance check ───────────────────────────────────
   if ('_asyncComplianceCheck' in event && event._asyncComplianceCheck) {
     await executeCheckAsync(event as Parameters<typeof executeCheckAsync>[0]);
+    return;
+  }
+
+  // ── Async self-invoke: document generation ────────────────────────────────
+  if ('_asyncDocumentGeneration' in event && event._asyncDocumentGeneration) {
+    const p = event._asyncDocumentGeneration as {
+      document_id: string; systemId: string; gapId: string; companyId: string;
+    };
+    await generateDocumentAsync(p);
     return;
   }
 
@@ -56,7 +75,7 @@ export const handler = async (
       return { ...r, headers: CORS };
     }
 
-    // ── Auth routes (Cognito JWT required, extracted from event context) ───
+    // ── Auth routes ────────────────────────────────────────────────────────
     if (method === 'POST' && path === '/api/auth/invite')
       return { ...await invite(ev), headers: CORS };
 
@@ -70,6 +89,10 @@ export const handler = async (
       return { ...await getUsers(ev), headers: CORS };
     if (method === 'DELETE' && /^\/api\/company\/users\/[^/]+$/.test(path))
       return { ...await deleteUser(ev), headers: CORS };
+
+    // Document Vault — all company documents
+    if (method === 'GET' && path === '/api/company/documents')
+      return { ...await listCompanyDocuments(ev), headers: CORS };
 
     if (method === 'GET' && path === '/api/systems')
       return { ...await listSystems(ev), headers: CORS };
@@ -95,6 +118,56 @@ export const handler = async (
       if (method === 'GET' && resource === 'compliance-checks' && !sub)
         return { ...await listChecks(ev), headers: CORS };
     }
+
+    // /api/systems/{systemId}/remediation/generate
+    if (method === 'POST' && /^\/api\/systems\/[^/]+\/remediation\/generate$/.test(path))
+      return { ...await generateDocument(ev), headers: CORS };
+
+    // /api/systems/{systemId}/documents
+    if (method === 'GET' && /^\/api\/systems\/[^/]+\/documents$/.test(path))
+      return { ...await listSystemDocuments(ev), headers: CORS };
+
+    // /api/documents/{documentId}
+    const singleDoc = path.match(/^\/api\/documents\/([^/]+)$/);
+    if (singleDoc) {
+      if (method === 'GET')    return { ...await getDocument(ev), headers: CORS };
+      if (method === 'DELETE') return { ...await deleteDocument(ev), headers: CORS };
+    }
+
+    // /api/documents/{documentId}/finalize
+    if (method === 'PUT' && /^\/api\/documents\/[^/]+\/finalize$/.test(path))
+      return { ...await finalizeDocument(ev), headers: CORS };
+
+    // /api/documents/{documentId}/regenerate
+    if (method === 'POST' && /^\/api\/documents\/[^/]+\/regenerate$/.test(path))
+      return { ...await regenerateDocument(ev), headers: CORS };
+
+    // ── AI Literacy ────────────────────────────────────────────────────────
+    if (method === 'GET'  && path === '/api/literacy')
+      return { ...await listDepartments(ev), headers: CORS };
+    if (method === 'POST' && path === '/api/literacy/departments')
+      return { ...await createDepartment(ev), headers: CORS };
+
+    // /api/literacy/departments/:deptId
+    const singleDept = path.match(/^\/api\/literacy\/departments\/([^/]+)$/);
+    if (singleDept) {
+      if (method === 'DELETE') return { ...await deleteDepartment(ev), headers: CORS };
+    }
+
+    // /api/literacy/departments/:deptId/suggest
+    if (method === 'POST' && /^\/api\/literacy\/departments\/[^/]+\/suggest$/.test(path))
+      return { ...await suggestCerts(ev), headers: CORS };
+
+    // /api/literacy/departments/:deptId/certifications
+    const certBase = path.match(/^\/api\/literacy\/departments\/([^/]+)\/certifications$/);
+    if (certBase) {
+      if (method === 'GET')  return { ...await listCertifications(ev), headers: CORS };
+      if (method === 'POST') return { ...await addCertification(ev), headers: CORS };
+    }
+
+    // /api/literacy/departments/:deptId/certifications/:certId
+    if (method === 'DELETE' && /^\/api\/literacy\/departments\/[^/]+\/certifications\/[^/]+$/.test(path))
+      return { ...await deleteCertification(ev), headers: CORS };
 
     return err(404, `Route not found: ${method} ${path}`);
 
