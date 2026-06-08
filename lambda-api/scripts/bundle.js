@@ -16,6 +16,7 @@ archive.pipe(output);
 archive.directory(path.join(__dirname, '../dist'), false, (entry) => {
   return entry.name === 'function.zip' ? false : entry;
 });
+archive.directory(path.join(__dirname, '../data'), 'data');
 archive.directory(path.join(__dirname, '../node_modules'), 'node_modules');
 
 archive.finalize();

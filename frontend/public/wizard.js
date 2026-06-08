@@ -87,6 +87,25 @@ var loadTimer;
 var loadStep = 0;
 
 var FREE_TOOL_LIMIT = 1;
+var PARTNER_TOKEN = (function() {
+  try { return new URLSearchParams(window.location.search).get('token') || null; } catch(e) { return null; }
+})();
+var PARTNER_PMI_ID = null;
+var PARTNER_REFERRAL_CODE = null;
+
+// Fetch assessment form metadata so we can build the registration CTA in the success screen
+async function loadPartnerFormData() {
+  if (!PARTNER_TOKEN) return;
+  try {
+    var apiUrl = (window.ACTIFY_API_URL || '');
+    var res = await fetch(apiUrl + '/api/assessment/' + PARTNER_TOKEN);
+    if (!res.ok) return;
+    var data = await res.json();
+    PARTNER_PMI_ID = data.pmi_id || null;
+    PARTNER_REFERRAL_CODE = data.referral_code || null;
+  } catch(e) { /* non-blocking */ }
+}
+
 function totalTools() {
   return providerSystems.length + deployerLlmSelected.length + deployerSpecialized.length;
 }
@@ -101,6 +120,7 @@ function startWizard() {
   app.style.display = 'flex';
   app.style.flexDirection = 'column';
   refreshUI();
+  loadPartnerFormData(); // non-blocking — populates PARTNER_PMI_ID + PARTNER_REFERRAL_CODE for success CTA
 }
 function exitWizard() {
   document.getElementById('app').style.display = 'none';
@@ -783,6 +803,24 @@ async function submitForm() {
     var data = await res.json();
     if (!res.ok) throw new Error(data.message || data.error || 'Errore generazione');
     stopLoad();
+    // Partner tracking — non-blocking
+    if (PARTNER_TOKEN) {
+      try {
+        var partnerSystems = aiTools.map(function(t) {
+          return { name: t.tool_name, purpose: t.purpose, role: t.role || 'deployer', vendor: t.vendor, category: t.category };
+        });
+        var partnerProfile = {
+          sector:               payload.company.sector,
+          employees_range:      payload.company.employees_range,
+          annual_revenue_range: revRange || undefined,
+          annual_revenue_exact: (revExactNum && !isNaN(revExactNum) && revExactNum > 0) ? revExactNum : undefined
+        };
+        await fetch(apiUrl + '/api/assessment/' + PARTNER_TOKEN + '/submit', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ systems: partnerSystems, company_profile: partnerProfile })
+        });
+      } catch(e) { /* non-blocking — main submit already succeeded */ }
+    }
     document.getElementById('loading').className = '';
     document.getElementById('app').style.display = 'none';
     var emailEl = document.getElementById('successEmail');
@@ -793,6 +831,17 @@ async function submitForm() {
     sc.style.alignItems = 'center';
     sc.style.justifyContent = 'center';
     sc.style.minHeight = '100vh';
+    // If this was a partner assessment, show registration CTA with referral link
+    if (PARTNER_TOKEN && PARTNER_REFERRAL_CODE && PARTNER_PMI_ID) {
+      var ctaEl = document.getElementById('successRegisterCta');
+      if (ctaEl) {
+        var regUrl = 'https://official-actify.com/register?type=pmi&ref=' + PARTNER_REFERRAL_CODE + '&pmi=' + PARTNER_PMI_ID;
+        ctaEl.innerHTML = '<p style="margin:16px 0 8px;font-size:15px;color:#1a1a2e;">Vuoi gestire la compliance completa?</p>'
+          + '<a href="' + regUrl + '" style="display:inline-block;background:#6C47FF;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:8px;">Registrati su Actify →</a>'
+          + '<p style="font-size:12px;color:#888;margin:4px 0 0;">Accedi con il 20% di sconto tramite il tuo consulente</p>';
+        ctaEl.style.display = 'block';
+      }
+    }
   } catch(err) {
     stopLoad();
     document.getElementById('loading').className = '';
@@ -863,4 +912,13 @@ function stopLoad() { clearInterval(loadTimer); }
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── Auto-start from partner assessment link (?token=XXX) ──────────────────────
+if (PARTNER_TOKEN) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startWizard);
+  } else {
+    startWizard();
+  }
 }

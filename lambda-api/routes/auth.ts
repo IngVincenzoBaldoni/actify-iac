@@ -4,16 +4,19 @@ import { parseBody } from '../middleware/validator';
 import { extractAuth, requireAdmin } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
 import * as cognitoSvc from '../services/cognitoService';
+import { logEvent } from '../services/auditService';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyEventV2 } from 'aws-lambda';
 
 const registerSchema = z.object({
-  email:          z.string().email(),
-  password:       z.string().min(8),
-  company_name:   z.string().min(1).max(200),
-  sector:         z.string().min(1),
+  email:           z.string().email(),
+  password:        z.string().min(8),
+  company_name:    z.string().min(1).max(200),
+  sector:          z.string().min(1),
   employees_range: z.string().min(1),
-  country:        z.string().min(1),
-  sede_legale:    z.string().optional(),
+  country:         z.string().min(1),
+  sede_legale:     z.string().optional(),
+  referral_code:   z.string().max(20).optional(),
+  pmi_id:          z.string().uuid().optional(),
 });
 
 const inviteSchema = z.object({
@@ -82,6 +85,36 @@ export async function register(event: APIGatewayProxyEventV2) {
     created_at: now,
   });
 
+  // Link to partner via referral code if provided
+  if (body.referral_code) {
+    const partner = await dynamo.scanPartnerByReferralCode(body.referral_code.toUpperCase()).catch(() => null);
+    if (partner) {
+      const partnerId = partner.partner_id as string;
+      await Promise.all([
+        dynamo.updateCompany(companyId, { referred_by: partnerId, updated_at: now }),
+        dynamo.appendReferredPMI(partnerId, companyId),
+      ]);
+      // Link to partnerPMI record: prefer direct pmi_id, fallback to email match
+      const pmiRecord = body.pmi_id
+        ? await dynamo.getPartnerPMI(partnerId, body.pmi_id).catch(() => null)
+        : await dynamo.getPartnerPMIByEmail(partnerId, body.email).catch(() => null);
+      if (pmiRecord) {
+        await dynamo.updatePartnerPMI(partnerId, pmiRecord.pmi_id as string, {
+          status:               'onboarded',
+          onboarded_company_id: companyId,
+          onboarded_at:         now,
+          updated_at:           now,
+        });
+      }
+    }
+  }
+
+  await logEvent(companyId, 'account_created', {
+    company_name: body.company_name,
+    sector:       body.sector,
+    country:      body.country,
+    email:        body.email,
+  }, body.email);
   return {
     statusCode: 201,
     body: JSON.stringify({ company_id: companyId, user_id: userId, message: 'Account creato. Accedi con le tue credenziali.' }),

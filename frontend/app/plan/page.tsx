@@ -18,6 +18,7 @@ interface PlanFeature { label: string; value: string | null; ok: FeatureOk; }
 interface Plan {
   tier: PlanTier; name: string; monthly: number; tagline: string;
   color: string; badge: string | null; toolLimit: number;
+  onHold?: boolean;
   features: PlanFeature[];
 }
 
@@ -31,15 +32,11 @@ const PLANS: Plan[] = [
     badge: null,
     toolLimit: 5,
     features: [
-      { label: 'AI Inventory', value: 'Fino a 5 tool', ok: true },
-      { label: 'Document Vault', value: 'limitato', ok: true },
-      { label: 'Fine Board', value: 'solo ultimo check', ok: 'partial' },
-      { label: 'AI Literacy Tracker', value: null, ok: false },
-      { label: 'Vendor Hub / DPA tracker', value: null, ok: false },
-      { label: 'Regulatory Feed', value: null, ok: false },
-      { label: 'Audit Trail immutabile', value: null, ok: false },
-      { label: 'Export PDF/Word', value: null, ok: true },
-      { label: 'SLA e supporto dedicato', value: null, ok: false },
+      { label: 'AI Inventory',          value: 'Fino a 5 tool', ok: true },
+      { label: 'Gap Analysis',          value: null,            ok: true },
+      { label: 'Fine Board Estimation', value: null,            ok: true },
+      { label: 'AI Literacy Tracker',   value: null,            ok: true },
+      { label: 'Audit Trail',           value: null,            ok: true },
     ],
   },
   {
@@ -51,35 +48,28 @@ const PLANS: Plan[] = [
     badge: 'Più popolare',
     toolLimit: 20,
     features: [
-      { label: 'AI Inventory', value: 'Fino a 20 tool', ok: true },
-      { label: 'Document Vault', value: 'completo', ok: true },
-      { label: 'Fine Board', value: 'storico completo', ok: true },
-      { label: 'AI Literacy Tracker', value: null, ok: true },
-      { label: 'Vendor Hub / DPA tracker', value: null, ok: false },
-      { label: 'Regulatory Feed', value: null, ok: true },
-      { label: 'Audit Trail immutabile', value: null, ok: true },
-      { label: 'Export PDF/Word', value: null, ok: true },
-      { label: 'SLA e supporto dedicato', value: null, ok: false },
+      { label: 'AI Inventory',          value: 'Fino a 20 tool', ok: true },
+      { label: 'Gap Analysis',          value: null,             ok: true },
+      { label: 'Fine Board Estimation', value: null,             ok: true },
+      { label: 'AI Literacy Tracker',   value: null,             ok: true },
+      { label: 'Audit Trail',           value: null,             ok: true },
     ],
   },
   {
     tier: 'enterprise',
     name: 'Enterprise',
     monthly: 249,
-    tagline: 'Per aziende strutturate con esigenze avanzate',
+    tagline: 'Funzionalità avanzate per grandi organizzazioni',
     color: 'plan-card-enterprise',
-    badge: 'Completo',
+    badge: 'Prossimamente',
     toolLimit: Infinity,
+    onHold: true,
     features: [
-      { label: 'AI Inventory', value: 'Tool illimitati', ok: true },
-      { label: 'Document Vault', value: 'completo', ok: true },
-      { label: 'Fine Board', value: 'storico completo', ok: true },
-      { label: 'AI Literacy Tracker', value: null, ok: true },
+      { label: 'Tutto di Premium',         value: null, ok: true },
+      { label: 'AI Inventory illimitato',  value: null, ok: true },
       { label: 'Vendor Hub / DPA tracker', value: null, ok: true },
-      { label: 'Regulatory Feed', value: null, ok: true },
-      { label: 'Audit Trail immutabile', value: null, ok: true },
-      { label: 'Export PDF/Word', value: null, ok: true },
-      { label: 'SLA e supporto dedicato', value: null, ok: true },
+      { label: 'Regulatory Feed',          value: null, ok: true },
+      { label: 'SLA e supporto dedicato',  value: null, ok: true },
     ],
   },
 ];
@@ -175,11 +165,17 @@ function PlanContent() {
           const displayPrice = annual ? Math.round(yearlyPrice / 12) : plan.monthly;
           const saving       = plan.monthly * 2;
           const isBusy       = selecting === plan.tier;
+          const isOnHold     = !!plan.onHold;
 
           return (
-            <div key={plan.tier} className={`plan-card ${plan.color}${plan.badge === 'Più popolare' ? ' plan-card-featured' : ''}`}>
+            <div
+              key={plan.tier}
+              className={`plan-card ${plan.color}${plan.badge === 'Più popolare' ? ' plan-card-featured' : ''}`}
+              style={isOnHold ? { opacity: 0.55, filter: 'grayscale(0.4)', pointerEvents: 'none' } : undefined}
+            >
               {plan.badge && (
-                <div className={`plan-card-badge ${plan.tier === 'premium' ? 'badge-premium' : 'badge-enterprise'}`}>
+                <div className={`plan-card-badge ${plan.tier === 'premium' ? 'badge-premium' : 'badge-enterprise'}`}
+                  style={isOnHold ? { background: '#334155', color: '#94a3b8', borderColor: '#475569' } : undefined}>
                   {plan.badge}
                 </div>
               )}
@@ -195,7 +191,7 @@ function PlanContent() {
                 <span className="plan-price-period">/mese</span>
               </div>
 
-              {annual ? (
+              {!isOnHold && (annual ? (
                 <div className="plan-price-annual">
                   €{yearlyPrice.toLocaleString('it-IT')}/anno
                   <span className="plan-price-saving"> · risparmia €{saving}</span>
@@ -204,19 +200,21 @@ function PlanContent() {
                 <div className="plan-price-annual">
                   O €{yearlyPrice.toLocaleString('it-IT')}/anno con fatturazione annuale
                 </div>
-              )}
+              ))}
 
-              <button
-                className={`plan-cta${plan.badge === 'Più popolare' ? ' plan-cta-featured' : ''}`}
-                onClick={() => selectPlan(plan.tier)}
-                disabled={!!selecting}
-              >
-                {isBusy ? (
-                  <span className="plan-cta-spin" />
-                ) : (
-                  `Inizia con ${plan.name} →`
-                )}
-              </button>
+              {isOnHold ? (
+                <button className="plan-cta" disabled style={{ background: '#1e293b', color: '#64748b', border: '1px solid #334155', cursor: 'not-allowed' }}>
+                  🔒 In lavorazione — disponibile presto
+                </button>
+              ) : (
+                <button
+                  className={`plan-cta${plan.badge === 'Più popolare' ? ' plan-cta-featured' : ''}`}
+                  onClick={() => selectPlan(plan.tier)}
+                  disabled={!!selecting}
+                >
+                  {isBusy ? <span className="plan-cta-spin" /> : `Inizia con ${plan.name} →`}
+                </button>
+              )}
 
               <div className="plan-features">
                 <div className="plan-feat-title">Cosa include</div>
@@ -236,7 +234,7 @@ function PlanContent() {
       {error && <div className="plan-error">{error}</div>}
 
       <div className="plan-footer-note">
-        Nessuna carta di credito richiesta per iniziare. Puoi cambiare o disdire il piano in qualsiasi momento.
+        Nessuna carta di credito richiesta per iniziare. Puoi cambiare o disdire il piano in qualsiasi momento, senza penali.
       </div>
     </div>
   );

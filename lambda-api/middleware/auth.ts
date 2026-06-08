@@ -4,7 +4,7 @@ export interface AuthContext {
   companyId: string;
   userId: string;
   email: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'member' | 'partner';
 }
 
 export function extractAuth(event: APIGatewayProxyEventV2WithJWTAuthorizer): AuthContext {
@@ -12,7 +12,9 @@ export function extractAuth(event: APIGatewayProxyEventV2WithJWTAuthorizer): Aut
   const companyId = claims['custom:company_id'] as string;
   const userId = claims['sub'] as string;
   const email = claims['email'] as string;
-  const role = (claims['custom:role'] as string) === 'admin' ? 'admin' : 'member';
+  const rawRole = claims['custom:role'] as string;
+  const role: AuthContext['role'] =
+    rawRole === 'admin' ? 'admin' : rawRole === 'partner' ? 'partner' : 'member';
 
   if (!companyId || !userId) {
     throw Object.assign(new Error('Missing required JWT claims'), { statusCode: 401 });
@@ -24,5 +26,11 @@ export function extractAuth(event: APIGatewayProxyEventV2WithJWTAuthorizer): Aut
 export function requireAdmin(auth: AuthContext): void {
   if (auth.role !== 'admin') {
     throw Object.assign(new Error('Admin role required'), { statusCode: 403 });
+  }
+}
+
+export function requirePartner(auth: AuthContext): void {
+  if (auth.role !== 'partner') {
+    throw Object.assign(new Error('Partner role required'), { statusCode: 403 });
   }
 }

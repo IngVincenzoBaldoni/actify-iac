@@ -7,12 +7,12 @@ const bedrock  = new BedrockRuntimeClient({ region: process.env.BEDROCK_REGION ?
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'eu.amazon.nova-pro-v1:0';
 
 export interface CertSuggestion {
-  name:        string;
-  provider:    string;
-  description: string;
-  url:         string;
-  level:       'beginner' | 'intermediate' | 'advanced';
-  format:      string;
+  name:         string;
+  provider:     string;
+  description:  string;
+  search_query: string;
+  level:        'beginner' | 'intermediate' | 'advanced';
+  format:       string;
 }
 
 export async function suggestCertifications(params: {
@@ -33,16 +33,18 @@ AZIENDA: ${params.company_name} (settore: ${params.company_sector})
 Rispondi ESCLUSIVAMENTE con un array JSON di 5 oggetti con questo schema esatto:
 [
   {
-    "name": "Nome esatto della certificazione",
-    "provider": "Ente erogatore (es. Google, Microsoft, DeepLearning.AI, EU...)",
+    "name": "Nome esatto della certificazione o corso",
+    "provider": "Ente erogatore (es. Google, Microsoft, DeepLearning.AI, IBM, Coursera, EU Commission…)",
     "description": "Descrizione in italiano — perché è rilevante per questo profilo (max 200 caratteri)",
-    "url": "URL diretto alla pagina ufficiale della certificazione",
+    "search_query": "Query di ricerca Google ottimale per trovare questo corso (es. 'Google AI Essentials Coursera' oppure 'Microsoft AI-900 certification')",
     "level": "beginner|intermediate|advanced",
     "format": "Es. MOOC online gratuito, Corso a pagamento, E-learning con badge, Certificazione professionale"
   }
 ]
 
-Suggerisci solo percorsi reali e verificabili. Priorità: rilevanza per l'uso specifico dello strumento AI, accessibilità in italiano o inglese, copertura Art. 4 AI Act (alfabetizzazione AI, rischi, uso consapevole).
+Priorità: rilevanza per l'uso specifico dello strumento AI, accessibilità in italiano o inglese, copertura Art. 4 AI Act (alfabetizzazione AI, rischi, uso consapevole).
+Suggerisci solo certificazioni e corsi reali e ben noti (es. Elements of AI, Google AI Essentials, Microsoft AI-900, AI for Everyone di DeepLearning.AI, IBM AI Foundations, corsi Coursera/edX riconosciuti).
+NON inventare URL — l'url NON è richiesto in questo JSON.
 Zero testo fuori dal JSON.`;
 
   const response = await bedrock.send(new ConverseCommand({
@@ -60,12 +62,12 @@ Zero testo fuori dal JSON.`;
   if (!Array.isArray(parsed)) throw new Error('Expected array from Bedrock');
 
   return parsed.slice(0, 5).map((item: Record<string, unknown>) => ({
-    name:        String(item.name ?? ''),
-    provider:    String(item.provider ?? ''),
-    description: String(item.description ?? ''),
-    url:         String(item.url ?? ''),
-    level:       (['beginner', 'intermediate', 'advanced'].includes(item.level as string)
+    name:         String(item.name ?? ''),
+    provider:     String(item.provider ?? ''),
+    description:  String(item.description ?? ''),
+    search_query: String(item.search_query ?? `${item.name ?? ''} ${item.provider ?? ''}`),
+    level:        (['beginner', 'intermediate', 'advanced'].includes(item.level as string)
       ? item.level : 'beginner') as CertSuggestion['level'],
-    format:      String(item.format ?? ''),
+    format:       String(item.format ?? ''),
   }));
 }

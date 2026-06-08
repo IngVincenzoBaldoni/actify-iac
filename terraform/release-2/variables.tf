@@ -20,6 +20,13 @@ variable "api_gateway_id" {
   description = "ID of the existing API Gateway from release-1 (run: terraform -chdir=../release-1 output -raw api_gateway_id)"
 }
 
+variable "resend_api_key" {
+  type        = string
+  description = "Resend API key for transactional email (assessment invites)"
+  sensitive   = true
+  default     = ""
+}
+
 variable "cognito_ses_email" {
   type        = string
   description = "Verified SES email for Cognito user invitation/verification emails"

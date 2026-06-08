@@ -159,11 +159,11 @@ CONTESTO AZIENDA:
 - Settore: ${company.sector}
 - Dipendenti: ${company.employees_range}
 - Ruolo AI Act aziendale: ${company.ai_role}
-- DPO presente: ${company.governance.has_dpo} (tipo: ${company.governance.dpo_status})
-- Inventory AI formalizzato: ${company.governance.has_ai_inventory}
-- Valutazione impatto condotta: ${company.governance.has_impact_assessment}
-- Policy AI interna: ${company.governance.has_ai_policy}
-- Formazione personale: ${company.governance.has_training}
+- DPO presente: ${company.governance?.has_dpo ?? false} (tipo: ${company.governance?.dpo_status ?? 'none'})
+- Inventory AI formalizzato: ${company.governance?.has_ai_inventory ?? false}
+- Valutazione impatto condotta: ${company.governance?.has_impact_assessment ?? false}
+- Policy AI interna: ${company.governance?.has_ai_policy ?? false}
+- Formazione personale: ${company.governance?.has_training ?? false}
 ${notesBlock}
 SISTEMA AI DA ANALIZZARE:
 ${JSON.stringify({

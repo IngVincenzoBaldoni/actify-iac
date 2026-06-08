@@ -29,6 +29,8 @@ locals {
   table_compliance_checks  = "${local.project}-compliance-checks"
   table_documents          = "${local.project}-documents"
   table_literacy           = "${local.project}-literacy"
+  table_partners           = "${local.project}-partners"
+  table_partner_pmi        = "${local.project}-partner-pmi"
 
   # ─── S3 — Document Vault ────────────────────────────────────────────────────
   s3_documents_bucket_name = "${local.project}-documents"

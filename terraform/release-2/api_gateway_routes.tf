@@ -25,6 +25,24 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
 }
 
 # ─── Public routes (no auth) ──────────────────────────────────────────────────
+resource "aws_apigatewayv2_route" "partner_request" {
+  api_id    = data.aws_apigatewayv2_api.main.id
+  route_key = "POST /api/partner/request"
+  target    = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+}
+
+resource "aws_apigatewayv2_route" "assessment_get" {
+  api_id    = data.aws_apigatewayv2_api.main.id
+  route_key = "GET /api/assessment/{token}"
+  target    = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+}
+
+resource "aws_apigatewayv2_route" "assessment_submit" {
+  api_id    = data.aws_apigatewayv2_api.main.id
+  route_key = "POST /api/assessment/{token}/submit"
+  target    = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+}
+
 resource "aws_apigatewayv2_route" "auth_register" {
   api_id    = data.aws_apigatewayv2_api.main.id
   route_key = "POST /api/auth/register"
@@ -58,11 +76,30 @@ locals {
     # ── Remediation Engine ───────────────────────────────────────────────────
     "GET /api/company/documents"                                  = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "POST /api/systems/{systemId}/remediation/generate"           = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/systems/{systemId}/gaps/{gapId}/close"             = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "GET /api/systems/{systemId}/documents"                       = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "GET /api/documents/{documentId}"                             = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "DELETE /api/documents/{documentId}"                          = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "PUT /api/documents/{documentId}/finalize"                    = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "POST /api/documents/{documentId}/regenerate"                 = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    # ── Partner routes ───────────────────────────────────────────────────────
+    "GET /api/partner/me"                                            = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "PUT /api/partner/me"                                            = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/partner/pmi"                                           = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/partner/pmi"                                          = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/partner/pmi/import-csv"                               = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/partner/pmi/{pmiId}"                                   = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "DELETE /api/partner/pmi/{pmiId}"                                = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/partner/pmi/{pmiId}/status"                           = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/partner/pmi/{pmiId}/send-assessment"                  = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/partner/pmi/{pmiId}/pdf"                              = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    # ── Partner Inventory (compliance checks for PMI clients) ────────────────
+    "GET /api/partner/inventory"                                                      = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/partner/inventory/{pmiId}"                                              = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/partner/inventory/{pmiId}/systems/{systemId}"                           = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "PUT /api/partner/inventory/{pmiId}/systems/{systemId}"                           = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "POST /api/partner/inventory/{pmiId}/systems/{systemId}/compliance-check"         = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/partner/inventory/{pmiId}/systems/{systemId}/compliance-checks/latest"  = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     # ── AI Literacy Tracker ──────────────────────────────────────────────────
     "GET /api/literacy"                                              = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "POST /api/literacy/departments"                                 = "integrations/${aws_apigatewayv2_integration.saas_api.id}"

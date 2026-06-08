@@ -1179,6 +1179,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .cl-declare-check{width:16px;height:16px;accent-color:#22C55E;cursor:pointer;flex-shrink:0}
 .cl-declare-label{font-size:13px;color:var(--muted);user-select:none}
 
+/* ─── HYBRID gap — document ready, action pending ────────────────────────── */
+.cl-hybrid-title{color:#F97316}
+.cl-count-hybrid{font-size:13px;font-weight:600;color:#F97316}
+.cl-item-hybrid{background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.25)}
+.cl-status-hybrid{font-size:11px;font-weight:700;color:#F97316;background:rgba(249,115,22,.1);border-radius:4px;padding:2px 8px;white-space:nowrap}
+.hybrid-action-panel{margin-top:10px;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:12px 14px}
+.hybrid-action-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:7px;padding:10px 14px;margin-bottom:12px}
+.hybrid-action-icon{font-size:18px;flex-shrink:0;line-height:1.3}
+.btn-hybrid-close{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:#fff;background:linear-gradient(135deg,#22C55E,#16A34A);border:none;border-radius:8px;padding:8px 18px;cursor:pointer;transition:opacity .15s;width:100%;justify-content:center;margin-top:4px}
+.btn-hybrid-close:hover{opacity:.88}
+.btn-hybrid-close:disabled{opacity:.55;cursor:default}
+
 /* ─── Remediation Engine — Gap Generate Block ────────────────────────────── */
 .gap-gen-block{margin-top:10px;background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:12px 14px}
 .gap-gen-type{font-size:11px;font-weight:700;color:rgba(99,102,241,.85);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
@@ -1873,3 +1885,73 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   transition: all .15s;
 }
 .btn-change-plan:hover { background: var(--green); color: #fff; }
+
+/* ═══ ACCOUNT TYPE SELECTION ═══ */
+.acct-type-card{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;cursor:pointer;text-align:left;width:100%;transition:border-color .2s,background .2s}
+.acct-type-card:hover{border-color:var(--green);background:rgba(34,197,94,.04)}
+.acct-type-icon{font-size:32px;flex-shrink:0}
+.acct-type-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.acct-type-sub{font-size:13px;color:var(--muted);line-height:1.5}
+.acct-type-arrow{margin-left:auto;font-size:18px;color:var(--muted);flex-shrink:0}
+
+/* ═══ PARTNER DASHBOARD ═══ */
+.partner-layout{display:flex;min-height:100vh;background:var(--bg)}
+.partner-sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0}
+.partner-sidebar-logo{display:flex;align-items:center;gap:8px;padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.partner-sidebar-logo-name{font-size:16px;font-weight:700;color:var(--text)}
+.partner-nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:14px;color:var(--muted);cursor:pointer;border-radius:0;transition:color .15s,background .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left}
+.partner-nav-item:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.partner-nav-item.active{color:var(--text);background:rgba(108,71,255,.12);font-weight:600}
+.partner-sidebar{overflow-y:auto}
+.pnav-sub{padding:2px 12px 4px 16px}
+.pnav-sub-item{display:flex;align-items:center;gap:7px;padding:6px 12px;font-size:12px;color:var(--dim);cursor:pointer;border-radius:6px;transition:color .15s,background .15s;text-decoration:none;width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border:none;background:none;text-align:left}
+.pnav-sub-item:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.pnav-sub-item.active{color:var(--text);background:rgba(108,71,255,.1);font-weight:600}
+.pnav-sub-empty{padding:6px 12px;font-size:11px;color:var(--dim);font-style:italic}
+.partner-main{flex:1;overflow-y:auto;padding:32px}
+.partner-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.partner-h1{font-size:22px;font-weight:700;color:var(--text)}
+.partner-sub{font-size:14px;color:var(--muted)}
+
+/* PMI Cards */
+.pmi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:24px}
+.pmi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;transition:border-color .2s}
+.pmi-card:hover{border-color:var(--border2)}
+.pmi-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.pmi-card-name{font-size:15px;font-weight:700;color:var(--text)}
+.pmi-card-email{font-size:12px;color:var(--muted);margin-top:2px}
+.pmi-status-badge{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px;flex-shrink:0}
+.pmi-status-todo{background:rgba(148,163,184,.12);color:var(--muted)}
+.pmi-status-pending{background:rgba(249,115,22,.12);color:#F97316}
+.pmi-status-completato{background:rgba(34,197,94,.12);color:var(--green)}
+.pmi-card-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.pmi-stat-row{display:flex;gap:24px;margin-bottom:24px;flex-wrap:wrap}
+.pmi-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 24px;flex:1;min-width:120px}
+.pmi-stat-val{font-size:28px;font-weight:800;color:var(--text);margin-bottom:4px}
+.pmi-stat-label{font-size:12px;color:var(--muted);font-weight:500}
+
+/* Assessment form (white-label) */
+.assessment-page{min-height:100vh;background:#f5f5f5;display:flex;flex-direction:column;align-items:center;padding:40px 16px}
+.assessment-card{background:#ffffff;border-radius:16px;width:100%;max-width:680px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.assessment-header{padding:32px 40px 24px;border-bottom:1px solid #eee}
+.assessment-header-logo{font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+.assessment-header-sub{font-size:13px;color:#888}
+.assessment-body{padding:32px 40px}
+.assessment-tool-block{background:#f9f9f9;border:1px solid #eee;border-radius:10px;padding:20px;margin-bottom:16px}
+.assessment-tool-num{font-size:12px;font-weight:600;color:#888;margin-bottom:12px}
+.assessment-field{margin-bottom:14px}
+.assessment-field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:6px}
+.assessment-field input,.assessment-field textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-size:14px;color:#1a1a2e;background:#fff;outline:none;font-family:inherit;resize:vertical}
+.assessment-field input:focus,.assessment-field textarea:focus{border-color:#6C47FF;box-shadow:0 0 0 3px rgba(108,71,255,.1)}
+.assessment-field-row{display:flex;gap:12px}
+.assessment-field-row .assessment-field{flex:1}
+.assessment-add-btn{display:flex;align-items:center;gap:8px;background:transparent;border:1px dashed #ccc;border-radius:8px;padding:12px 16px;color:#888;font-size:14px;cursor:pointer;width:100%;justify-content:center;transition:all .15s;margin-top:8px}
+.assessment-add-btn:hover{border-color:#6C47FF;color:#6C47FF}
+.assessment-submit-btn{display:block;width:100%;padding:14px;border-radius:10px;border:none;font-size:16px;font-weight:700;color:#fff;cursor:pointer;margin-top:24px;transition:background .2s}
+.assessment-footer{padding:20px 40px;background:#f9f9f9;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}
+
+/* Partner email template editor */
+.email-editor{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px}
+.email-editor textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:12px;min-height:180px;resize:vertical;font-family:inherit}
+.email-preview-vars{font-size:12px;color:var(--muted);margin-top:8px}
+.email-preview-vars span{background:rgba(108,71,255,.15);color:#A78BFA;border-radius:4px;padding:2px 6px;margin-right:6px;font-family:monospace}

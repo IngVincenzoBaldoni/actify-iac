@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { parseBody } from '../middleware/validator';
 import { extractAuth } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
+import { logEvent } from '../services/auditService';
 import { suggestCertifications } from '../services/literacySuggestService';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
@@ -121,6 +122,7 @@ export async function createDepartment(event: APIGatewayProxyEventV2WithJWTAutho
     created_at:  now,
   });
 
+  await logEvent(auth.companyId, 'literacy_dept_created', { dept_id: deptId, name: body.name, headcount: body.headcount }, auth.email);
   return { statusCode: 201, body: JSON.stringify({ dept_id: deptId }) };
 }
 
@@ -132,6 +134,7 @@ export async function deleteDepartment(event: APIGatewayProxyEventV2WithJWTAutho
   if (!deptId) return { statusCode: 400, body: JSON.stringify({ error: 'deptId required' }) };
 
   await dynamo.deleteLiteracyRecord(auth.companyId, deptRecordId(deptId));
+  await logEvent(auth.companyId, 'literacy_dept_deleted', { dept_id: deptId }, auth.email);
   return { statusCode: 200, body: JSON.stringify({ message: 'Dipartimento eliminato.' }) };
 }
 
@@ -214,6 +217,12 @@ export async function addCertification(event: APIGatewayProxyEventV2WithJWTAutho
     created_at:         now,
   });
 
+  await logEvent(auth.companyId, 'literacy_cert_added', {
+    cert_id: certId, dept_id: deptId,
+    certification_name: body.certification_name,
+    issued_date: body.issued_date,
+    people_count: body.people_count,
+  }, auth.email);
   return { statusCode: 201, body: JSON.stringify({ cert_id: certId }) };
 }
 

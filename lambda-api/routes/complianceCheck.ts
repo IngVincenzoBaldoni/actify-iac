@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import { extractAuth } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
+import { logEvent } from '../services/auditService';
 import { runComplianceCheck } from '../services/complianceEngine';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import type { AISystem } from '../types/aiSystem';
@@ -100,6 +101,12 @@ export async function triggerCheck(event: APIGatewayProxyEventV2WithJWTAuthorize
     Payload:        Buffer.from(JSON.stringify(asyncPayload)),
   }));
 
+  await logEvent(auth.companyId, 'compliance_check_started', {
+    system_id:   systemId,
+    system_name: (system as Record<string, unknown>).tool_name,
+    check_id:    checkId,
+  }, auth.email);
+
   return {
     statusCode: 202,
     body: JSON.stringify({
@@ -165,6 +172,17 @@ export async function executeCheckAsync(payload: {
       max: result.total_exposure_estimate?.max ?? 0,
       source: 'check',
     });
+
+    await logEvent(companyId, 'compliance_check_completed', {
+      system_id:    systemId,
+      system_name:  (systemRaw as Record<string, unknown>).tool_name,
+      check_id:     checkId,
+      risk_level:   result.risk_classification as unknown as string,
+      status:       finalStatus,
+      gaps_count:   result.compliance_gaps.filter((g: { status: string }) => g.status !== 'compliant').length,
+      exposure_min: result.total_exposure_estimate?.min ?? 0,
+      exposure_max: result.total_exposure_estimate?.max ?? 0,
+    });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[COMPLIANCE ERROR]', JSON.stringify({
@@ -180,6 +198,11 @@ export async function executeCheckAsync(payload: {
     await dynamo.updateSystem(companyId, systemId, {
       compliance_status: 'unchecked',
       updated_at:        new Date().toISOString(),
+    });
+    await logEvent(companyId, 'compliance_check_failed', {
+      system_id: systemId,
+      check_id:  checkId,
+      error:     errorMsg,
     });
   }
 }

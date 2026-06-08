@@ -14,7 +14,7 @@ export async function adminCreateUser(params: {
   email: string;
   password?: string;
   companyId: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'member' | 'partner';
   suppressEmail?: boolean;
 }) {
   const cmd = new AdminCreateUserCommand({

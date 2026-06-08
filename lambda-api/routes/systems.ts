@@ -4,6 +4,7 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { parseBody } from '../middleware/validator';
 import { extractAuth, requireAdmin } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
+import { logEvent } from '../services/auditService';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
@@ -76,6 +77,13 @@ export async function createSystem(event: APIGatewayProxyEventV2WithJWTAuthorize
   };
 
   await dynamo.putSystem(item);
+  await logEvent(auth.companyId, 'system_created', {
+    system_id: systemId,
+    tool_name: body.tool_name,
+    category:  body.category,
+    vendor:    body.vendor,
+    role:      body.role,
+  }, auth.email);
   return {
     statusCode: 201,
     body: JSON.stringify({
@@ -106,6 +114,11 @@ export async function updateSystem(event: APIGatewayProxyEventV2WithJWTAuthorize
   const body = parseBody(event.body, aiSystemUpdateSchema);
   const updates = { ...body, updated_at: new Date().toISOString() };
   await dynamo.updateSystem(auth.companyId, systemId, updates);
+  await logEvent(auth.companyId, 'system_updated', {
+    system_id: systemId,
+    fields_updated: Object.keys(body),
+    ...(body.compliance_checklist ? { checklist_updated: true } : {}),
+  }, auth.email);
 
   // When checklist changes, compute effective exposure server-side and record a snapshot
   if (body.compliance_checklist) {
@@ -157,5 +170,9 @@ export async function deleteSystem(event: APIGatewayProxyEventV2WithJWTAuthorize
       .map(d => s3Client.send(new DeleteObjectCommand({ Bucket: DOCUMENTS_BUCKET, Key: d.s3_key as string }))),
   ]);
 
+  await logEvent(auth.companyId, 'system_deleted', {
+    system_id: systemId,
+    deleted_documents: docs.length,
+  }, auth.email);
   return { statusCode: 200, body: JSON.stringify({ message: 'Sistema eliminato.', deleted_documents: docs.length }) };
 }

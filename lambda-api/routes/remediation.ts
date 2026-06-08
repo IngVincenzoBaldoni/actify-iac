@@ -3,7 +3,8 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { parseBody } from '../middleware/validator';
 import { extractAuth } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
-import { generatePresignedUrl } from '../services/remediationService';
+import { generatePresignedUrl, getGapType, uploadProofToS3 } from '../services/remediationService';
+import type { Company } from '../types/company';
 import { z } from 'zod';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
@@ -156,6 +157,133 @@ export async function listSystemDocuments(event: APIGatewayProxyEventV2WithJWTAu
 
   const docs = await dynamo.listDocumentsBySystem(systemId);
   return { statusCode: 200, body: JSON.stringify({ documents: docs }) };
+}
+
+// ─── POST /api/systems/:systemId/gaps/:gapId/close ────────────────────────────
+// Closes a gap fully: either via self-declaration or by uploading a proof file.
+// For HYBRID gaps this completes the action step after the document was generated.
+
+const closeGapSchema = z.object({
+  evidence_note:  z.string().max(500).optional(),
+  proof_base64:   z.string().optional(),       // base64-encoded file (max ~4 MB)
+  proof_filename: z.string().max(200).optional(),
+});
+
+export async function closeGap(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth     = extractAuth(event);
+  const rawPath  = event.requestContext?.http?.path ?? (event as unknown as Record<string, unknown>).rawPath as string ?? '';
+  const closeMatch = rawPath.match(/\/api\/systems\/([^/]+)\/gaps\/([^/]+)\/close/);
+  const systemId = closeMatch?.[1] ?? event.pathParameters?.systemId;
+  const gapId    = closeMatch?.[2] ?? event.pathParameters?.gapId;
+  if (!systemId || !gapId) return { statusCode: 400, body: JSON.stringify({ error: 'missing params' }) };
+
+  const body = parseBody(event.body, closeGapSchema);
+  const now  = new Date().toISOString();
+
+  // Find the gap in the latest compliance check
+  const [latestCheck, system, company] = await Promise.all([
+    dynamo.getLatestComplianceCheck(auth.companyId, systemId),
+    dynamo.getSystem(auth.companyId, systemId),
+    dynamo.getCompany(auth.companyId),
+  ]);
+
+  if (!system) return { statusCode: 404, body: JSON.stringify({ error: 'system_not_found' }) };
+  const gaps = (latestCheck?.result?.compliance_gaps ?? []) as Record<string, unknown>[];
+  const gap  = gaps.find(g => g.gap_id === gapId);
+  if (!gap)  return { statusCode: 404, body: JSON.stringify({ error: 'gap_not_found' }) };
+
+  const article       = gap.article as string;
+  const automationType = gap.automation_type as string | null;
+
+  // Upload proof to S3 if provided
+  let proofS3Key: string | undefined;
+  if (body.proof_base64 && body.proof_filename) {
+    proofS3Key = await uploadProofToS3({
+      companyId: auth.companyId,
+      systemId,
+      gapId,
+      base64:   body.proof_base64,
+      filename: body.proof_filename,
+    });
+  }
+
+  // Build evidence note
+  const proofNote = proofS3Key
+    ? `Prova caricata: ${body.proof_filename} — ${body.evidence_note ?? ''}`
+    : body.evidence_note ?? `Auto-dichiarato conforme il ${now.split('T')[0]}`;
+
+  // Update compliance_checklist to mark article as 'present' (full sanction reduction)
+  const existingChecklist = (system.compliance_checklist ?? {}) as Record<string, unknown>;
+  const updatedChecklist: Record<string, unknown> = {
+    ...existingChecklist,
+    [article]: {
+      status:       'present',
+      addressed_at: now.split('T')[0],
+      evidence_note: proofNote,
+      ...(proofS3Key ? { proof_s3_key: proofS3Key } : {}),
+      source: proofS3Key ? 'proof_upload' : 'self_declared',
+    },
+  };
+
+  // Mark gap compliant in compliance check (reuses markGapCompliant logic)
+  if (latestCheck?.result && latestCheck.status === 'completed') {
+    const { computeSanctions } = await import('../services/sanctions');
+    const result = latestCheck.result as Record<string, unknown>;
+    const updatedGaps = (result.compliance_gaps as Record<string, unknown>[]).map(g =>
+      g.gap_id === gapId
+        ? { ...g, status: 'compliant', estimated_sanction_min: 0, estimated_sanction_max: 0, tier_info: undefined }
+        : g,
+    );
+    // Also apply other checklist overrides
+    const finalGaps = updatedGaps.map(g => {
+      const entry = (updatedChecklist[g.article as string] as Record<string, unknown> | undefined);
+      if (entry?.status === 'present') {
+        return { ...g, status: 'compliant', estimated_sanction_min: 0, estimated_sanction_max: 0, tier_info: undefined };
+      }
+      return g;
+    });
+    const recomputed = computeSanctions({ ...result as Parameters<typeof computeSanctions>[0], compliance_gaps: finalGaps as Parameters<typeof computeSanctions>[0]['compliance_gaps'] }, company as unknown as Company);
+    const pk = `${auth.companyId}#${systemId}`;
+    await dynamo.updateComplianceCheck(pk, latestCheck.check_id as string, {
+      result: {
+        ...recomputed,
+        compliance_summary: {
+          ...(recomputed.compliance_summary ?? {}),
+          compliant_count:     finalGaps.filter(g => g.status === 'compliant').length,
+          non_compliant_count: finalGaps.filter(g => g.status !== 'compliant' && g.status !== 'partial').length,
+          monitoring_count:    finalGaps.filter(g => g.status === 'partial').length,
+        },
+      },
+    });
+    const totalMin = recomputed.total_exposure_estimate?.min ?? 0;
+    const totalMax = recomputed.total_exposure_estimate?.max ?? 0;
+    const allCompliant = finalGaps.every(g => g.status === 'compliant');
+    await dynamo.updateSystem(auth.companyId, systemId, {
+      compliance_status:       allCompliant ? 'compliant' : 'gap_found',
+      last_exposure_min:       totalMin,
+      last_exposure_max:       totalMax,
+      last_article_sanctions:  JSON.stringify(recomputed.article_sanctions ?? {}),
+      compliance_checklist:    updatedChecklist,
+      updated_at:              now,
+    });
+  } else {
+    // No compliance check yet: just update the checklist
+    await dynamo.updateSystem(auth.companyId, systemId, {
+      compliance_checklist: updatedChecklist,
+      updated_at:           now,
+    });
+  }
+
+  const gapType = getGapType(automationType);
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      success:   true,
+      gap_type:  gapType,
+      source:    proofS3Key ? 'proof_upload' : 'self_declared',
+      article,
+    }),
+  };
 }
 
 // ─── DELETE /api/documents/:documentId ───────────────────────────────────────

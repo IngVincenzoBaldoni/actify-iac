@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { configureAmplify } from '@/lib/amplify';
-import { doSignIn, setSessionCookie, isAuthenticated } from '@/lib/auth';
+import { doSignIn, setSessionCookie, isAuthenticated, getAuthClaims } from '@/lib/auth';
 import { markSvg, logoSvg } from '@/lib/branding';
 
 export default function LoginPage() {
@@ -15,7 +15,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     configureAmplify();
-    isAuthenticated().then(ok => { if (ok) router.replace('/dashboard'); });
+    isAuthenticated().then(async ok => {
+      if (ok) {
+        const claims = await getAuthClaims();
+        router.replace(claims?.role === 'partner' ? '/partner' : '/dashboard');
+      }
+    });
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -26,7 +31,8 @@ export default function LoginPage() {
       const result = await doSignIn(email, password);
       if (result.isSignedIn) {
         setSessionCookie();
-        router.push('/dashboard');
+        const claims = await getAuthClaims();
+        router.push(claims?.role === 'partner' ? '/partner' : '/dashboard');
       } else if (result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
         router.push(`/login/new-password?email=${encodeURIComponent(email)}`);
       }

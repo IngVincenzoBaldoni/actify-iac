@@ -3,11 +3,9 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as dynamo from './dynamoService';
-import { computeSanctions } from './sanctions';
 import type { AISystem } from '../types/aiSystem';
 import type { Company } from '../types/company';
 import type { AutomationType, ActifyDocument } from '../types/document';
-import type { ComplianceResultWithSanctions } from './sanctions';
 
 const BEDROCK_REGION  = process.env.BEDROCK_REGION  ?? 'eu-central-1';
 const BEDROCK_MODEL   = process.env.BEDROCK_MODEL_ID ?? 'eu.amazon.nova-pro-v1:0';
@@ -188,72 +186,71 @@ export function buildDocumentTitle(type: AutomationType, toolName: string): stri
   return titles[type];
 }
 
-// ─── Mark gap compliant in the latest check + recompute sanctions ─────────────
+// ─── Gap type classification ──────────────────────────────────────────────────
+// DOCUMENTARY → document template (must be adopted/signed by PMI to close the gap)
+// HYBRID      → document guides the action; PMI must also implement it operationally
+// OPERATIONAL → no automation; professional/technical intervention required
+// NOTE: document generation NEVER auto-resolves a gap. The PMI must always
+//       explicitly confirm via closeGap() after acting on the document.
 
-async function markGapCompliant(
+const DOCUMENTARY_TYPES = new Set(['document_generation', 'transparency_notice', 'conformity_declaration']);
+const HYBRID_TYPES       = new Set(['policy_template', 'monitoring_plan', 'risk_assessment']);
+
+export function getGapType(automationType: string | null | undefined): 'DOCUMENTARY' | 'HYBRID' | 'OPERATIONAL' {
+  if (!automationType) return 'OPERATIONAL';
+  if (DOCUMENTARY_TYPES.has(automationType)) return 'DOCUMENTARY';
+  if (HYBRID_TYPES.has(automationType)) return 'HYBRID';
+  return 'OPERATIONAL';
+}
+
+// ─── Mark gap as document_ready after generation ─────────────────────────────
+// Documents are TEMPLATES — they tell the PMI what to do, but the PMI must
+// explicitly confirm compliance via closeGap(). No sanctions are changed here.
+
+async function markGapDocumentReady(
   companyId: string,
   systemId:  string,
-  gapId:     string,
-  company:   Company,
+  article:   string,
 ): Promise<void> {
-  const [latest, systemRaw] = await Promise.all([
-    dynamo.getLatestComplianceCheck(companyId, systemId),
-    dynamo.getSystem(companyId, systemId),
-  ]);
-  if (!latest?.result || latest.status !== 'completed') return;
-
-  const result = latest.result as ComplianceResultWithSanctions;
-
-  const gapExists = result.compliance_gaps.some(g => g.gap_id === gapId);
-  if (!gapExists) return;
-
-  // Mark the document-generated gap compliant
-  const serverUpdatedGaps = result.compliance_gaps.map(g =>
-    g.gap_id === gapId
-      ? { ...g, status: 'compliant' as const, estimated_sanction_min: 0, estimated_sanction_max: 0, tier_info: undefined }
-      : g,
-  );
-
-  // Also apply compliance_checklist overrides already declared by the user
-  const checklist = (systemRaw?.compliance_checklist ?? {}) as Record<string, { status?: string }>;
-  const finalGaps = serverUpdatedGaps.map(g => {
-    const entry = checklist[g.article as string];
-    if (entry?.status === 'present') {
-      return { ...g, status: 'compliant' as const, estimated_sanction_min: 0, estimated_sanction_max: 0, tier_info: undefined };
-    }
-    return g;
-  });
-
-  const recomputed = computeSanctions({ ...result, compliance_gaps: finalGaps }, company);
-
-  const newResult = {
-    ...recomputed,
-    compliance_summary: {
-      ...recomputed.compliance_summary,
-      compliant_count:     finalGaps.filter(g => g.status === 'compliant').length,
-      non_compliant_count: finalGaps.filter(g => g.status !== 'compliant' && g.status !== 'partial').length,
-      monitoring_count:    finalGaps.filter(g => g.status === 'partial').length,
-    },
-  };
-
-  const pk = `${companyId}#${systemId}`;
-  await dynamo.updateComplianceCheck(pk, latest.check_id, { result: newResult });
-
-  const allCompliant = finalGaps.every(g => g.status === 'compliant');
+  const systemRaw = await dynamo.getSystem(companyId, systemId);
+  const checklist = ((systemRaw?.compliance_checklist ?? {}) as Record<string, unknown>);
   await dynamo.updateSystem(companyId, systemId, {
-    compliance_status:      allCompliant ? 'compliant' : 'gap_found',
-    last_exposure_min:      newResult.total_exposure_estimate?.min ?? 0,
-    last_exposure_max:      newResult.total_exposure_estimate?.max ?? 0,
-    last_article_sanctions: JSON.stringify(newResult.article_sanctions ?? {}),
-    updated_at:             new Date().toISOString(),
+    compliance_checklist: {
+      ...checklist,
+      [article]: {
+        status:       'document_ready',
+        addressed_at: new Date().toISOString().split('T')[0],
+        evidence_note: 'Documento Actify generato — in attesa di conferma PMI',
+      },
+    },
+    updated_at: new Date().toISOString(),
   });
+}
 
-  await dynamo.appendSanctionSnapshot(companyId, systemId, {
-    at: new Date().toISOString(),
-    min: newResult.total_exposure_estimate?.min ?? 0,
-    max: newResult.total_exposure_estimate?.max ?? 0,
-    source: 'document',
-  });
+// ─── Upload proof file to S3 ──────────────────────────────────────────────────
+
+export async function uploadProofToS3(params: {
+  companyId: string;
+  systemId:  string;
+  gapId:     string;
+  base64:    string;
+  filename:  string;
+}): Promise<string> {
+  const { companyId, systemId, gapId, base64, filename } = params;
+  const ts     = new Date().toISOString().replace(/[:.]/g, '-');
+  const s3Key  = `proofs/${companyId}/${systemId}/${gapId}/${ts}_${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const buffer = Buffer.from(base64, 'base64');
+  const ct     = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream';
+
+  await s3Client.send(new PutObjectCommand({
+    Bucket:      DOCUMENTS_BUCKET,
+    Key:         s3Key,
+    Body:        buffer,
+    ContentType: ct,
+    Metadata: { company_id: companyId, system_id: systemId, gap_id: gapId },
+  }));
+
+  return s3Key;
 }
 
 // ─── Generate pre-signed URL for frontend preview ────────────────────────────
@@ -386,8 +383,8 @@ export async function generateDocumentAsync(params: {
       },
     });
 
-    // 7. Mark the corresponding gap compliant in the latest check + recompute sanctions
-    await markGapCompliant(companyId, systemId, gapId, company);
+    // 7. Mark checklist as document_ready — sanctions unchanged until PMI confirms
+    await markGapDocumentReady(companyId, systemId, gap.article as string);
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Errore sconosciuto';

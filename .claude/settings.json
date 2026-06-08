@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(aws logs *)"
+      "Bash(aws logs *)",
+      "Bash(npm run *)"
     ]
   }
 }

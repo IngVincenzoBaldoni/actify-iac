@@ -20,10 +20,42 @@ interface CompanyUser {
   user_id: string; email: string; role: 'admin' | 'member'; status: string; joined_at: string | null;
 }
 
+function ReferringPartnerCard(p: Record<string, unknown> | undefined) {
+  if (!p) return null;
+  return (
+    <div className="fcard">
+      <h3>Studio di Riferimento</h3>
+      <p style={{ fontSize: 13, color: 'var(--dim)', marginBottom: 14 }}>
+        Il tuo account è gestito tramite questo studio consulente. Per aggiornamenti normativi o assistenza sulla compliance AI Act, contatta direttamente il tuo referente.
+      </p>
+      <div className="settings-grid">
+        <div className="rev-row">
+          <span className="rk">Studio</span>
+          <span className="rv" style={{ fontWeight: 600 }}>{String(p.ragione_sociale ?? '')}</span>
+        </div>
+        {!!p.tipo_studio && (
+          <div className="rev-row">
+            <span className="rk">Tipo</span>
+            <span className="rv">{String(p.tipo_studio)}</span>
+          </div>
+        )}
+        <div className="rev-row">
+          <span className="rk">Contatto</span>
+          <span className="rv">
+            <a href={`mailto:${String(p.contact_email ?? '')}`} style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>
+              {String(p.contact_email ?? '')}
+            </a>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [company, setCompany] = useState<Record<string, unknown> | null>(null);
   const [users, setUsers] = useState<CompanyUser[]>([]);
-  const [myRole, setMyRole] = useState<'admin' | 'member'>('member');
+  const [myRole, setMyRole] = useState<'admin' | 'member' | 'partner'>('member');
   const [myId, setMyId] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
@@ -290,6 +322,9 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Studio di Riferimento */}
+      {ReferringPartnerCard(company?.referring_partner as Record<string, unknown> | undefined)}
 
       {/* User Management — admin only */}
       {myRole === 'admin' && (

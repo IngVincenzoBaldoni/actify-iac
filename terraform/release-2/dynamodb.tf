@@ -183,6 +183,74 @@ resource "aws_dynamodb_table" "literacy" {
   }
 }
 
+# ─── partners ─────────────────────────────────────────────────────────────────
+# PK: partner_id (UUID) — studio/consulente account
+resource "aws_dynamodb_table" "partners" {
+  name         = local.table_partners
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "partner_id"
+
+  attribute {
+    name = "partner_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = {
+    Name = local.table_partners
+  }
+}
+
+# ─── partner-pmi ──────────────────────────────────────────────────────────────
+# PK: partner_id, SK: pmi_id
+# GSI token-index: form_token → lookup by assessment token (public form)
+resource "aws_dynamodb_table" "partner_pmi" {
+  name         = local.table_partner_pmi
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "partner_id"
+  range_key    = "pmi_id"
+
+  attribute {
+    name = "partner_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "pmi_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "form_token"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "token-index"
+    hash_key        = "form_token"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = {
+    Name = local.table_partner_pmi
+  }
+}
+
 # ─── compliance-checks ────────────────────────────────────────────────────────
 # PK: "company_id#system_id", SK: "YYYYMMDDHHMMSS-uuid" (cronologico nativo)
 resource "aws_dynamodb_table" "compliance_checks" {

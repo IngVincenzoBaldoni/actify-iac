@@ -388,6 +388,8 @@ function SetupContent() {
       await api.systems.create(buildSystemPayload());
       if (!addMode) {
         await api.company.setup({ ai_role: sys.role, context_notes: contextNotes, governance });
+      } else {
+        await api.company.update({ setup_completed: true }).catch(() => {});
       }
       router.push('/dashboard/inventory');
     } catch (e: unknown) {

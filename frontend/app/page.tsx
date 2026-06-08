@@ -668,7 +668,9 @@ export default function Page() {
           <p>Il tuo report di compliance AI Act &egrave; stato generato e inviato via email a:</p>
           <div id="successEmail" style={{fontWeight:700,fontSize:18,color:'var(--green)',margin:'12px 0',letterSpacing:'-0.3px'}}></div>
           <p style={{fontSize:13,color:'var(--muted)'}}>Controlla la tua casella (e la cartella spam). Il link nel report &egrave; valido per <strong>24 ore</strong>.</p>
-          <a href="/" className="btn-restart" style={{display:'inline-block',textDecoration:'none',textAlign:'center'}}>Torna alla home</a>
+          {/* wizard.js populates this when pmi_id + referral_code are available */}
+          <div id="successRegisterCta" style={{display:'none',textAlign:'center',marginTop:8}}></div>
+          <a href="/" className="btn-restart" style={{display:'inline-block',textDecoration:'none',textAlign:'center',marginTop:16}}>Torna alla home</a>
         </div>
       </div>
 

@@ -11,10 +11,19 @@ export const complianceGapSchema = z.object({
   what_to_do: z.string().max(600),
   can_actify_automate: z.boolean(),
   automation_type: z.preprocess(
-    v => (v === 'null' || v === undefined) ? null : v,
+    v => {
+      if (v === 'null' || v === undefined || v === null) return null;
+      const valid = new Set([
+        'document_generation', 'policy_template', 'transparency_notice',
+        'risk_assessment', 'monitoring_plan', 'conformity_declaration',
+        'training_plan', 'training_program',
+      ]);
+      return valid.has(v as string) ? v : null;
+    },
     z.enum([
       'document_generation', 'policy_template', 'transparency_notice',
       'risk_assessment', 'monitoring_plan', 'conformity_declaration',
+      'training_plan', 'training_program',
     ]).nullable(),
   ),
   // FIX-03: source attribution — chunk IDs that support this gap

@@ -16,19 +16,27 @@ function AddDeptModal({
   onSave: () => void;
   onClose: () => void;
 }) {
+  const [type, setType]           = useState<'dept' | 'company'>('dept');
   const [name, setName]           = useState('');
   const [headcount, setHeadcount] = useState('');
   const [sysIds, setSysIds]       = useState<string[]>([]);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState('');
 
+  const isCompany = type === 'company';
+
   async function handleSave() {
-    if (!name.trim()) { setError('Inserisci il nome del dipartimento'); return; }
-    if (!headcount || Number(headcount) < 1) { setError('Inserisci il numero di persone'); return; }
+    const finalName = isCompany ? 'Tutta l\'azienda' : name.trim();
+    if (!isCompany && !name.trim()) { setError('Inserisci il nome del dipartimento'); return; }
+    if (!isCompany && (!headcount || Number(headcount) < 1)) { setError('Inserisci il numero di persone'); return; }
     if (sysIds.length === 0) { setError('Seleziona almeno un tool AI'); return; }
     setSaving(true);
     try {
-      await api.literacy.createDept({ name: name.trim(), headcount: Number(headcount), system_ids: sysIds });
+      await api.literacy.createDept({
+        name: finalName,
+        headcount: headcount ? Number(headcount) : 0,
+        system_ids: sysIds,
+      });
       onSave();
     } catch (e: unknown) {
       setError((e as { message?: string }).message ?? 'Errore durante il salvataggio.');
@@ -45,18 +53,42 @@ function AddDeptModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-box" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>Aggiungi Dipartimento</h3>
+          <h3>{isCompany ? 'Aggiungi intera azienda' : 'Aggiungi Dipartimento'}</h3>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          <div className="field">
-            <label>Nome Dipartimento *</label>
-            <input type="text" value={name} placeholder="Es. HR, Finance, Operations…" onChange={e => setName(e.target.value)} />
+
+          {/* Type toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {([
+              { key: 'dept',    icon: '👥', label: 'Dipartimento specifico' },
+              { key: 'company', icon: '🏢', label: 'Tutta l\'azienda' },
+            ] as const).map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => { setType(opt.key); setError(''); }}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 12px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all .15s', border: type === opt.key ? '2px solid var(--green)' : '1px solid var(--border)', background: type === opt.key ? 'rgba(34,197,94,0.08)' : 'var(--surface)', color: type === opt.key ? 'var(--green)' : 'var(--muted)' }}>
+                <span>{opt.icon}</span>{opt.label}
+              </button>
+            ))}
           </div>
+
+          {isCompany ? (
+            <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 9, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>
+              Verrà creata un&apos;unità <strong>&quot;Tutta l&apos;azienda&quot;</strong> — utile quando l&apos;intera PMI usa un tool AI o quando la struttura è troppo piccola per avere dipartimenti separati.
+            </div>
+          ) : (
+            <div className="field">
+              <label>Nome Dipartimento *</label>
+              <input type="text" value={name} placeholder="Es. HR, Finance, Operations…" onChange={e => setName(e.target.value)} />
+            </div>
+          )}
+
           <div className="field">
-            <label>N° persone nel dipartimento *</label>
-            <input type="number" min={1} value={headcount} placeholder="Es. 12" onChange={e => setHeadcount(e.target.value)} />
+            <label>N° persone{isCompany ? ' (opzionale)' : ' nel dipartimento *'}</label>
+            <input type="number" min={1} value={headcount} placeholder={isCompany ? 'Es. 10 — totale dipendenti' : 'Es. 12'} onChange={e => setHeadcount(e.target.value)} />
           </div>
+
           <div className="field">
             <label>Tool AI collegati *</label>
             <div className="check-list">
@@ -69,6 +101,7 @@ function AddDeptModal({
               {systems.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 13 }}>Nessun tool AI censito. Aggiungi sistemi AI nell&apos;AI Inventory prima.</p>}
             </div>
           </div>
+
           {error && <div className="alert-err show">{error}</div>}
         </div>
         <div className="modal-foot">
@@ -122,7 +155,13 @@ function SuggestModal({ dept, onClose }: { dept: LiteracyDepartment; onClose: ()
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: `${levelColor[s.level]}22`, color: levelColor[s.level] }}>{levelLabel[s.level] ?? s.level}</span>
-                  {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>Apri →</a>}
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query || `${s.name} ${s.provider}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>
+                    Cerca online →
+                  </a>
                 </div>
               </div>
             </div>
@@ -323,13 +362,20 @@ function LiteracyContent() {
   const [loading, setLoading]         = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [suggestDept, setSuggestDept]   = useState<LiteracyDepartment | null>(null);
+  const [allSystems, setAllSystems]         = useState<Array<Record<string, unknown>>>([]);
+  const [markingSystemId, setMarkingSystemId] = useState<string | null>(null);
+  const [markResults, setMarkResults]         = useState<Record<string, { ok: boolean; message: string }>>({});
 
   async function load() {
     setLoading(true);
     try {
-      const r = await api.literacy.list();
-      setDepartments((r as { departments: LiteracyDepartment[] }).departments);
-      setSystems((r as { systems: Array<{ system_id: string; tool_name: string }> }).systems);
+      const [literacyData, systemsData] = await Promise.all([
+        api.literacy.list(),
+        api.systems.list(),
+      ]);
+      setDepartments((literacyData as { departments: LiteracyDepartment[] }).departments);
+      setSystems((literacyData as { systems: Array<{ system_id: string; tool_name: string }> }).systems);
+      setAllSystems((systemsData as Array<Record<string, unknown>>).filter(s => s.compliance_status && s.compliance_status !== 'unchecked'));
     } catch { /* silent */ }
     setLoading(false);
   }
@@ -341,6 +387,35 @@ function LiteracyContent() {
     if (!confirm(`Eliminare il dipartimento "${dept.name}"?`)) return;
     await api.literacy.deleteDept(dept.dept_id);
     load();
+  }
+
+  async function handleMarkArt4ForSystem(s: Record<string, unknown>) {
+    const systemId = s.system_id as string;
+    setMarkingSystemId(systemId);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const existing = (s.compliance_checklist as Record<string, unknown>) ?? {};
+      const updatedChecklist = {
+        ...existing,
+        'Art. 4': {
+          status: 'present',
+          addressed_at: today,
+          evidence_note: 'Formazione documentata nel AI Literacy Tracker',
+        },
+      };
+      await api.systems.update(systemId, { compliance_checklist: updatedChecklist });
+      // Update local state so button reflects the change immediately
+      setAllSystems(prev => prev.map(sys =>
+        sys.system_id === systemId
+          ? { ...sys, compliance_checklist: updatedChecklist }
+          : sys
+      ));
+      setMarkResults(prev => ({ ...prev, [systemId]: { ok: true, message: 'Art. 4 segnato come conforme — stima ridotta' } }));
+    } catch (e: unknown) {
+      setMarkResults(prev => ({ ...prev, [systemId]: { ok: false, message: (e as { message?: string }).message ?? 'Errore' } }));
+    } finally {
+      setMarkingSystemId(null);
+    }
   }
 
   // Show dept detail if ?dept= param is set
@@ -366,7 +441,7 @@ function LiteracyContent() {
           <p className="inv-sub">Gestisci la formazione AI del tuo team — obbligo Art. 4 EU AI Act</p>
         </div>
         <button className="btn-submit" style={{ whiteSpace: 'nowrap' }} onClick={() => setShowAddModal(true)}>
-          + Aggiungi Dipartimento
+          + Aggiungi Dipartimento / Azienda
         </button>
       </div>
 
@@ -385,16 +460,94 @@ function LiteracyContent() {
         </div>
       )}
 
-      {/* Art. 4 banner */}
+      {/* Intro section */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
+          <span style={{ fontSize: 32, lineHeight: 1 }}>🎓</span>
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', margin: 0, marginBottom: 6 }}>Perché l&apos;AI Literacy è fondamentale</h2>
+            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, margin: 0 }}>
+              L&apos;<strong>Art. 4 del Regolamento UE 2024/1689 (EU AI Act)</strong> impone a tutti i deployer e provider di sistemi AI di garantire
+              che il personale che utilizza o supervisiona sistemi AI disponga di un livello sufficiente di competenze — tenendo conto della loro
+              formazione, esperienza e del contesto specifico d&apos;uso.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+          {[
+            { icon: '⚖️', title: 'Riduce le sanzioni', desc: 'L\'Art. 99 EU AI Act valuta esplicitamente le misure adottate per attenuare il danno e la cooperazione con le autorità. Una formazione documentata dimostra buona fede e diligenza — fattori che l\'Autorità di vigilanza deve considerare nel determinare l\'importo effettivo.' },
+            { icon: '🛡️', title: 'Prova ispettiva', desc: 'Il registro delle certificazioni che tieni qui è evidenza diretta per un audit. Se un ispettore verifica la conformità all\'Art. 4, questo tracker è il tuo documento di difesa — data, persone formate, tool AI coperti.' },
+            { icon: '📋', title: 'Sblocca la checklist', desc: 'Una volta documentata la formazione, puoi segnare l\'Art. 4 come conforme nell\'AI Inventory — il gap scompare dal profilo di rischio e il calcolo della stima sanzionatoria si riduce automaticamente.' },
+          ].map(card => (
+            <div key={card.title} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 18px' }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>{card.icon}</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 6 }}>{card.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>{card.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Per-system Art. 4 marking */}
+        {!loading && (
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+              Segna Art. 4 come Conforme per sistema
+            </div>
+            {allSystems.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic' }}>
+                Nessun sistema AI con compliance check effettuato. Esegui un Compliance Check dall&apos;AI Inventory prima.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {allSystems.map(s => {
+                  const sid = s.system_id as string;
+                  const name = s.tool_name as string;
+                  const checklist = (s.compliance_checklist as Record<string, unknown>) ?? {};
+                  const art4Entry = checklist['Art. 4'] as { status?: string } | undefined;
+                  const isAlreadyMarked = art4Entry?.status === 'present';
+                  const result = markResults[sid];
+                  return (
+                    <div key={sid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                        {result && (
+                          <div style={{ fontSize: 11, color: result.ok ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+                            {result.ok ? '✓ ' : '✗ '}{result.message}
+                          </div>
+                        )}
+                        {!result && isAlreadyMarked && (
+                          <div style={{ fontSize: 11, color: '#16A34A', fontWeight: 600 }}>✓ Art. 4 già segnato come conforme</div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleMarkArt4ForSystem(s)}
+                        disabled={markingSystemId === sid || isAlreadyMarked}
+                        style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: isAlreadyMarked ? 'rgba(34,197,94,0.1)' : '#22C55E', color: isAlreadyMarked ? '#16A34A' : '#fff', border: isAlreadyMarked ? '1px solid rgba(34,197,94,0.3)' : 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: (markingSystemId === sid || isAlreadyMarked) ? 'default' : 'pointer', opacity: markingSystemId === sid ? 0.7 : 1 }}>
+                        {markingSystemId === sid
+                          ? <><span className="spin" style={{ width: 12, height: 12, borderWidth: 2 }}></span> …</>
+                          : isAlreadyMarked ? '✓ Conforme' : '✓ Segna Conforme'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Art. 4 status banner */}
       <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.3)', borderLeft: '4px solid #CA8A04', borderRadius: '0 10px 10px 0', padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ fontSize: 18 }}>⚠</span>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#CA8A04', marginBottom: 2 }}>Art. 4 EU AI Act — Alfabetizzazione AI</div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#CA8A04', marginBottom: 2 }}>Art. 4 EU AI Act — Stato della tua formazione</div>
           <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>
-            I deployer e provider devono garantire che il personale che utilizza sistemi AI abbia un adeguato livello di competenza AI.
-            {departments.length > 0 && coveredDepts < departments.length && (
-              <strong style={{ color: '#CA8A04' }}> {departments.length - coveredDepts} dipartiment{departments.length - coveredDepts === 1 ? 'o' : 'i'} senza certificazioni.</strong>
-            )}
+            {departments.length === 0
+              ? 'Nessun dipartimento ancora censito. Aggiungi i team che utilizzano tool AI e registra le loro certificazioni.'
+              : coveredDepts === departments.length
+                ? <><strong style={{ color: '#16A34A' }}>Tutti i dipartimenti hanno almeno una certificazione.</strong> Puoi segnare Art. 4 come conforme nell&apos;AI Inventory.</>
+                : <><strong style={{ color: '#CA8A04' }}>{departments.length - coveredDepts} dipartiment{departments.length - coveredDepts === 1 ? 'o senza' : 'i senza'} certificazioni.</strong> Completa la copertura prima di segnare Art. 4 come conforme.</>
+            }
           </div>
         </div>
       </div>
@@ -405,8 +558,8 @@ function LiteracyContent() {
         <div className="inv-empty">
           <div className="inv-empty-icon">🎓</div>
           <div className="inv-empty-title">Nessun dipartimento ancora</div>
-          <div className="inv-empty-sub">Aggiungi i dipartimenti che usano strumenti AI. Si auto-popolano anche dai tool censiti nell&apos;AI Inventory se hai specificato il dipartimento.</div>
-          <button className="btn-submit" onClick={() => setShowAddModal(true)}>+ Aggiungi Dipartimento</button>
+          <div className="inv-empty-sub">Aggiungi i dipartimenti che usano strumenti AI — o l&apos;intera azienda se sei una PMI piccola. Si auto-popolano anche dai tool censiti nell&apos;AI Inventory se hai specificato il dipartimento.</div>
+          <button className="btn-submit" onClick={() => setShowAddModal(true)}>+ Aggiungi Dipartimento / Azienda</button>
         </div>
       )}
 

@@ -102,6 +102,13 @@ function SanctionOverview({ result }: { result: ComplianceResult }) {
                 {ti && m && (
                   <div className="so-formula">
                     <span className="so-formula-tier">{ti.tier_label}</span>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 4, lineHeight: 1.4 }}>
+                      {ti.tier_label.includes('pratiche vietate')
+                        ? 'Art. 99(3) AI Act — massimale di legge: €35M o 7% fatturato globale annuo'
+                        : ti.tier_label.includes('requisiti')
+                          ? 'Art. 99(4) AI Act — massimale di legge: €15M o 3% fatturato globale annuo'
+                          : 'Art. 99(5) AI Act — massimale di legge: €7,5M o 1% fatturato globale annuo'}
+                    </div>
                     <div className="so-formula-steps">
                       <span>
                         <span className="so-fk">Fatturato × {fmtPct(ti.tier_pct)}</span>
@@ -123,9 +130,17 @@ function SanctionOverview({ result }: { result: ComplianceResult }) {
                       )}
                       <span className="so-farrow">→</span>
                       <span>
-                        <span className="so-fk">Min = max × {fmtPct(m.min_factor)}</span>
+                        <span className="so-fk">Stima min (×{fmtPct(m.min_factor)} del max)</span>
                         <span className="so-fv"> = {fmtEurFull(g.estimated_sanction_min ?? 0)}</span>
                       </span>
+                    </div>
+                    {m.is_sme && (
+                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4, lineHeight: 1.4, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+                        ⓘ <strong>Riduzione PMI (Art. 100):</strong> L&apos;AI Act prevede sanzioni &quot;proporzionate&quot; per PMI e startup — la riduzione del {fmtPct(m.sme_reduction)} è una stima prudenziale applicata al massimale di legge. La norma non fissa una percentuale esatta.
+                      </div>
+                    )}
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: m.is_sme ? 2 : 4, lineHeight: 1.4 }}>
+                      ⓘ <strong>Range min indicativo:</strong> L&apos;Art. 99 Reg. UE 2024/1689 stabilisce solo massimali — l&apos;importo effettivo entro quel massimo è determinato dall&apos;Autorità di vigilanza in base a: gravità e durata dell&apos;infrazione, numero di persone coinvolte, intenzionalità o negligenza, misure adottate per attenuare il danno e cooperazione con le autorità. Il {fmtPct(m.min_factor)} del massimale applicabile rappresenta la nostra stima conservativa del caso tipico.
                     </div>
                   </div>
                 )}
@@ -262,6 +277,83 @@ function GapGenerateBlock({ gap, doc, generating, onGenerate, onFinalize, onRege
   );
 }
 
+// ─── HYBRID gap action panel (document ready, operational action pending) ─────
+
+function HybridActionPanel({ gap, doc, onCloseGap }: {
+  gap:        ComplianceGap;
+  doc?:       ActifyDocument;
+  onCloseGap: (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
+}) {
+  const [note, setNote]           = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [closing, setClosing]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+
+  async function handleClose() {
+    setClosing(true);
+    setError(null);
+    try {
+      await onCloseGap(gap.gap_id, note || undefined, proofFile || undefined);
+    } catch (e: unknown) {
+      setError((e as { message?: string }).message ?? 'Errore nel salvataggio');
+      setClosing(false);
+    }
+  }
+
+  return (
+    <div className="hybrid-action-panel">
+      <div className="hybrid-action-banner">
+        <span className="hybrid-action-icon">⚡</span>
+        <div>
+          <strong>Azione operativa richiesta</strong>
+          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--dim)' }}>
+            Il documento è pronto nel Vault. Implementa il requisito operativamente, poi dichiara la conformità.
+          </p>
+        </div>
+      </div>
+
+      {doc?.preview_url && (
+        <a href={doc.preview_url} target="_blank" rel="noopener noreferrer" className="btn-doc-open" style={{ display: 'inline-flex', marginBottom: 10 }}>
+          📄 Apri documento nel Vault
+        </a>
+      )}
+
+      <p style={{ fontSize: 13, color: 'var(--dim)', marginBottom: 10 }}>
+        <strong>Cosa fare:</strong> {gap.what_to_do}
+      </p>
+
+      <label style={{ display: 'block', fontSize: 12, color: 'var(--dim)', marginBottom: 4 }}>
+        📎 Carica prova (PDF/immagine, opzionale)
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png"
+          style={{ display: 'block', marginTop: 4, fontSize: 12 }}
+          onChange={e => setProofFile(e.target.files?.[0] ?? null)}
+        />
+      </label>
+      {proofFile && (
+        <div style={{ fontSize: 11, color: 'var(--primary)', marginBottom: 8 }}>✓ {proofFile.name}</div>
+      )}
+
+      <textarea
+        className="cl-evidence-input"
+        placeholder="Nota facoltativa (data implementazione, link documento interno…)"
+        maxLength={500}
+        rows={2}
+        value={note}
+        onChange={e => setNote(e.target.value)}
+        style={{ marginTop: 6, marginBottom: 10 }}
+      />
+
+      {error && <div style={{ color: '#EF4444', fontSize: 12, marginBottom: 8 }}>⚠ {error}</div>}
+
+      <button className="btn-hybrid-close" onClick={handleClose} disabled={closing}>
+        {closing ? <><span className="spin-sm" /> Salvataggio…</> : '✓ Dichiara conforme — chiudi gap'}
+      </button>
+    </div>
+  );
+}
+
 // ─── FIX-12: Interactive compliance checklist — 3 states + evidence note ──────
 
 function ComplianceChecklist({
@@ -275,6 +367,7 @@ function ComplianceChecklist({
   onFinalize,
   onRegenerate,
   onSanctionUpdate,
+  onCloseGap,
 }: {
   gaps:               ComplianceGap[];
   checklist:          Record<string, ChecklistEntry>;
@@ -286,6 +379,7 @@ function ComplianceChecklist({
   onFinalize:         (docId: string) => void;
   onRegenerate:       (docId: string) => void;
   onSanctionUpdate:   () => void;
+  onCloseGap:         (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
 }) {
   const [previewDoc, setPreviewDoc] = useState<ActifyDocument | null>(null);
   // Local note drafts — synced to parent on blur (prevents a save on every keystroke)
@@ -293,10 +387,11 @@ function ComplianceChecklist({
 
   const getStatus = (article: string) => normalizeEntry(checklist[article]).status;
 
-  const llmCompliant  = gaps.filter(g => g.status === 'compliant' && !checklist[g.article]);
-  const userPresent   = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'present');
-  const userPartial   = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial');
-  const stillMissing  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'missing');
+  const llmCompliant   = gaps.filter(g => g.status === 'compliant' && !checklist[g.article]);
+  const userPresent    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'present');
+  const userPartial    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial');
+  const documentReady  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'document_ready');
+  const stillMissing   = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'missing');
 
   function handleMark(article: string, status: 'present' | 'partial') {
     const existing = checklist[article] ?? {};
@@ -371,6 +466,9 @@ function ComplianceChecklist({
       </div>
       <div className="cl-counts">
         <span className="cl-count-ok">✓ {llmCompliant.length + userPresent.length} conformi</span>
+        {documentReady.length > 0 && (
+          <span className="cl-count-hybrid">⚡ {documentReady.length} azione richiesta</span>
+        )}
         {userPartial.length > 0 && (
           <span className="cl-count-partial">⟳ {userPartial.length} in lavorazione</span>
         )}
@@ -448,6 +546,28 @@ function ComplianceChecklist({
         </div>
       )}
 
+      {/* HYBRID — document in Vault, operational action pending */}
+      {documentReady.length > 0 && (
+        <div className="cl-section">
+          <div className="cl-section-title cl-hybrid-title">⚡ Azione richiesta (documento pronto)</div>
+          {documentReady.map(gap => (
+            <div key={gap.gap_id} className="cl-item cl-item-hybrid">
+              <div className="cl-item-head">
+                <span className="cl-art">{gap.article}</span>
+                <span className="cl-req">{gap.requirement}</span>
+                <span className="cl-status-hybrid">Parzialmente risolto</span>
+              </div>
+              <p className="cl-desc">{gap.description}</p>
+              <HybridActionPanel
+                gap={gap}
+                doc={documents[gap.gap_id]}
+                onCloseGap={onCloseGap}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Still missing */}
       {stillMissing.length > 0 && (
         <div className="cl-section">
@@ -488,6 +608,13 @@ function ComplianceChecklist({
                   <p className="cl-manual-steps">{gap.what_to_do}</p>
                   {gap.deadline && (
                     <div className="cl-deadline">📅 Scadenza: <strong>{gap.deadline}</strong></div>
+                  )}
+                  {/^Art\.?\s*4$/i.test(gap.article) && (
+                    <a
+                      href="/dashboard/literacy"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '7px 14px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, color: '#6366F1', fontSize: 13, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
+                      🎓 Gestisci in AI Literacy →
+                    </a>
                   )}
                 </div>
               )}
@@ -710,8 +837,9 @@ function SystemDetailContent() {
         } else {
           setGeneratingGapId(null);
           if (doc.status === 'final') {
-            // Auto-sync effective exposure to DynamoDB so inventory reflects correct values immediately
-            await handleSanctionUpdate();
+            // Reload system to pick up the document_ready checklist status.
+            // Sanctions are NOT auto-updated — the PMI must explicitly confirm via closeGap().
+            await load();
           }
         }
       } catch {
@@ -728,6 +856,26 @@ function SystemDetailContent() {
     } catch (err: unknown) {
       alert((err as { message?: string }).message ?? 'Errore nella finalizzazione');
     }
+  }
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleCloseGap(gapId: string, evidenceNote?: string, proofFile?: File) {
+    let proof_base64: string | undefined;
+    let proof_filename: string | undefined;
+    if (proofFile) {
+      proof_base64 = await fileToBase64(proofFile);
+      proof_filename = proofFile.name;
+    }
+    await api.gaps.close(systemId, gapId, { evidence_note: evidenceNote, proof_base64, proof_filename });
+    await load();
   }
 
   async function handleRegenerate(documentId: string) {
@@ -808,6 +956,7 @@ function SystemDetailContent() {
             onFinalize={handleFinalize}
             onRegenerate={handleRegenerate}
             onSanctionUpdate={handleSanctionUpdate}
+            onCloseGap={handleCloseGap}
           />
         </>
       )}

@@ -13,13 +13,26 @@ import {
 import {
   generateDocument, getDocument, finalizeDocument,
   listCompanyDocuments, listSystemDocuments,
-  deleteDocument, regenerateDocument,
+  deleteDocument, regenerateDocument, closeGap,
 } from './routes/remediation';
 import { generateDocumentAsync } from './services/remediationService';
 import {
   listDepartments, createDepartment, deleteDepartment,
   suggestCerts, addCertification, listCertifications, deleteCertification,
 } from './routes/literacy';
+import {
+  registerPartner, getPartnerMe, updatePartnerMe,
+  listPMI, addPMI, importPMICSV, getPMI, deletePMI, updatePMIStatus,
+  sendAssessment, sendReferralEmail, sendOnboardingEmail, generatePMIPdf,
+  getAssessmentForm, submitAssessmentForm,
+} from './routes/partner';
+import {
+  getInventoryOverview, getPMIInventory,
+  getPartnerSystem, updatePartnerSystem,
+  triggerPartnerCheck, getPartnerSystemCheck,
+} from './routes/partnerInventory';
+import { getArticleText } from './routes/articles';
+import { listAuditTrail, exportAuditTrail } from './routes/auditTrail';
 
 const CORS = {
   'Content-Type': 'application/json',
@@ -75,6 +88,24 @@ export const handler = async (
       return { ...r, headers: CORS };
     }
 
+    if (method === 'POST' && path === '/api/partner/request') {
+      const r = await registerPartner(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
+    // /api/assessment/{token} — public white-label form
+    const assessmentTokenPath = path.match(/^\/api\/assessment\/([^/]+)$/);
+    if (assessmentTokenPath) {
+      if (method === 'GET') {
+        const r = await getAssessmentForm(ev as unknown as APIGatewayProxyEventV2);
+        return { ...r, headers: CORS };
+      }
+    }
+    if (method === 'POST' && /^\/api\/assessment\/[^/]+\/submit$/.test(path)) {
+      const r = await submitAssessmentForm(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
     // ── Auth routes ────────────────────────────────────────────────────────
     if (method === 'POST' && path === '/api/auth/invite')
       return { ...await invite(ev), headers: CORS };
@@ -123,6 +154,10 @@ export const handler = async (
     if (method === 'POST' && /^\/api\/systems\/[^/]+\/remediation\/generate$/.test(path))
       return { ...await generateDocument(ev), headers: CORS };
 
+    // /api/systems/{systemId}/gaps/{gapId}/close
+    if (method === 'POST' && /^\/api\/systems\/[^/]+\/gaps\/[^/]+\/close$/.test(path))
+      return { ...await closeGap(ev), headers: CORS };
+
     // /api/systems/{systemId}/documents
     if (method === 'GET' && /^\/api\/systems\/[^/]+\/documents$/.test(path))
       return { ...await listSystemDocuments(ev), headers: CORS };
@@ -141,6 +176,56 @@ export const handler = async (
     // /api/documents/{documentId}/regenerate
     if (method === 'POST' && /^\/api\/documents\/[^/]+\/regenerate$/.test(path))
       return { ...await regenerateDocument(ev), headers: CORS };
+
+    // ── Partner ────────────────────────────────────────────────────────────
+    if (method === 'GET'  && path === '/api/partner/me')
+      return { ...await getPartnerMe(ev), headers: CORS };
+    if (method === 'PUT'  && path === '/api/partner/me')
+      return { ...await updatePartnerMe(ev), headers: CORS };
+    if (method === 'POST' && path === '/api/partner/send-referral')
+      return { ...await sendReferralEmail(ev), headers: CORS };
+    if (method === 'GET'  && path === '/api/partner/pmi')
+      return { ...await listPMI(ev), headers: CORS };
+    if (method === 'POST' && path === '/api/partner/pmi')
+      return { ...await addPMI(ev), headers: CORS };
+    if (method === 'POST' && path === '/api/partner/pmi/import-csv')
+      return { ...await importPMICSV(ev), headers: CORS };
+
+    // /api/partner/pmi/{pmiId}
+    const singlePMI = path.match(/^\/api\/partner\/pmi\/([^/]+)$/);
+    if (singlePMI) {
+      if (method === 'GET')    return { ...await getPMI(ev), headers: CORS };
+      if (method === 'DELETE') return { ...await deletePMI(ev), headers: CORS };
+    }
+
+    if (method === 'POST' && /^\/api\/partner\/pmi\/[^/]+\/status$/.test(path))
+      return { ...await updatePMIStatus(ev), headers: CORS };
+    if (method === 'POST' && /^\/api\/partner\/pmi\/[^/]+\/send-assessment$/.test(path))
+      return { ...await sendAssessment(ev), headers: CORS };
+    if (method === 'POST' && /^\/api\/partner\/pmi\/[^/]+\/send-onboarding$/.test(path))
+      return { ...await sendOnboardingEmail(ev), headers: CORS };
+    if (method === 'POST' && /^\/api\/partner\/pmi\/[^/]+\/pdf$/.test(path))
+      return { ...await generatePMIPdf(ev), headers: CORS };
+
+    // ── Partner Inventory (AI compliance for PMI clients) ──────────────────
+    if (method === 'GET' && path === '/api/partner/inventory')
+      return { ...await getInventoryOverview(ev), headers: CORS };
+
+    // /api/partner/inventory/{pmiId}
+    if (method === 'GET' && /^\/api\/partner\/inventory\/[^/]+$/.test(path))
+      return { ...await getPMIInventory(ev), headers: CORS };
+
+    // /api/partner/inventory/{pmiId}/systems/{systemId}
+    const partnerSystemPath = path.match(/^\/api\/partner\/inventory\/([^/]+)\/systems\/([^/]+)(\/.*)?$/);
+    if (partnerSystemPath) {
+      const sub = partnerSystemPath[3] ?? '';
+      if (method === 'GET'  && !sub) return { ...await getPartnerSystem(ev), headers: CORS };
+      if (method === 'PUT'  && !sub) return { ...await updatePartnerSystem(ev), headers: CORS };
+      if (method === 'POST' && sub === '/compliance-check')
+        return { ...await triggerPartnerCheck(ev), headers: CORS };
+      if (method === 'GET'  && sub === '/compliance-checks/latest')
+        return { ...await getPartnerSystemCheck(ev), headers: CORS };
+    }
 
     // ── AI Literacy ────────────────────────────────────────────────────────
     if (method === 'GET'  && path === '/api/literacy')
@@ -168,6 +253,16 @@ export const handler = async (
     // /api/literacy/departments/:deptId/certifications/:certId
     if (method === 'DELETE' && /^\/api\/literacy\/departments\/[^/]+\/certifications\/[^/]+$/.test(path))
       return { ...await deleteCertification(ev), headers: CORS };
+
+    // /api/audit-trail
+    if (method === 'GET' && path === '/api/audit-trail')
+      return { ...await listAuditTrail(ev), headers: CORS };
+    if (method === 'POST' && path === '/api/audit-trail/export')
+      return { ...await exportAuditTrail(ev), headers: CORS };
+
+    // /api/articles/{num} — public, returns full AI Act article text from knowledge base
+    if (method === 'GET' && /^\/api\/articles\/\d+$/.test(path))
+      return { ...await getArticleText(ev as unknown as APIGatewayProxyEventV2), headers: CORS };
 
     return err(404, `Route not found: ${method} ${path}`);
 

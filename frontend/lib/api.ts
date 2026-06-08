@@ -35,6 +35,7 @@ export const api = {
     register: (body: {
       email: string; password: string; company_name: string;
       sector: string; employees_range: string; country: string;
+      referral_code?: string; pmi_id?: string;
     }) => request<{ company_id: string; user_id: string; message: string }>(
       'POST', '/api/auth/register', body, true
     ),
@@ -58,6 +59,17 @@ export const api = {
     get: (id: string) => request<Record<string, unknown>>('GET', `/api/systems/${id}`),
     update: (id: string, body: Record<string, unknown>) => request<{ message: string }>('PUT', `/api/systems/${id}`, body),
     delete: (id: string) => request<{ message: string }>('DELETE', `/api/systems/${id}`),
+  },
+
+  // ─── Gap actions ────────────────────────────────────────────────────────────
+  gaps: {
+    close: (systemId: string, gapId: string, body: {
+      evidence_note?: string;
+      proof_base64?: string;
+      proof_filename?: string;
+    }) => request<{ success: boolean; source: string; article: string }>(
+      'POST', `/api/systems/${systemId}/gaps/${gapId}/close`, body
+    ),
   },
 
   // ─── Compliance ─────────────────────────────────────────────────────────────
@@ -112,5 +124,78 @@ export const api = {
     }) => request<{ cert_id: string }>('POST', `/api/literacy/departments/${deptId}/certifications`, body),
     deleteCert: (deptId: string, certId: string) =>
       request<{ message: string }>('DELETE', `/api/literacy/departments/${deptId}/certifications/${certId}`),
+  },
+
+  // ─── Partner ────────────────────────────────────────────────────────────────
+  partner: {
+    register: (body: {
+      email: string; password: string;
+      ragione_sociale: string; tipo_studio: string; n_clienti: number;
+    }) => request<{ partner_id: string; message: string }>(
+      'POST', '/api/partner/request', body, true
+    ),
+    getMe: () => request<Record<string, unknown>>('GET', '/api/partner/me'),
+    updateMe: (body: Record<string, unknown>) =>
+      request<{ message: string }>('PUT', '/api/partner/me', body),
+    sendReferral: (body: { contact_email: string; company_name?: string; custom_message?: string }) =>
+      request<{ message: string; sent_at: string }>('POST', '/api/partner/send-referral', body),
+    listPMI: () => request<unknown[]>('GET', '/api/partner/pmi'),
+    addPMI: (body: { company_name: string; contact_email: string }) =>
+      request<Record<string, unknown>>('POST', '/api/partner/pmi', body),
+    importCSV: (rows: { company_name: string; contact_email: string }[]) =>
+      request<{ created: number; items: unknown[] }>('POST', '/api/partner/pmi/import-csv', { rows }),
+    getPMI: (pmiId: string) => request<Record<string, unknown>>('GET', `/api/partner/pmi/${pmiId}`),
+    deletePMI: (pmiId: string) => request<{ message: string }>('DELETE', `/api/partner/pmi/${pmiId}`),
+    updateStatus: (pmiId: string, status: string) =>
+      request<{ message: string; status: string }>('POST', `/api/partner/pmi/${pmiId}/status`, { status }),
+    sendAssessment: (pmiId: string, emailBody?: string) =>
+      request<{ message: string; sent_at: string }>(
+        'POST', `/api/partner/pmi/${pmiId}/send-assessment`, { email_body: emailBody }
+      ),
+    sendOnboarding: (pmiId: string) =>
+      request<{ message: string; sent_at: string }>(
+        'POST', `/api/partner/pmi/${pmiId}/send-onboarding`, {}
+      ),
+    getPMIReport: (pmiId: string) =>
+      request<{ report: Record<string, unknown> }>('POST', `/api/partner/pmi/${pmiId}/pdf`, {}),
+  },
+
+  // ─── Partner Inventory (AI compliance for partner PMI clients) ──────────────
+  partnerInventory: {
+    getOverview: () =>
+      request<Record<string, unknown>[]>('GET', '/api/partner/inventory'),
+    getPMI: (pmiId: string) =>
+      request<Record<string, unknown>>('GET', `/api/partner/inventory/${pmiId}`),
+    getSystem: (pmiId: string, systemId: string) =>
+      request<Record<string, unknown>>('GET', `/api/partner/inventory/${pmiId}/systems/${systemId}`),
+    updateSystem: (pmiId: string, systemId: string, body: Record<string, unknown>) =>
+      request<{ message: string }>('PUT', `/api/partner/inventory/${pmiId}/systems/${systemId}`, body),
+    triggerCheck: (pmiId: string, systemId: string) =>
+      request<{ check_id: string; status: string }>('POST', `/api/partner/inventory/${pmiId}/systems/${systemId}/compliance-check`, {}),
+    getLatestCheck: (pmiId: string, systemId: string) =>
+      request<Record<string, unknown>>('GET', `/api/partner/inventory/${pmiId}/systems/${systemId}/compliance-checks/latest`),
+  },
+
+  // ─── AI Act articles (public) ────────────────────────────────────────────────
+  articles: {
+    get: (articleNum: number) =>
+      request<{ article_number: number; article_title: string; text: string; parts_count: number }>(
+        'GET', `/api/articles/${articleNum}`, undefined, true
+      ),
+  },
+
+  // ─── Assessment (public, no auth) ───────────────────────────────────────────
+  assessment: {
+    getForm: (token: string) => request<Record<string, unknown>>('GET', `/api/assessment/${token}`, undefined, true),
+    submit: (token: string, systems: Record<string, unknown>[], companyProfile?: Record<string, unknown>) =>
+      request<{ message: string; systems_count: number }>(
+        'POST', `/api/assessment/${token}/submit`, { systems, company_profile: companyProfile }, true
+      ),
+  },
+
+  // ─── Audit Trail ─────────────────────────────────────────────────────────────
+  auditTrail: {
+    list:   () => request<import('./types').AuditEvent[]>('GET', '/api/audit-trail'),
+    export: () => request<{ pdfBase64: string; filename: string }>('POST', '/api/audit-trail/export'),
   },
 };

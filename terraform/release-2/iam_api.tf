@@ -45,6 +45,9 @@ data "aws_iam_policy_document" "api_permissions" {
       aws_dynamodb_table.documents.arn,
       "${aws_dynamodb_table.documents.arn}/index/*",
       aws_dynamodb_table.literacy.arn,
+      aws_dynamodb_table.partners.arn,
+      aws_dynamodb_table.partner_pmi.arn,
+      "${aws_dynamodb_table.partner_pmi.arn}/index/*",
     ]
   }
 

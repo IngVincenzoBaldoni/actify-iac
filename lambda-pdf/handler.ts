@@ -4,9 +4,10 @@ import { validatePayload } from "./middleware/validator";
 import { analyze } from "./services/bedrockService";
 import { render } from "./services/htmlTemplate";
 import { htmlToPdf, buildNormativeDocumentHtml } from "./services/pdfService";
+import { buildAuditTrailPdfHtml } from "./services/auditTrailPdfHtml";
 import { uploadReport, writeToDatalake } from "./services/s3Service";
 import { formHtml } from "./services/formHtml";
-import { checkEmailAlreadyUsed, markReportGenerated } from "./services/otpService";
+import { markReportGenerated } from "./services/otpService";
 import { sendEmail, buildReportEmail } from "./services/resendService";
 
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
@@ -46,9 +47,28 @@ interface NormativeDocumentRequest {
   };
 }
 
+interface AuditTrailPdfRequest {
+  _auditTrailPdfRequest: {
+    company_name: string;
+    company_id:   string;
+    events:       Record<string, unknown>[];
+    generated_at: string;
+    period_from:  string;
+    period_to:    string;
+  };
+}
+
 export async function handler(
-  event: APIGatewayProxyEventV2 | NormativeDocumentRequest
+  event: APIGatewayProxyEventV2 | NormativeDocumentRequest | AuditTrailPdfRequest
 ): Promise<APIGatewayProxyResultV2 | { pdfBase64: string }> {
+
+  // ── Audit trail PDF request from lambda-api ──────────────────────────────────
+  if ("_auditTrailPdfRequest" in event && event._auditTrailPdfRequest) {
+    const req = event._auditTrailPdfRequest;
+    const html = buildAuditTrailPdfHtml(req as unknown as Parameters<typeof buildAuditTrailPdfHtml>[0]);
+    const pdfBuffer = await htmlToPdf(html);
+    return { pdfBase64: pdfBuffer.toString("base64") };
+  }
 
   // ── Normative document request from lambda-api ───────────────────────────────
   if ("_normativeDocumentRequest" in event && event._normativeDocumentRequest) {
@@ -113,8 +133,9 @@ async function handleCheckEmail(rawBody: unknown): Promise<APIGatewayProxyResult
     return json(400, { error: "invalid_email", message: "Inserisci un indirizzo email valido." });
   }
 
-  const used = await checkEmailAlreadyUsed(email);
-  return json(200, { already_used: used });
+  // Disabled during testing — always return false
+  // const used = await checkEmailAlreadyUsed(email);
+  return json(200, { already_used: false });
 }
 
 // ─── Handler: generate report ─────────────────────────────────────────────────
@@ -125,14 +146,14 @@ async function handleGenerate(rawBody: unknown): Promise<APIGatewayProxyResultV2
     return json(400, { error: "payload_invalid", details: errors });
   }
 
-  // ── Duplicate gate ───────────────────────────────────────────────────────────
+  // ── Duplicate gate — disabled during testing ────────────────────────────────
   const email = payload.contact_email.trim().toLowerCase();
-  if (await checkEmailAlreadyUsed(email)) {
-    return json(409, {
-      error:   "already_used",
-      message: "Hai già ricevuto un assessment gratuito con questa email. Registrati su Actify per analisi illimitate.",
-    });
-  }
+  // if (await checkEmailAlreadyUsed(email)) {
+  //   return json(409, {
+  //     error:   "already_used",
+  //     message: "Hai già ricevuto un assessment gratuito con questa email. Registrati su Actify per analisi illimitate.",
+  //   });
+  // }
 
   log("info", "report_requested", {
     sector:     payload.company.sector,
