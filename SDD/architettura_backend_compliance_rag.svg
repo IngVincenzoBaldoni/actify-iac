@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="980" viewBox="0 0 960 980" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="960" height="980" fill="#ffffff"/>
+
+  <!-- ═══════════════ TITLE ═══════════════ -->
+  <text x="480" y="36" text-anchor="middle" font-size="18" font-weight="700" fill="#111827">Architettura Back End — Motore di Compliance + RAG</text>
+  <text x="480" y="56" text-anchor="middle" font-size="12" fill="#6B7280">Actify SaaS · AI Act Compliance Engine · Flusso End-to-End</text>
+  <line x1="40" y1="66" x2="920" y2="66" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- ═══════════════ LAYER 1 — CLIENT ═══════════════ -->
+  <rect x="280" y="80" width="400" height="64" rx="8" fill="#2563EB"/>
+  <text x="480" y="106" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">PMI Frontend (Next.js)</text>
+  <text x="480" y="128" text-anchor="middle" font-size="11" fill="#BFDBFE">POST /api/systems/{'{'}systemId{'}'}/compliance-check</text>
+
+  <!-- Arrow 1 -->
+  <line x1="480" y1="144" x2="480" y2="170" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="474,168 480,178 486,168" fill="#9CA3AF"/>
+  <text x="494" y="161" font-size="10" fill="#9CA3AF">HTTPS</text>
+
+  <!-- ═══════════════ LAYER 2 — INGRESS ═══════════════ -->
+  <rect x="100" y="178" width="365" height="64" rx="8" fill="#D97706"/>
+  <text x="282" y="204" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">API Gateway (HTTP API v2)</text>
+  <text x="282" y="224" text-anchor="middle" font-size="11" fill="#FEF3C7">Route matching · CORS · JWT passthrough</text>
+
+  <rect x="495" y="178" width="365" height="64" rx="8" fill="#DC2626"/>
+  <text x="677" y="204" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Amazon Cognito</text>
+  <text x="677" y="224" text-anchor="middle" font-size="11" fill="#FEE2E2">JWT verification · companyId claim</text>
+
+  <!-- Cognito verify arrow -->
+  <line x1="465" y1="210" x2="495" y2="210" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <polygon points="493,206 501,210 493,214" fill="#9CA3AF"/>
+  <text x="468" y="206" font-size="9" fill="#9CA3AF">verify</text>
+
+  <!-- Arrow 2 -->
+  <line x1="480" y1="242" x2="480" y2="268" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="474,266 480,276 486,266" fill="#9CA3AF"/>
+  <text x="494" y="259" font-size="10" fill="#9CA3AF">Lambda invoke</text>
+
+  <!-- ═══════════════ LAYER 3 — LAMBDA HANDLER ═══════════════ -->
+  <rect x="100" y="276" width="580" height="68" rx="8" fill="#EA580C"/>
+  <text x="390" y="302" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Lambda: actify-saas-api · triggerCheck()</text>
+  <text x="390" y="322" text-anchor="middle" font-size="11" fill="#FFEDD5">Legge sistema + company · salva check "checking" · risponde 202 Accepted</text>
+
+  <!-- Async self-invoke box -->
+  <rect x="710" y="276" width="190" height="68" rx="8" fill="#ffffff" stroke="#EA580C" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="805" y="302" text-anchor="middle" font-size="12" font-weight="600" fill="#EA580C">⟳ Async Self-Invoke</text>
+  <text x="805" y="320" text-anchor="middle" font-size="10" fill="#9CA3AF">InvocationType: Event</text>
+  <line x1="680" y1="310" x2="710" y2="310" stroke="#EA580C" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="708,306 716,310 708,314" fill="#EA580C"/>
+
+  <!-- Arrow 3 -->
+  <line x1="480" y1="344" x2="480" y2="370" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="474,368 480,378 486,368" fill="#9CA3AF"/>
+  <text x="494" y="361" font-size="10" fill="#9CA3AF">runComplianceCheck()</text>
+
+  <!-- ═══════════════ LAYER 4 — PIPELINE ═══════════════ -->
+  <rect x="40" y="378" width="880" height="338" rx="10" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>
+  <text x="480" y="398" text-anchor="middle" font-size="10" font-weight="600" fill="#64748B">COMPLIANCE PIPELINE — eseguito nella stessa Lambda invocata async</text>
+
+  <!-- Step 1 -->
+  <rect x="58" y="408" width="185" height="118" rx="7" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+  <rect x="58" y="408" width="185" height="34" rx="7" fill="#2563EB"/>
+  <rect x="58" y="428" width="185" height="14" fill="#2563EB"/>
+  <text x="150" y="430" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">① Rule Engine</text>
+  <text x="150" y="458" text-anchor="middle" font-size="10" font-weight="600" fill="#1E3A8A">DETERMINISTICO</text>
+  <text x="150" y="476" text-anchor="middle" font-size="10" fill="#374151">Classifica il sistema AI</text>
+  <text x="150" y="492" text-anchor="middle" font-size="10" fill="#374151">(categoria, uso, oversight)</text>
+  <text x="150" y="510" text-anchor="middle" font-size="10" fill="#374151">→ articoli applicabili</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="243" y1="467" x2="268" y2="467" stroke="#64748B" stroke-width="2"/>
+  <polygon points="266,463 274,467 266,471" fill="#64748B"/>
+
+  <!-- Step 2 -->
+  <rect x="272" y="408" width="185" height="118" rx="7" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
+  <rect x="272" y="408" width="185" height="34" rx="7" fill="#16A34A"/>
+  <rect x="272" y="428" width="185" height="14" fill="#16A34A"/>
+  <text x="364" y="430" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">② Checklist Filter</text>
+  <text x="364" y="458" text-anchor="middle" font-size="10" font-weight="600" fill="#14532D">DETERMINISTICO</text>
+  <text x="364" y="476" text-anchor="middle" font-size="10" fill="#374151">Legge compliance_checklist</text>
+  <text x="364" y="492" text-anchor="middle" font-size="10" fill="#374151">skip articoli già "present"</text>
+  <text x="364" y="510" text-anchor="middle" font-size="10" fill="#374151">→ solo articoli pending</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="457" y1="467" x2="482" y2="467" stroke="#64748B" stroke-width="2"/>
+  <polygon points="480,463 488,467 480,471" fill="#64748B"/>
+
+  <!-- Step 3 -->
+  <rect x="486" y="408" width="185" height="118" rx="7" fill="#F0F9FF" stroke="#0891B2" stroke-width="1.5"/>
+  <rect x="486" y="408" width="185" height="34" rx="7" fill="#0891B2"/>
+  <rect x="486" y="428" width="185" height="14" fill="#0891B2"/>
+  <text x="578" y="430" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">③ RAG Context Builder</text>
+  <text x="578" y="458" text-anchor="middle" font-size="10" font-weight="600" fill="#0C4A6E">KEY-BASED LOOKUP</text>
+  <text x="578" y="476" text-anchor="middle" font-size="10" fill="#374151">GetVectors(pendingKeys)</text>
+  <text x="578" y="492" text-anchor="middle" font-size="10" fill="#374151">S3 Vectors — AI Act text</text>
+  <text x="578" y="510" text-anchor="middle" font-size="10" fill="#374151">→ chunks normativi</text>
+
+  <!-- Arrow 3→4 -->
+  <line x1="671" y1="467" x2="696" y2="467" stroke="#64748B" stroke-width="2"/>
+  <polygon points="694,463 702,467 694,471" fill="#64748B"/>
+
+  <!-- Step 4 -->
+  <rect x="700" y="408" width="200" height="118" rx="7" fill="#FAF5FF" stroke="#7C3AED" stroke-width="1.5"/>
+  <rect x="700" y="408" width="200" height="34" rx="7" fill="#7C3AED"/>
+  <rect x="700" y="428" width="200" height="14" fill="#7C3AED"/>
+  <text x="800" y="430" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">④ LLM — Amazon Nova Pro</text>
+  <text x="800" y="458" text-anchor="middle" font-size="10" font-weight="600" fill="#4C1D95">BEDROCK · CONVERSE API</text>
+  <text x="800" y="476" text-anchor="middle" font-size="10" fill="#374151">System prompt + RAG context</text>
+  <text x="800" y="492" text-anchor="middle" font-size="10" fill="#374151">Analizza gap di conformità</text>
+  <text x="800" y="510" text-anchor="middle" font-size="10" fill="#374151">→ compliance_gaps (JSON)</text>
+
+  <!-- Arrow down to step 5 (from center of row) -->
+  <line x1="480" y1="526" x2="480" y2="552" stroke="#64748B" stroke-width="2"/>
+  <polygon points="474,550 480,560 486,550" fill="#64748B"/>
+
+  <!-- Step 5 — Sanctions, centered -->
+  <rect x="265" y="560" width="430" height="120" rx="7" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5"/>
+  <rect x="265" y="560" width="430" height="34" rx="7" fill="#EA580C"/>
+  <rect x="265" y="580" width="430" height="14" fill="#EA580C"/>
+  <text x="480" y="582" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">⑤ Motore Sanzioni — computeSanctions()</text>
+  <text x="480" y="612" text-anchor="middle" font-size="10" font-weight="600" fill="#7C2D12">DETERMINISTICO · Art. 99 AI Act</text>
+  <text x="480" y="632" text-anchor="middle" font-size="10" fill="#374151">3 tier sanzionatori · calcolo su fatturato aziendale</text>
+  <text x="480" y="652" text-anchor="middle" font-size="10" fill="#374151">→ sanzione min/max per gap · esposizione totale</text>
+  <text x="480" y="670" text-anchor="middle" font-size="10" fill="#374151">→ article_sanctions (riepilogo per articolo)</text>
+
+  <!-- Arrow pipeline → storage -->
+  <line x1="480" y1="716" x2="480" y2="742" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="474,740 480,750 486,740" fill="#9CA3AF"/>
+  <text x="494" y="732" font-size="10" fill="#9CA3AF">write results</text>
+
+  <!-- ═══════════════ LAYER 5 — STORAGE ═══════════════ -->
+  <rect x="60" y="750" width="380" height="70" rx="8" fill="#16A34A"/>
+  <text x="250" y="778" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Amazon DynamoDB</text>
+  <text x="250" y="798" text-anchor="middle" font-size="11" fill="#D1FAE5">checks · systems · companies · documents</text>
+
+  <rect x="470" y="750" width="430" height="70" rx="8" fill="#0891B2"/>
+  <text x="685" y="778" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">S3 Vectors — Knowledge Base</text>
+  <text x="685" y="798" text-anchor="middle" font-size="11" fill="#BAE6FD">actify-saas-ai-act-knowledge-base · index: ai-act-it</text>
+
+  <!-- S3 Vectors ↔ RAG (Step 3): up arrow -->
+  <line x1="578" y1="750" x2="578" y2="526" stroke="#0891B2" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="572,528 578,518 584,528" fill="#0891B2"/>
+  <text x="590" y="640" font-size="9" fill="#0891B2">GetVectors</text>
+
+  <!-- Arrow Storage → Polling -->
+  <line x1="250" y1="820" x2="250" y2="848" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="244,846 250,856 256,846" fill="#9CA3AF"/>
+
+  <!-- ═══════════════ LAYER 6 — POLLING ═══════════════ -->
+  <rect x="60" y="856" width="760" height="60" rx="8" fill="#F0F4FF" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="440" y="882" text-anchor="middle" font-size="13" font-weight="700" fill="#2563EB">Frontend Polling — GET /compliance-checks/latest</text>
+  <text x="440" y="900" text-anchor="middle" font-size="11" fill="#6B7280">Ogni 3s · Lambda legge DynamoDB · risponde status + result quando completato</text>
+
+  <!-- ═══════════════ LEGEND ═══════════════ -->
+  <line x1="40" y1="932" x2="920" y2="932" stroke="#E5E7EB" stroke-width="1"/>
+
+  <text x="56" y="950" font-size="10" font-weight="700" fill="#374151">Nota chiave:</text>
+  <text x="56" y="966" font-size="10" fill="#374151">Il RAG non usa semantic search — i chunk normativi vengono recuperati per chiave esatta (es. "art_9_p1"), determinata deterministicamente dal Rule Engine al passo ①.</text>
+  <text x="56" y="982" font-size="10" fill="#374151">Se tutti gli articoli sono già "present" in checklist, Bedrock viene saltato completamente. I passi ①②⑤ sono sempre deterministici (nessun ML).</text>
+
+</svg>
