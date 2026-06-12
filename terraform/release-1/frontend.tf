@@ -173,6 +173,11 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
         Action   = ["cloudfront:CreateInvalidation"]
         Resource = aws_cloudfront_distribution.frontend.arn
       },
+      {
+        Effect = "Allow"
+        Action = ["lambda:UpdateFunctionCode", "lambda:GetFunction"]
+        Resource = "arn:aws:lambda:eu-central-1:265020547280:function:actify-saas-api"
+      },
     ]
   })
 }

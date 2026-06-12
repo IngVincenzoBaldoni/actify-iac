@@ -48,6 +48,9 @@ data "aws_iam_policy_document" "api_permissions" {
       aws_dynamodb_table.partners.arn,
       aws_dynamodb_table.partner_pmi.arn,
       "${aws_dynamodb_table.partner_pmi.arn}/index/*",
+      aws_dynamodb_table.doc_generations.arn,
+      "${aws_dynamodb_table.doc_generations.arn}/index/*",
+      aws_dynamodb_table.doc_schemas.arn,
     ]
   }
 
@@ -120,6 +123,14 @@ data "aws_iam_policy_document" "api_permissions" {
       "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_api_name}",
       "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_pdf_name}",
     ]
+  }
+
+  # Step Functions — start doc generation pipeline executions
+  statement {
+    sid     = "AllowStepFunctionsStartExecution"
+    effect  = "Allow"
+    actions = ["states:StartExecution"]
+    resources = [aws_sfn_state_machine.doc_pipeline.arn]
   }
 }
 

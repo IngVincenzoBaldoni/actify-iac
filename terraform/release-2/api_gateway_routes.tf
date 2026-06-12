@@ -75,6 +75,11 @@ locals {
     "PUT /api/company/setup"                                      = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     # ── Remediation Engine ───────────────────────────────────────────────────
     "GET /api/company/documents"                                  = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    # ── Doc Vault (Step Functions pipeline) ─────────────────────────────────
+    "POST /api/systems/{systemId}/documents"                      = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/systems/{systemId}/document-generations"            = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/document-generations/{generationId}"                = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
+    "GET /api/company/document-generations"                       = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "POST /api/systems/{systemId}/remediation/generate"           = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "POST /api/systems/{systemId}/gaps/{gapId}/close"             = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
     "GET /api/systems/{systemId}/documents"                       = "integrations/${aws_apigatewayv2_integration.saas_api.id}"
