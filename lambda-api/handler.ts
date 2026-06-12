@@ -17,6 +17,9 @@ import {
 } from './routes/remediation';
 import { generateDocumentAsync } from './services/remediationService';
 import {
+  startDocGeneration, getDocGenerationStatus, listSystemDocGenerations, listCompanyDocGenerations,
+} from './routes/docVault';
+import {
   listDepartments, createDepartment, deleteDepartment,
   suggestCerts, addCertification, listCertifications, deleteCertification,
 } from './routes/literacy';
@@ -125,6 +128,10 @@ export const handler = async (
     if (method === 'GET' && path === '/api/company/documents')
       return { ...await listCompanyDocuments(ev), headers: CORS };
 
+    // Document Vault — all company doc generations (pipeline status)
+    if (method === 'GET' && path === '/api/company/document-generations')
+      return { ...await listCompanyDocGenerations(ev), headers: CORS };
+
     if (method === 'GET' && path === '/api/systems')
       return { ...await listSystems(ev), headers: CORS };
     if (method === 'POST' && path === '/api/systems')
@@ -150,7 +157,19 @@ export const handler = async (
         return { ...await listChecks(ev), headers: CORS };
     }
 
-    // /api/systems/{systemId}/remediation/generate
+    // /api/systems/{systemId}/documents — new Step Functions pipeline
+    if (method === 'POST' && /^\/api\/systems\/[^/]+\/documents$/.test(path))
+      return { ...await startDocGeneration(ev), headers: CORS };
+
+    // /api/systems/{systemId}/document-generations — list generations for a system
+    if (method === 'GET' && /^\/api\/systems\/[^/]+\/document-generations$/.test(path))
+      return { ...await listSystemDocGenerations(ev), headers: CORS };
+
+    // /api/document-generations/{generationId} — polling endpoint
+    if (method === 'GET' && /^\/api\/document-generations\/[^/]+$/.test(path))
+      return { ...await getDocGenerationStatus(ev), headers: CORS };
+
+    // /api/systems/{systemId}/remediation/generate (legacy — kept for backward compat)
     if (method === 'POST' && /^\/api\/systems\/[^/]+\/remediation\/generate$/.test(path))
       return { ...await generateDocument(ev), headers: CORS };
 

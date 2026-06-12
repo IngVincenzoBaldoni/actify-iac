@@ -90,6 +90,41 @@ export interface ComplianceResult {
 
 export type DocumentStatus = 'generating' | 'draft' | 'final' | 'error';
 
+export type DocType =
+  | 'DISCLOSURE_NOTICE'
+  | 'MONITORING_PLAN'
+  | 'AI_POLICY'
+  | 'TECH_DOC'
+  | 'CONFORMITY_DECL';
+
+export type DocGenStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'DRAFT_READY'
+  | 'REVIEW_REQUIRED'
+  | 'FAILED';
+
+export interface DocGeneration {
+  pk:             string;
+  sk:             string;
+  generationId:   string;
+  companyId:      string;
+  systemId:       string;
+  gapId:          string;
+  docType:        DocType;
+  status:         DocGenStatus;
+  schemaVersion?: string;
+  kbVersion?:     string;
+  modelId?:       string;
+  documentId?:    string;
+  outputS3Key?:   string;
+  attempt:        number;
+  createdAt:      string;
+  updatedAt:      string;
+  completedAt?:   string;
+  errorMessage?:  string;
+}
+
 export interface ActifyDocument {
   document_id:    string;
   company_id:     string;

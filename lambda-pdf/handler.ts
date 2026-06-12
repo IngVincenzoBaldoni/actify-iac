@@ -1,14 +1,18 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { checkRateLimit } from "./middleware/rateLimiter";
 import { validatePayload } from "./middleware/validator";
 import { analyze } from "./services/bedrockService";
 import { render } from "./services/htmlTemplate";
-import { htmlToPdf, buildNormativeDocumentHtml } from "./services/pdfService";
+import { htmlToPdf, buildNormativeDocumentHtml, buildDocPipelinePdfHtml } from "./services/pdfService";
 import { buildAuditTrailPdfHtml } from "./services/auditTrailPdfHtml";
 import { uploadReport, writeToDatalake } from "./services/s3Service";
 import { formHtml } from "./services/formHtml";
 import { markReportGenerated } from "./services/otpService";
 import { sendEmail, buildReportEmail } from "./services/resendService";
+
+const s3DocClient = new S3Client({ region: process.env.AWS_REGION ?? "eu-central-1" });
+const DOCUMENTS_BUCKET = process.env.DOCUMENTS_BUCKET ?? "actify-saas-documents";
 
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
 
@@ -58,9 +62,54 @@ interface AuditTrailPdfRequest {
   };
 }
 
+interface DocPipelineRenderRequest {
+  _docPipelineRenderRequest: {
+    markdownContent: string;
+    title:           string;
+    generationId:    string;
+    companyId:       string;
+    systemId:        string;
+    docType:         string;
+    schemaVersion:   string;
+    kbVersion:       string;
+    modelId:         string;
+    promptVersion:   string;
+    isDraft:         boolean;
+  };
+}
+
 export async function handler(
-  event: APIGatewayProxyEventV2 | NormativeDocumentRequest | AuditTrailPdfRequest
-): Promise<APIGatewayProxyResultV2 | { pdfBase64: string }> {
+  event: APIGatewayProxyEventV2 | NormativeDocumentRequest | AuditTrailPdfRequest | DocPipelineRenderRequest
+): Promise<APIGatewayProxyResultV2 | { pdfBase64: string } | { pdfS3Key: string }> {
+
+  // ── Doc pipeline render request from Step Functions ───────────────────────────
+  if ("_docPipelineRenderRequest" in event && event._docPipelineRenderRequest) {
+    const req = event._docPipelineRenderRequest;
+    const now = new Date().toISOString();
+
+    const html = buildDocPipelinePdfHtml({
+      ...req,
+      generatedAt: now,
+    });
+    const pdfBuffer = await htmlToPdf(html);
+
+    const pdfS3Key = `documents/${req.companyId}/${req.systemId}/${req.docType}/${req.generationId}_v1.pdf`;
+    await s3DocClient.send(new PutObjectCommand({
+      Bucket:      DOCUMENTS_BUCKET,
+      Key:         pdfS3Key,
+      Body:        pdfBuffer,
+      ContentType: "application/pdf",
+      Metadata: {
+        generation_id:  req.generationId,
+        company_id:     req.companyId,
+        schema_version: req.schemaVersion,
+        kb_version:     req.kbVersion,
+        is_draft:       req.isDraft ? "true" : "false",
+      },
+    }));
+
+    return { pdfS3Key };
+  }
 
   // ── Audit trail PDF request from lambda-api ──────────────────────────────────
   if ("_auditTrailPdfRequest" in event && event._auditTrailPdfRequest) {

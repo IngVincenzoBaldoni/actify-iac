@@ -161,3 +161,127 @@ export function buildNormativeDocumentHtml(params: {
 </body>
 </html>`;
 }
+
+// ─── Doc Pipeline PDF (con frontespizio provenance) ───────────────────────────
+// Invocato dallo Step Functions RenderPdf step via _docPipelineRenderRequest.
+// Salva il PDF direttamente su S3 e restituisce solo la chiave S3.
+
+export function buildDocPipelinePdfHtml(params: {
+  markdownContent: string;
+  title:           string;
+  generationId:    string;
+  companyId:       string;
+  docType:         string;
+  schemaVersion:   string;
+  kbVersion:       string;
+  modelId:         string;
+  promptVersion:   string;
+  isDraft:         boolean;
+  generatedAt:     string;
+}): string {
+  const bodyHtml  = markdownToHtml(params.markdownContent);
+  const dateStr   = formatDate(params.generatedAt);
+  const watermark = params.isDraft ? '<div class="draft-watermark">BOZZA</div>' : '';
+  const shortId   = params.generationId.slice(0, 8).toUpperCase();
+
+  return `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1a1a1a; background: #fff; }
+
+    .doc-header { background: #0f0f0f; color: #fff; padding: 24px 48px; display: flex; justify-content: space-between; align-items: center; }
+    .doc-header .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .doc-header .meta { text-align: right; font-size: 11px; color: #888; line-height: 1.6; }
+
+    .doc-cover { padding: 36px 48px; border-bottom: 3px solid #e5e5e5; margin-bottom: 0; }
+    .doc-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; line-height: 1.25; }
+    .doc-meta-row { display: flex; gap: 24px; font-size: 12px; color: #888; flex-wrap: wrap; margin-top: 12px; }
+    .doc-meta-row span strong { color: #444; }
+
+    .provenance-box {
+      margin: 0 48px; padding: 10px 16px; background: #f8f8f8; border: 1px solid #e0e0e0;
+      border-radius: 6px; font-size: 10px; color: #777; line-height: 1.6;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px;
+    }
+    .provenance-box strong { color: #555; }
+
+    .draft-banner {
+      margin: 12px 48px; padding: 10px 16px; background: #fffbeb;
+      border: 1px solid #fde68a; border-radius: 6px; font-size: 11px; color: #92400e;
+    }
+
+    .doc-disclaimer {
+      margin: 12px 48px 0; padding: 10px 16px; background: #f9fafb;
+      border: 1px solid #e5e5e5; border-radius: 6px; font-size: 11px; color: #6b7280; line-height: 1.55;
+    }
+
+    .doc-body { padding: 24px 48px 80px; }
+    .doc-body h1 { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
+    .doc-body h2 { font-size: 15px; font-weight: 700; margin: 28px 0 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; color: #111; }
+    .doc-body h3 { font-size: 13px; font-weight: 700; margin: 18px 0 7px; color: #333; }
+    .doc-body p  { font-size: 12.5px; line-height: 1.7; margin-bottom: 9px; }
+    .doc-body ul { margin: 6px 0 12px 20px; }
+    .doc-body li { font-size: 12.5px; line-height: 1.65; margin-bottom: 4px; }
+    .doc-body strong { font-weight: 700; }
+    .doc-body hr { border: none; border-top: 1px solid #e5e5e5; margin: 20px 0; }
+
+    .draft-watermark {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg);
+      font-size: 100px; font-weight: 900; color: rgba(0,0,0,0.04);
+      pointer-events: none; z-index: 0; white-space: nowrap;
+    }
+
+    .doc-footer {
+      position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 48px;
+      background: #fafafa; border-top: 1px solid #e5e5e5;
+      display: flex; justify-content: space-between; font-size: 10px; color: #999;
+    }
+  </style>
+</head>
+<body>
+  ${watermark}
+  <div class="doc-header">
+    <div class="logo">Actify</div>
+    <div class="meta">
+      AI Act Compliance Platform<br>
+      Reg. UE 2024/1689
+    </div>
+  </div>
+
+  <div class="doc-cover">
+    <h1 class="doc-title">${params.title}${params.isDraft ? ' — <em style="font-weight:400;color:#888">Bozza</em>' : ''}</h1>
+    <div class="doc-meta-row">
+      <span>Tipo: <strong>${params.docType}</strong></span>
+      <span>Generato il: <strong>${dateStr}</strong></span>
+      <span>ID generazione: <strong>${shortId}</strong></span>
+    </div>
+  </div>
+
+  <div class="provenance-box">
+    <span><strong>Schema:</strong> v${params.schemaVersion}</span>
+    <span><strong>Base normativa:</strong> ${params.kbVersion}</span>
+    <span><strong>Modello AI:</strong> ${params.modelId.split(':')[0]}</span>
+    <span><strong>Prompt:</strong> v${params.promptVersion}</span>
+  </div>
+
+  ${params.isDraft ? '<div class="draft-banner">⚠ Documento in stato BOZZA — deve essere rivisto e finalizzato dalla PMI prima dell\'uso ufficiale.</div>' : ''}
+
+  <div class="doc-body">
+    ${bodyHtml}
+  </div>
+
+  <div class="doc-disclaimer">
+    Documento generato dalla piattaforma Actify sulla base del profilo sistema dichiarato. Non costituisce parere legale.
+    Actify non certifica la conformità al Regolamento UE 2024/1689. La PMI è responsabile dell'adozione effettiva delle misure descritte.
+  </div>
+
+  <div class="doc-footer">
+    <span>${params.title}</span>
+    <span>Actify · Generato il ${dateStr} · ID: ${shortId}</span>
+  </div>
+</body>
+</html>`;
+}

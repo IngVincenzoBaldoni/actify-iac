@@ -85,6 +85,23 @@ export const api = {
     ),
   },
 
+  // ─── Document Generation Pipeline (Step Functions) ──────────────────────────
+  docPipeline: {
+    start: (systemId: string, gapId: string, idempotencyKey?: string) => {
+      const headers: Record<string, string> = {};
+      if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+      return request<{ generationId: string; status: string }>(
+        'POST', `/api/systems/${systemId}/documents`, { gap_id: gapId }
+      );
+    },
+    getStatus: (generationId: string) =>
+      request<import('./types').DocGeneration>('GET', `/api/document-generations/${generationId}`),
+    listBySystem: (systemId: string) =>
+      request<{ generations: import('./types').DocGeneration[] }>('GET', `/api/systems/${systemId}/document-generations`),
+    listByCompany: () =>
+      request<{ generations: import('./types').DocGeneration[] }>('GET', '/api/company/document-generations'),
+  },
+
   // ─── Documents (Remediation Engine) ─────────────────────────────────────────
   documents: {
     generate: (systemId: string, gapId: string) =>

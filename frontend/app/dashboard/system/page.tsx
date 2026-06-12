@@ -4,20 +4,9 @@ import { Suspense } from 'react';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import type { ComplianceCheck, ComplianceGap, ComplianceResult, ChecklistEntry, ActifyDocument } from '@/lib/types';
+import type { ComplianceCheck, ComplianceGap, ComplianceResult, ChecklistEntry, ActifyDocument, DocGeneration } from '@/lib/types';
 import { normalizeEntry } from '@/lib/types';
-
-function fmtEur(n: number): string {
-  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1).replace('.0', '')}M`;
-  if (n >= 1_000)     return `€${(n / 1_000).toFixed(0)}K`;
-  return `€${n.toLocaleString('it-IT')}`;
-}
-function fmtEurFull(n: number): string {
-  return `€${n.toLocaleString('it-IT')}`;
-}
-function fmtPct(n: number): string {
-  return `${(n * 100).toFixed(0)}%`;
-}
+import { SanctionOverview } from '@/components/SanctionOverview';
 
 const AUTO_LABELS: Record<string, string> = {
   document_generation: 'Generazione Documento',
@@ -27,144 +16,6 @@ const AUTO_LABELS: Record<string, string> = {
   monitoring_plan:     'Piano di Monitoraggio',
   conformity_declaration: 'Dichiarazione di Conformità',
 };
-
-// ─── Sanction overview ────────────────────────────────────────────────────────
-
-function SanctionOverview({ result }: { result: ComplianceResult }) {
-  const exposure = result.total_exposure_estimate;
-  if (!exposure) return null;
-
-  const gaps = result.compliance_gaps ?? [];
-  const activeGaps = gaps.filter(g => g.status !== 'compliant' && (g.estimated_sanction_max ?? 0) > 0);
-  const totalMax = exposure.max;
-  const totalMin = exposure.min;
-
-  const severityColor  = totalMax === 0 ? '#22C55E' : totalMax > 1_000_000 ? '#EF4444' : totalMax > 200_000 ? '#F97316' : '#EAB308';
-  const severityPct    = totalMax === 0 ? 100 : Math.min(98, Math.max(8, (totalMax / 15_000_000) * 100));
-
-  if (totalMax === 0) {
-    return (
-      <div className="so-wrap so-compliant">
-        <div className="so-compliant-inner">
-          <div className="so-compliant-icon">✓</div>
-          <div>
-            <div className="so-compliant-title">Nessuna esposizione sanzionatoria stimata</div>
-            <div className="so-compliant-sub">Il sistema risulta conforme agli articoli applicabili dell'AI Act</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="so-wrap">
-      <div className="so-header">
-        <div className="so-header-left">
-          <span className="so-icon">⚖️</span>
-          <div>
-            <div className="so-title">Esposizione Sanzionatoria Stimata</div>
-            <div className="so-subtitle">Art. 99 AI Act · Massimali di legge</div>
-          </div>
-        </div>
-        <div className="so-source-chip">
-          {exposure.turnover_source === 'exact' ? '✅ Fatturato esatto' : exposure.turnover_source === 'declared' ? '📊 Range dichiarato (mediana)' : '📐 Fatturato stimato'}
-          <span className="so-source-val">{fmtEur(exposure.turnover_used)}</span>
-        </div>
-      </div>
-
-      <div className="so-current-block">
-        <div className="so-col-label">Esposizione stimata</div>
-        <div className="so-big-num" style={{ color: severityColor }}>{fmtEur(totalMax)}</div>
-        <div className="so-big-sub">da {fmtEur(totalMin)}</div>
-        <div className="so-severity-bar">
-          <div className="so-severity-fill" style={{ width: `${severityPct}%`, background: severityColor }} />
-        </div>
-        <div className="so-severity-label">{totalMax > 1_000_000 ? 'Rischio alto' : totalMax > 200_000 ? 'Rischio medio' : 'Rischio basso'}</div>
-      </div>
-
-      {activeGaps.length > 0 && (
-        <div className="so-bars">
-          <div className="so-bars-title">Dettaglio per articolo violato</div>
-          {activeGaps.map(g => {
-            const pct    = totalMax > 0 ? Math.max(6, ((g.estimated_sanction_max ?? 0) / totalMax) * 100) : 0;
-            const ti     = g.tier_info;
-            const m      = exposure.methodology;
-            return (
-              <div key={g.gap_id} className="so-bar-row">
-                <div className="so-bar-meta">
-                  <span className="so-bar-art">{g.article}</span>
-                  <span className="so-bar-req">{g.requirement}</span>
-                </div>
-                <div className="so-bar-track">
-                  <div className="so-bar-seg-current" style={{ width: `${pct}%`, background: severityColor }} />
-                </div>
-                <span className="so-bar-amt">{fmtEur(g.estimated_sanction_max ?? 0)}</span>
-                {ti && m && (
-                  <div className="so-formula">
-                    <span className="so-formula-tier">{ti.tier_label}</span>
-                    <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 4, lineHeight: 1.4 }}>
-                      {ti.tier_label.includes('pratiche vietate')
-                        ? 'Art. 99(3) AI Act — massimale di legge: €35M o 7% fatturato globale annuo'
-                        : ti.tier_label.includes('requisiti')
-                          ? 'Art. 99(4) AI Act — massimale di legge: €15M o 3% fatturato globale annuo'
-                          : 'Art. 99(5) AI Act — massimale di legge: €7,5M o 1% fatturato globale annuo'}
-                    </div>
-                    <div className="so-formula-steps">
-                      <span>
-                        <span className="so-fk">Fatturato × {fmtPct(ti.tier_pct)}</span>
-                        <span className="so-fv"> = {fmtEurFull(ti.theoretical_pct_amount)}</span>
-                      </span>
-                      <span className="so-farrow">→</span>
-                      <span>
-                        <span className="so-fk">min({fmtEur(ti.tier_cap)} cap, {fmtEurFull(ti.theoretical_pct_amount)})</span>
-                        <span className="so-fv"> = {fmtEurFull(ti.theoretical_max)}</span>
-                      </span>
-                      {m.is_sme && (
-                        <>
-                          <span className="so-farrow">→</span>
-                          <span>
-                            <span className="so-fk">Riduzione PMI Art. 100 (×{fmtPct(m.sme_reduction)})</span>
-                            <span className="so-fv"> = {fmtEurFull(g.estimated_sanction_max ?? 0)} max</span>
-                          </span>
-                        </>
-                      )}
-                      <span className="so-farrow">→</span>
-                      <span>
-                        <span className="so-fk">Stima min (×{fmtPct(m.min_factor)} del max)</span>
-                        <span className="so-fv"> = {fmtEurFull(g.estimated_sanction_min ?? 0)}</span>
-                      </span>
-                    </div>
-                    {m.is_sme && (
-                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4, lineHeight: 1.4, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
-                        ⓘ <strong>Riduzione PMI (Art. 100):</strong> L&apos;AI Act prevede sanzioni &quot;proporzionate&quot; per PMI e startup — la riduzione del {fmtPct(m.sme_reduction)} è una stima prudenziale applicata al massimale di legge. La norma non fissa una percentuale esatta.
-                      </div>
-                    )}
-                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: m.is_sme ? 2 : 4, lineHeight: 1.4 }}>
-                      ⓘ <strong>Range min indicativo:</strong> L&apos;Art. 99 Reg. UE 2024/1689 stabilisce solo massimali — l&apos;importo effettivo entro quel massimo è determinato dall&apos;Autorità di vigilanza in base a: gravità e durata dell&apos;infrazione, numero di persone coinvolte, intenzionalità o negligenza, misure adottate per attenuare il danno e cooperazione con le autorità. Il {fmtPct(m.min_factor)} del massimale applicabile rappresenta la nostra stima conservativa del caso tipico.
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {exposure.methodology && (
-        <div className="so-method-box">
-          <div className="so-method-title">📐 Parametri di calcolo</div>
-          <div className="so-method-grid">
-            <div className="so-method-row"><span className="so-mk">Fonte fatturato</span><span className="so-mv">{exposure.methodology.turnover_source_label}</span></div>
-            <div className="so-method-row"><span className="so-mk">Fatturato usato</span><span className="so-mv">{fmtEurFull(exposure.turnover_used)}</span></div>
-            <div className="so-method-row"><span className="so-mk">Riduzione PMI (Art. 100)</span><span className="so-mv">{exposure.methodology.is_sme ? `Sì — ×${fmtPct(exposure.methodology.sme_reduction)}` : 'No'}</span></div>
-          </div>
-        </div>
-      )}
-
-      <div className="so-disclaimer">{exposure.disclaimer}</div>
-    </div>
-  );
-}
 
 // ─── Document Preview Modal ───────────────────────────────────────────────────
 
@@ -205,9 +56,18 @@ function DocumentPreviewModal({ doc, onFinalize, onClose }: {
 
 // ─── Gap Generate Block ───────────────────────────────────────────────────────
 
-function GapGenerateBlock({ gap, doc, generating, onGenerate, onFinalize, onRegenerate, onOpenPreview, onSanctionUpdate }: {
+const GEN_STATUS_LABELS: Record<string, string> = {
+  QUEUED:           'In coda…',
+  RUNNING:          'Generazione in corso (~60s)…',
+  DRAFT_READY:      'Bozza pronta',
+  REVIEW_REQUIRED:  'Revisione richiesta',
+  FAILED:           'Generazione fallita',
+};
+
+function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, onRegenerate, onOpenPreview, onSanctionUpdate }: {
   gap:                ComplianceGap;
   doc?:               ActifyDocument;
+  gen?:               DocGeneration;
   generating:         boolean;
   onGenerate:         () => void;
   onFinalize:         (docId: string) => void;
@@ -215,15 +75,59 @@ function GapGenerateBlock({ gap, doc, generating, onGenerate, onFinalize, onRege
   onOpenPreview:      (doc: ActifyDocument) => void;
   onSanctionUpdate?:  () => void;
 }) {
+  const typeLabel = AUTO_LABELS[gap.automation_type!] ?? (gap.automation_type ?? '').replace(/_/g, ' ');
+
+  // Pipeline states take priority over legacy doc states
+  if (gen?.status === 'QUEUED' || gen?.status === 'RUNNING') {
+    return (
+      <div className="gap-gen-block">
+        <div className="gap-gen-type">{typeLabel}</div>
+        <div className="gap-gen-running">
+          <span className="spin-sm" /> {GEN_STATUS_LABELS[gen.status]}
+        </div>
+      </div>
+    );
+  }
+
+  if (gen?.status === 'FAILED') {
+    return (
+      <div className="gap-gen-block">
+        <div className="gap-gen-type">{typeLabel}</div>
+        <div className="gap-gen-error">
+          ⚠ {gen.errorMessage ?? 'Errore nella generazione del documento'}
+        </div>
+        <button className="btn-generate" onClick={onGenerate} disabled={generating}>
+          <span>↻</span> Riprova
+        </button>
+      </div>
+    );
+  }
+
+  if (gen?.status === 'REVIEW_REQUIRED') {
+    return (
+      <div className="gap-gen-block">
+        <div className="gap-gen-type">{typeLabel}</div>
+        <div className="gap-gen-error" style={{ background: 'rgba(251,191,36,0.1)', borderColor: 'rgba(251,191,36,0.3)', color: '#f59e0b' }}>
+          ⚠ Validazione non superata — revisione manuale richiesta
+          {gen.errorMessage && <p style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>{gen.errorMessage}</p>}
+        </div>
+        <button className="btn-generate" onClick={onGenerate} disabled={generating}>
+          <span>↻</span> Rigenera
+        </button>
+      </div>
+    );
+  }
+
+  // Legacy doc-based rendering (includes DRAFT_READY with linked doc)
   if (!doc || doc.status === 'error') {
     return (
       <div className="gap-gen-block">
-        <div className="gap-gen-type">{AUTO_LABELS[gap.automation_type!] ?? (gap.automation_type ?? '').replace(/_/g, ' ')}</div>
+        <div className="gap-gen-type">{typeLabel}</div>
         {doc?.status === 'error' && (
           <div className="gap-gen-error">⚠ Errore nella generazione: {doc.error_message ?? 'errore sconosciuto'}</div>
         )}
         <button className="btn-generate" onClick={onGenerate} disabled={generating}>
-          {generating ? <><span className="spin-sm" /> Generazione in corso (~30s)…</> : <><span>⚡</span> Genera con Actify</>}
+          {generating ? <><span className="spin-sm" /> Avvio generazione…</> : <><span>⚡</span> Genera con Actify</>}
         </button>
       </div>
     );
@@ -232,8 +136,8 @@ function GapGenerateBlock({ gap, doc, generating, onGenerate, onFinalize, onRege
   if (doc.status === 'generating') {
     return (
       <div className="gap-gen-block">
-        <div className="gap-gen-type">{AUTO_LABELS[gap.automation_type!] ?? (gap.automation_type ?? '').replace(/_/g, ' ')}</div>
-        <div className="gap-gen-running"><span className="spin-sm" /> Generazione in corso (~30s)…</div>
+        <div className="gap-gen-type">{typeLabel}</div>
+        <div className="gap-gen-running"><span className="spin-sm" /> Generazione in corso (~60s)…</div>
       </div>
     );
   }
@@ -241,7 +145,7 @@ function GapGenerateBlock({ gap, doc, generating, onGenerate, onFinalize, onRege
   if (doc.status === 'draft') {
     return (
       <div className="gap-gen-block gap-gen-draft">
-        <div className="gap-gen-type">{AUTO_LABELS[gap.automation_type!] ?? (gap.automation_type ?? '').replace(/_/g, ' ')}</div>
+        <div className="gap-gen-type">{typeLabel}</div>
         <div className="gap-gen-doc-row">
           <span className="gap-gen-doc-title">📄 {doc.title}</span>
           <span className="badge-draft">Bozza</span>
@@ -362,6 +266,7 @@ function ComplianceChecklist({
   onSetEntry,
   saving,
   documents,
+  docGenerations,
   generatingGapId,
   onGenerate,
   onFinalize,
@@ -374,6 +279,7 @@ function ComplianceChecklist({
   onSetEntry:         (article: string, entry: ChecklistEntry | null) => void;
   saving:             boolean;
   documents:          Record<string, ActifyDocument>;
+  docGenerations:     Record<string, DocGeneration>;
   generatingGapId:    string | null;
   onGenerate:         (gapId: string) => void;
   onFinalize:         (docId: string) => void;
@@ -592,11 +498,12 @@ function ComplianceChecklist({
                 <GapGenerateBlock
                   gap={gap}
                   doc={documents[gap.gap_id]}
+                  gen={docGenerations[gap.gap_id]}
                   generating={generatingGapId === gap.gap_id}
                   onGenerate={() => onGenerate(gap.gap_id)}
                   onFinalize={onFinalize}
                   onRegenerate={onRegenerate}
-                  onOpenPreview={setPreviewDoc}
+                  onOpenPreview={(d: ActifyDocument) => setPreviewDoc(d)}
                   onSanctionUpdate={onSanctionUpdate}
                 />
               ) : (
@@ -643,6 +550,7 @@ function SystemDetailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const systemId = searchParams.get('id') ?? '';
+  const viewFines = searchParams.get('view') === 'fines';
 
   const [system, setSystem]   = useState<Record<string, unknown> | null>(null);
   const [check, setCheck]     = useState<ComplianceCheck | null>(null);
@@ -659,13 +567,36 @@ function SystemDetailContent() {
   const [generatingGapId, setGeneratingGapId] = useState<string | null>(null);
   const docPollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Step Functions pipeline state: keyed by gap_id
+  const [docGenerations, setDocGenerations] = useState<Record<string, DocGeneration>>({});
+  const genPollTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const pollDocGeneration = useCallback((generationId: string, gapId: string) => {
+    if (genPollTimers.current[gapId]) clearTimeout(genPollTimers.current[gapId]);
+    genPollTimers.current[gapId] = setTimeout(async () => {
+      try {
+        const gen = await api.docPipeline.getStatus(generationId);
+        setDocGenerations(prev => ({ ...prev, [gapId]: gen }));
+        if (gen.status === 'QUEUED' || gen.status === 'RUNNING') {
+          pollDocGeneration(generationId, gapId);
+        } else if (gen.status === 'DRAFT_READY' && gen.documentId) {
+          const doc = await api.documents.get(gen.documentId) as unknown as ActifyDocument;
+          setDocuments(prev => ({ ...prev, [gapId]: doc }));
+        }
+      } catch {
+        // silent — leave gen state as-is
+      }
+    }, 5000);
+  }, []);
+
   const load = useCallback(async () => {
     if (!systemId) return;
     try {
-      const [sysData, latestCheck, docsData] = await Promise.allSettled([
+      const [sysData, latestCheck, docsData, gensData] = await Promise.allSettled([
         api.systems.get(systemId),
         api.compliance.getLatest(systemId),
         api.documents.listBySystem(systemId),
+        api.docPipeline.listBySystem(systemId),
       ]);
       if (sysData.status === 'fulfilled') setSystem(sysData.value);
       if (latestCheck.status === 'fulfilled') setCheck(latestCheck.value as unknown as ComplianceCheck);
@@ -676,10 +607,24 @@ function SystemDetailContent() {
         }
         setDocuments(docMap);
       }
+      if (gensData.status === 'fulfilled') {
+        const genMap: Record<string, DocGeneration> = {};
+        for (const gen of (gensData.value.generations ?? [])) {
+          const existing = genMap[gen.gapId];
+          if (!existing || gen.createdAt > existing.createdAt) genMap[gen.gapId] = gen;
+        }
+        setDocGenerations(genMap);
+        // Resume polling for active generations
+        for (const [gapId, gen] of Object.entries(genMap)) {
+          if (gen.status === 'QUEUED' || gen.status === 'RUNNING') {
+            pollDocGeneration(gen.generationId, gapId);
+          }
+        }
+      }
     } finally {
       setLoading(false);
     }
-  }, [systemId]);
+  }, [systemId, pollDocGeneration]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -817,9 +762,10 @@ function SystemDetailContent() {
   async function handleGenerate(gapId: string) {
     setGeneratingGapId(gapId);
     try {
-      const { document_id } = await api.documents.generate(systemId, gapId);
-      // Start polling for this document
-      pollDocument(document_id, gapId);
+      const idempotencyKey = `${systemId}-${gapId}-${Date.now()}`;
+      const { generationId } = await api.docPipeline.start(systemId, gapId, idempotencyKey);
+      setGeneratingGapId(null);
+      pollDocGeneration(generationId, gapId);
     } catch (err: unknown) {
       alert((err as { message?: string }).message ?? 'Errore nella generazione');
       setGeneratingGapId(null);
@@ -895,6 +841,33 @@ function SystemDetailContent() {
   if (loading)   return <div className="db-loading"><div className="spin"></div></div>;
   if (!system)   return <div className="inv-page"><p>Sistema non trovato.</p></div>;
 
+  // ── Fine board view: only sanction estimation ────────────────────────────
+  if (viewFines) {
+    return (
+      <div className="inv-page">
+        <div className="inv-header">
+          <div>
+            <button className="btn-back-link" onClick={() => router.push('/dashboard/fines')}>
+              ← Fine Estimation Board
+            </button>
+            <h1 className="inv-title">⚖️ {system.tool_name as string}</h1>
+            <p className="inv-sub">{system.vendor as string} · Esposizione sanzionatoria stimata</p>
+          </div>
+        </div>
+        {effectiveResult ? (
+          <SanctionOverview result={effectiveResult} />
+        ) : (
+          <div className="inv-empty">
+            <div className="empty-icon">⚖️</div>
+            <h3>Nessun dato sanzionatorio</h3>
+            <p>Esegui un Compliance Check per calcolare l&apos;esposizione sanzionatoria.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Inventory view: gap analysis ─────────────────────────────────────────
   return (
     <div className="inv-page">
       <div className="inv-header">
@@ -939,7 +912,6 @@ function SystemDetailContent() {
               </button>
             </div>
           )}
-          <SanctionOverview result={effectiveResult} />
           <div className={`risk-banner risk-${effectiveResult.risk_classification}`}>
             <div className="risk-label">Classificazione Rischio</div>
             <div className="risk-value">{effectiveResult.risk_classification.toUpperCase()}</div>
@@ -951,6 +923,7 @@ function SystemDetailContent() {
             onSetEntry={handleSetEntry}
             saving={saving}
             documents={documents}
+            docGenerations={docGenerations}
             generatingGapId={generatingGapId}
             onGenerate={handleGenerate}
             onFinalize={handleFinalize}

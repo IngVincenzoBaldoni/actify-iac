@@ -1,0 +1,31 @@
+{
+  "name": "actify-lambda-doc-pipeline",
+  "version": "1.0.0",
+  "description": "Actify — Document Generation Pipeline Lambda functions (Step Functions steps)",
+  "scripts": {
+    "build": "tsc --project tsconfig.json && node scripts/bundle.js",
+    "build:tsc": "tsc --project tsconfig.json",
+    "lint": "tsc --noEmit",
+    "seed": "ts-node --project tsconfig.json src/seeds/seedRunner.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.600.0",
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.1055.0",
+    "@aws-sdk/client-s3vectors": "^3.1053.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.140",
+    "@types/node": "^20.12.12",
+    "@types/uuid": "^9.0.8",
+    "archiver": "^7.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

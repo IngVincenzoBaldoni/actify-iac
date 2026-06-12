@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 interface SanctionSnap {
@@ -133,6 +134,7 @@ function SanctionChart({ series, compact = false }: { series: ChartSeries[]; com
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function FineBoardContent() {
+  const router = useRouter();
   const [systems, setSystems] = useState<SysWithTimeline[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -272,7 +274,13 @@ function FineBoardContent() {
                     />
                     <div className="fines-sys-card-foot">
                       <span>{tl.length} evento{tl.length !== 1 ? 'i' : 'o'}</span>
-                      <a href={`/dashboard/system?id=${s.system_id}`} className="fines-sys-link">Dettaglio →</a>
+                      <button
+                        className="fines-sys-link"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                        onClick={() => router.push(`/dashboard/system?id=${s.system_id}&view=fines`)}
+                      >
+                        Dettaglio →
+                      </button>
                     </div>
                   </div>
                 );
@@ -281,6 +289,7 @@ function FineBoardContent() {
           </div>
         </>
       )}
+
     </div>
   );
 }

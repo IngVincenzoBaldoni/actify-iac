@@ -50,6 +50,11 @@ resource "aws_lambda_function" "saas_api" {
       LAMBDA_SELF_ARN            = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_api_name}"
       ENV                        = var.environment
 
+      # Document Generation Pipeline — Step Functions + new DynamoDB tables
+      STEP_FUNCTIONS_ARN              = aws_sfn_state_machine.doc_generation.arn
+      DYNAMODB_DOC_SCHEMAS_TABLE      = aws_dynamodb_table.doc_schemas.name
+      DYNAMODB_DOC_GENERATIONS_TABLE  = aws_dynamodb_table.doc_generations.name
+
       # RAG — S3 Vectors knowledge base (shared with release-1)
       S3_VECTORS_BUCKET     = local.s3_vectors_bucket_name
       S3_VECTORS_INDEX      = "ai-act-it"

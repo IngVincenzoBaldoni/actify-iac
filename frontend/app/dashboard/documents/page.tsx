@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import type { ActifyDocument } from '@/lib/types';
+import type { ActifyDocument, DocGeneration } from '@/lib/types';
 
 interface SystemInfo {
   system_id: string;
@@ -36,6 +36,30 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   error:      { label: '⚠ Errore',         cls: 'badge-error' },
 };
 
+const GEN_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+  QUEUED:          { label: '⟳ In coda',           cls: 'badge-gen'   },
+  RUNNING:         { label: '⟳ In esecuzione',      cls: 'badge-gen'   },
+  DRAFT_READY:     { label: '✎ Bozza pronta',       cls: 'badge-draft' },
+  REVIEW_REQUIRED: { label: '⚠ Revisione richiesta', cls: 'badge-warn'  },
+  FAILED:          { label: '⚠ Fallito',             cls: 'badge-error' },
+};
+
+const DOCTYPE_ICONS: Record<string, string> = {
+  DISCLOSURE_NOTICE: '📢',
+  MONITORING_PLAN:   '📊',
+  AI_POLICY:         '📋',
+  TECH_DOC:          '📄',
+  CONFORMITY_DECL:   '✅',
+};
+
+const DOCTYPE_LABELS: Record<string, string> = {
+  DISCLOSURE_NOTICE: 'Disclosure Notice',
+  MONITORING_PLAN:   'Piano di Monitoraggio',
+  AI_POLICY:         'Policy AI',
+  TECH_DOC:          'Documentazione Tecnica',
+  CONFORMITY_DECL:   'Dichiarazione di Conformità',
+};
+
 function fmtDate(iso: string) {
   try { return new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }); }
   catch { return iso; }
@@ -64,6 +88,7 @@ function EmptyState() {
 function DocumentVaultContent() {
   const [docs, setDocs]       = useState<ActifyDocument[]>([]);
   const [systems, setSystems] = useState<SystemInfo[]>([]);
+  const [generations, setGenerations] = useState<DocGeneration[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType]     = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -71,12 +96,14 @@ function DocumentVaultContent() {
 
   const load = useCallback(async () => {
     try {
-      const [docsRes, systemsRes] = await Promise.all([
+      const [docsRes, systemsRes, gensRes] = await Promise.allSettled([
         api.documents.listByCompany(),
         api.systems.list(),
+        api.docPipeline.listByCompany(),
       ]);
-      setDocs((docsRes.documents ?? []) as ActifyDocument[]);
-      setSystems(systemsRes as unknown as SystemInfo[]);
+      if (docsRes.status === 'fulfilled') setDocs((docsRes.value.documents ?? []) as ActifyDocument[]);
+      if (systemsRes.status === 'fulfilled') setSystems(systemsRes.value as unknown as SystemInfo[]);
+      if (gensRes.status === 'fulfilled') setGenerations(gensRes.value.generations ?? []);
     } catch {
       // silent
     } finally {
@@ -170,7 +197,46 @@ function DocumentVaultContent() {
         </div>
       )}
 
-      {docs.length === 0 ? (
+      {/* Active pipeline generations (QUEUED/RUNNING/FAILED/REVIEW_REQUIRED) */}
+      {generations.filter(g => g.status !== 'DRAFT_READY').length > 0 && (
+        <div className="vault-group" style={{ marginBottom: 24 }}>
+          <div className="vault-group-header">
+            <div className="vault-group-sys">
+              <span className="vault-group-sys-name">⟳ Generazioni in corso</span>
+            </div>
+          </div>
+          <div className="vault-group-docs">
+            {generations
+              .filter(g => g.status !== 'DRAFT_READY')
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .map(gen => {
+                const st = GEN_STATUS_LABELS[gen.status] ?? GEN_STATUS_LABELS.FAILED;
+                const sys = sysMap[gen.systemId];
+                return (
+                  <div key={gen.generationId} className="vault-doc">
+                    <div className="vault-doc-left">
+                      <div className="vault-doc-icon">{DOCTYPE_ICONS[gen.docType] ?? '📄'}</div>
+                    </div>
+                    <div className="vault-doc-right">
+                      <div className="vault-doc-title">{DOCTYPE_LABELS[gen.docType] ?? gen.docType}</div>
+                      <div className="vault-doc-meta">
+                        {sys && <span className="vault-doc-art">{sys.tool_name}</span>}
+                        <span className="vault-doc-date">{fmtDate(gen.createdAt)}</span>
+                        <span className={`badge ${st.cls}`}>{st.label}</span>
+                        {gen.schemaVersion && <span className="vault-doc-type">schema {gen.schemaVersion}</span>}
+                      </div>
+                      {gen.errorMessage && (
+                        <div className="vault-doc-error">{gen.errorMessage}</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {docs.length === 0 && generations.filter(g => g.status !== 'DRAFT_READY').length === 0 ? (
         <EmptyState />
       ) : filtered.length === 0 ? (
         <div className="inv-empty">

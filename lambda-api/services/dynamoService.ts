@@ -11,15 +11,16 @@ const client = DynamoDBDocumentClient.from(
 );
 
 const TABLES = {
-  companies:   process.env.DYNAMODB_COMPANIES_TABLE!,
-  users:       process.env.DYNAMODB_USERS_TABLE!,
-  systems:     process.env.DYNAMODB_SYSTEMS_TABLE!,
-  checks:      process.env.DYNAMODB_CHECKS_TABLE!,
-  documents:   process.env.DYNAMODB_DOCUMENTS_TABLE!,
-  literacy:    process.env.DYNAMODB_LITERACY_TABLE!,
-  partners:    process.env.DYNAMODB_PARTNERS_TABLE!,
-  partnerPmi:  process.env.DYNAMODB_PARTNER_PMI_TABLE!,
-  audit:       process.env.DYNAMODB_AUDIT_TABLE!,
+  companies:      process.env.DYNAMODB_COMPANIES_TABLE!,
+  users:          process.env.DYNAMODB_USERS_TABLE!,
+  systems:        process.env.DYNAMODB_SYSTEMS_TABLE!,
+  checks:         process.env.DYNAMODB_CHECKS_TABLE!,
+  documents:      process.env.DYNAMODB_DOCUMENTS_TABLE!,
+  literacy:       process.env.DYNAMODB_LITERACY_TABLE!,
+  partners:       process.env.DYNAMODB_PARTNERS_TABLE!,
+  partnerPmi:     process.env.DYNAMODB_PARTNER_PMI_TABLE!,
+  audit:          process.env.DYNAMODB_AUDIT_TABLE!,
+  docGenerations: process.env.DYNAMODB_DOC_GENERATIONS_TABLE!,
 };
 
 // Strip undefined values — DocumentClient removes them from PutCommand Items but NOT from
@@ -498,6 +499,57 @@ export async function updateComplianceCheck(
     ExpressionAttributeNames: names,
     ExpressionAttributeValues: values,
   }));
+}
+
+// ─── Doc Generations ─────────────────────────────────────────────────────────
+
+export async function putDocGeneration(item: Record<string, unknown>) {
+  await client.send(new PutCommand({ TableName: TABLES.docGenerations, Item: item }));
+}
+
+export async function getDocGeneration(companyId: string, generationId: string) {
+  const r = await client.send(new GetCommand({
+    TableName: TABLES.docGenerations,
+    Key: { pk: `COMPANY#${companyId}`, sk: `GEN#${generationId}` },
+  }));
+  return r.Item ?? null;
+}
+
+export async function updateDocGeneration(companyId: string, generationId: string, updates: Record<string, unknown>) {
+  const entries = Object.entries(defined(updates));
+  const expr = 'SET ' + entries.map((_, i) => `#k${i} = :v${i}`).join(', ');
+  const names = Object.fromEntries(entries.map(([k], i) => [`#k${i}`, k]));
+  const values = Object.fromEntries(entries.map(([, v], i) => [`:v${i}`, v]));
+  await client.send(new UpdateCommand({
+    TableName: TABLES.docGenerations,
+    Key: { pk: `COMPANY#${companyId}`, sk: `GEN#${generationId}` },
+    UpdateExpression: expr,
+    ExpressionAttributeNames: names,
+    ExpressionAttributeValues: values,
+  }));
+}
+
+export async function listDocGenerationsBySystem(systemId: string, limit = 20) {
+  const r = await client.send(new QueryCommand({
+    TableName: TABLES.docGenerations,
+    IndexName: 'system-gen-index',
+    KeyConditionExpression: 'system_id = :sid',
+    ExpressionAttributeValues: { ':sid': systemId },
+    ScanIndexForward: false,
+    Limit: limit,
+  }));
+  return r.Items ?? [];
+}
+
+export async function listDocGenerationsByCompany(companyId: string, limit = 100) {
+  const r = await client.send(new QueryCommand({
+    TableName: TABLES.docGenerations,
+    KeyConditionExpression: 'pk = :pk',
+    ExpressionAttributeValues: { ':pk': `COMPANY#${companyId}` },
+    ScanIndexForward: false,
+    Limit: limit,
+  }));
+  return r.Items ?? [];
 }
 
 // ─── Audit Trail ──────────────────────────────────────────────────────────────

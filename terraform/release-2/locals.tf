@@ -37,4 +37,20 @@ locals {
 
   # ─── Lambda PDF Generator (release-1 resource, referenced by release-2) ────
   lambda_pdf_name          = "${local.project}-pdf-generator"
+
+  # ─── Document Generation Pipeline ───────────────────────────────────────────
+  table_doc_schemas             = "${local.project}-doc-schemas"
+  table_doc_generations         = "${local.project}-doc-generations"
+
+  lambda_doc_assemble_ctx_name  = "${local.project}-doc-assemble-context"
+  lambda_doc_generate_slot_name = "${local.project}-doc-generate-slot"
+  lambda_doc_validate_name      = "${local.project}-doc-validate"
+  lambda_doc_assemble_name      = "${local.project}-doc-assemble-document"
+  lambda_doc_persist_name       = "${local.project}-doc-persist-audit"
+
+  sfn_doc_generation_name       = "${local.project}-doc-generation-workflow"
+  iam_doc_pipeline_role_name    = "${local.project}-doc-pipeline-role"
+  iam_doc_pipeline_policy_name  = "${local.project}-doc-pipeline-policy"
+  iam_sfn_role_name             = "${local.project}-sfn-role"
+  iam_sfn_policy_name           = "${local.project}-sfn-policy"
 }
