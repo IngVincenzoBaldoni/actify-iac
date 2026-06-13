@@ -242,21 +242,19 @@ function DocumentVaultContent() {
         </div>
       )}
 
-      {/* Active pipeline generations (QUEUED/RUNNING/FAILED/REVIEW_REQUIRED) */}
-      {generations.filter(g => g.status !== 'DRAFT_READY').length > 0 && (
+      {/* Active pipeline generations (QUEUED/RUNNING only — no errors) */}
+      {generations.filter(g => g.status === 'QUEUED' || g.status === 'RUNNING').length > 0 && (
         <div className="vault-group" style={{ marginBottom: 24 }}>
           <div className="vault-group-header">
             <div className="vault-group-sys">
               <span className="vault-group-sys-name">
-                {generations.some(g => g.status === 'QUEUED' || g.status === 'RUNNING')
-                  ? <><span className="spin-sm" /> Generazioni in corso</>
-                  : '⟳ Generazioni recenti'}
+                <><span className="spin-sm" /> Generazioni in corso</>
               </span>
             </div>
           </div>
           <div className="vault-group-docs">
             {generations
-              .filter(g => g.status !== 'DRAFT_READY')
+              .filter(g => g.status === 'QUEUED' || g.status === 'RUNNING')
               .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
               .map(gen => {
                 const st = GEN_STATUS_LABELS[gen.status] ?? GEN_STATUS_LABELS.FAILED;
@@ -290,7 +288,7 @@ function DocumentVaultContent() {
         </div>
       )}
 
-      {docs.length === 0 && generations.filter(g => g.status !== 'DRAFT_READY').length === 0 ? (
+      {docs.length === 0 && generations.filter(g => g.status === 'QUEUED' || g.status === 'RUNNING').length === 0 ? (
         <EmptyState />
       ) : filtered.length === 0 ? (
         <div className="inv-empty">
