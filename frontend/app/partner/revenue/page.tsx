@@ -13,14 +13,14 @@ configureAmplify();
 const PLAN_PRICE: Record<string, number> = {
   trial:      0,
   base:       79,
-  premium:    149,
+  premium:    129,
   enterprise: 249,
 };
 
 const PLAN_LABEL: Record<string, string> = {
   trial:      'Trial (€0/mese)',
   base:       'Starter (€79/mese)',
-  premium:    'Professional (€149/mese)',
+  premium:    'Professional (€129/mese)',
   enterprise: 'Enterprise (€249/mese)',
 };
 

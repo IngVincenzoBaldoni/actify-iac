@@ -34,7 +34,7 @@ const PLANS: Plan[] = [
     features: [
       { label: 'AI Inventory',           value: 'Fino a 10 tool',             ok: true },
       { label: 'Gap Analysis',           value: null,                          ok: true },
-      { label: 'Fine Board Estimation',  value: null,                          ok: true },
+      { label: 'FEB (Fine Board Estimation)',  value: null,                          ok: true },
       { label: 'AI Literacy Tracker',    value: null,                          ok: true },
       { label: 'Document Vault',         value: '5 categorie di documenti',    ok: true },
       { label: 'Audit Trail',            value: null,                          ok: true },
@@ -44,7 +44,7 @@ const PLANS: Plan[] = [
   {
     tier: 'premium',
     name: 'Professional',
-    monthly: 149,
+    monthly: 129,
     tagline: 'Per aziende che vogliono compliance attiva',
     color: 'plan-card-premium',
     badge: 'Più popolare',
@@ -52,7 +52,7 @@ const PLANS: Plan[] = [
     features: [
       { label: 'AI Inventory',           value: 'Illimitata',                              ok: true },
       { label: 'Gap Analysis',           value: null,                                      ok: true },
-      { label: 'Fine Board Estimation',  value: null,                                      ok: true },
+      { label: 'FEB (Fine Board Estimation)',  value: null,                                      ok: true },
       { label: 'AI Literacy Tracker',    value: null,                                      ok: true },
       { label: 'Document Vault',         value: 'Tutte le categorie + FRIA',               ok: true },
       { label: 'Audit Trail',            value: null,                                      ok: true },
