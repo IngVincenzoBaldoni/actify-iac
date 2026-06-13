@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense } from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import type { ActifyDocument, DocGeneration } from '@/lib/types';
 
@@ -36,12 +37,12 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   error:      { label: '⚠ Errore',         cls: 'badge-error' },
 };
 
-const GEN_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  QUEUED:          { label: '⟳ In coda',           cls: 'badge-gen'   },
-  RUNNING:         { label: '⟳ In esecuzione',      cls: 'badge-gen'   },
-  DRAFT_READY:     { label: '✎ Bozza pronta',       cls: 'badge-draft' },
-  REVIEW_REQUIRED: { label: '⚠ Revisione richiesta', cls: 'badge-warn'  },
-  FAILED:          { label: '⚠ Fallito',             cls: 'badge-error' },
+const GEN_STATUS_LABELS: Record<string, { label: string; cls: string; eta?: string }> = {
+  QUEUED:          { label: '⟳ In coda',           cls: 'badge-gen',   eta: 'Avvio imminente…'       },
+  RUNNING:         { label: '⟳ In esecuzione',      cls: 'badge-gen',   eta: 'Completamento ~60–90s'  },
+  DRAFT_READY:     { label: '✎ Bozza pronta',       cls: 'badge-draft'                                },
+  REVIEW_REQUIRED: { label: '⚠ Revisione richiesta', cls: 'badge-warn'                               },
+  FAILED:          { label: '⚠ Fallito',             cls: 'badge-error'                               },
 };
 
 const DOCTYPE_ICONS: Record<string, string> = {
@@ -93,6 +94,7 @@ function DocumentVaultContent() {
   const [filterType, setFilterType]     = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -112,6 +114,17 @@ function DocumentVaultContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh every 8s while there are active (QUEUED/RUNNING) generations
+  useEffect(() => {
+    const hasActive = generations.some(g => g.status === 'QUEUED' || g.status === 'RUNNING');
+    if (hasActive) {
+      pollRef.current = setInterval(() => { load(); }, 8000);
+    } else {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    }
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  }, [generations, load]);
 
   const sysMap = Object.fromEntries(systems.map(s => [s.system_id, s]));
 
@@ -202,7 +215,11 @@ function DocumentVaultContent() {
         <div className="vault-group" style={{ marginBottom: 24 }}>
           <div className="vault-group-header">
             <div className="vault-group-sys">
-              <span className="vault-group-sys-name">⟳ Generazioni in corso</span>
+              <span className="vault-group-sys-name">
+                {generations.some(g => g.status === 'QUEUED' || g.status === 'RUNNING')
+                  ? <><span className="spin-sm" /> Generazioni in corso</>
+                  : '⟳ Generazioni recenti'}
+              </span>
             </div>
           </div>
           <div className="vault-group-docs">
@@ -212,6 +229,7 @@ function DocumentVaultContent() {
               .map(gen => {
                 const st = GEN_STATUS_LABELS[gen.status] ?? GEN_STATUS_LABELS.FAILED;
                 const sys = sysMap[gen.systemId];
+                const isActive = gen.status === 'QUEUED' || gen.status === 'RUNNING';
                 return (
                   <div key={gen.generationId} className="vault-doc">
                     <div className="vault-doc-left">
@@ -220,12 +238,16 @@ function DocumentVaultContent() {
                     <div className="vault-doc-right">
                       <div className="vault-doc-title">{DOCTYPE_LABELS[gen.docType] ?? gen.docType}</div>
                       <div className="vault-doc-meta">
-                        {sys && <span className="vault-doc-art">{sys.tool_name}</span>}
+                        {sys
+                          ? <Link href={`/dashboard/system?id=${gen.systemId}`} className="vault-doc-art" style={{ textDecoration: 'none' }}>{sys.tool_name}</Link>
+                          : <span className="vault-doc-art">Sistema AI</span>}
                         <span className="vault-doc-date">{fmtDate(gen.createdAt)}</span>
                         <span className={`badge ${st.cls}`}>{st.label}</span>
-                        {gen.schemaVersion && <span className="vault-doc-type">schema {gen.schemaVersion}</span>}
                       </div>
-                      {gen.errorMessage && (
+                      {isActive && st.eta && (
+                        <div className="vault-doc-eta">{st.eta}</div>
+                      )}
+                      {gen.errorMessage && !isActive && (
                         <div className="vault-doc-error">{gen.errorMessage}</div>
                       )}
                     </div>

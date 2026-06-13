@@ -130,7 +130,7 @@ data "aws_iam_policy_document" "api_permissions" {
     sid     = "AllowStepFunctionsStartExecution"
     effect  = "Allow"
     actions = ["states:StartExecution"]
-    resources = [aws_sfn_state_machine.doc_pipeline.arn]
+    resources = [aws_sfn_state_machine.doc_generation.arn]
   }
 }
 

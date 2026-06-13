@@ -16,7 +16,6 @@ locals {
   doc_stub_hash = data.archive_file.doc_pipeline_stub.output_base64sha256
 
   doc_pipeline_env = {
-    AWS_REGION               = var.aws_region
     DOCUMENTS_BUCKET         = aws_s3_bucket.actify_documents.bucket
     S3_VECTORS_BUCKET        = local.s3_vectors_bucket_name
     S3_VECTORS_INDEX         = "ai-act-it"

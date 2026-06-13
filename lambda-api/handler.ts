@@ -289,7 +289,7 @@ export const handler = async (
     const error = e as { message?: string; statusCode?: number };
     const statusCode = error.statusCode ?? 500;
     const message = error.message ?? 'Internal server error';
-    if (statusCode >= 500) console.error('[ERROR]', e);
+    console.error('[ERROR]', statusCode, message, e);
     return err(statusCode, message);
   }
 };

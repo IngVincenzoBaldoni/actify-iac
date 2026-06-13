@@ -58,7 +58,7 @@ resource "aws_sfn_state_machine" "doc_generation" {
       # ── Step 2: Map — generate each GENERATIVE slot concurrently ─────────────
       GenerateSlots = {
         Type      = "Map"
-        "ItemsPath.$" = "$.context.generativeSlots"
+        ItemsPath = "$.context.generativeSlots"
         ItemSelector = {
           "slot.$"          = "$$.Map.Item.Value"
           "context.$"       = "$.context"

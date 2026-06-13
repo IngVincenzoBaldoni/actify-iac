@@ -1,4 +1,5 @@
 import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
+import type { ConverseCommandInput } from '@aws-sdk/client-bedrock-runtime';
 import type { GenerativeSlotInput } from '../types';
 
 const REGION          = process.env.BEDROCK_REGION          ?? process.env.AWS_REGION ?? 'eu-central-1';
@@ -70,8 +71,8 @@ Massimo ${slot.maxWords} parole. Tono: ${slot.tone}.
 
 Compila questo slot rispettando ESATTAMENTE lo schema JSON fornito nel tool "emit_slot".`;
 
-  const response = await bedrock.send(new ConverseCommand({
-    modelId,
+  const input: ConverseCommandInput = {
+    modelId: model,
     system:   [{ text: SYSTEM_PROMPT }],
     messages: [{ role: 'user', content: [{ text: userMessage }] }],
     inferenceConfig: { maxTokens: Math.min(slot.maxWords * 8, 2048), temperature: 0, topP: 0.9 },
@@ -80,28 +81,34 @@ Compila questo slot rispettando ESATTAMENTE lo schema JSON fornito nel tool "emi
         toolSpec: {
           name:        'emit_slot',
           description: 'Emit the structured slot content',
-          inputSchema: { json: slot.outputSchema as Record<string, unknown> },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          inputSchema: { json: slot.outputSchema as any },
         },
       }],
       toolChoice: { tool: { name: 'emit_slot' } },
     },
-  }));
+  };
 
-  const toolUse = response.output?.message?.content?.find(
-    (b): b is { toolUse: { input: Record<string, unknown> } } =>
-      'toolUse' in b && (b as Record<string, unknown>).toolUse !== undefined,
-  );
+  const response = await bedrock.send(new ConverseCommand(input));
 
-  if (!toolUse?.toolUse?.input) {
-    // Fallback: parse first text block as JSON
-    const textBlock = response.output?.message?.content?.find(
-      (b): b is { text: string } => 'text' in b,
-    );
-    if (textBlock?.text) {
-      try { return JSON.parse(textBlock.text) as Record<string, unknown>; } catch {}
+  const blocks = response.output?.message?.content ?? [];
+
+  // Find tool_use block
+  for (const block of blocks) {
+    if ('toolUse' in block && block.toolUse && typeof block.toolUse === 'object') {
+      const toolBlock = block.toolUse as { name?: string; input?: unknown };
+      if (toolBlock.input && typeof toolBlock.input === 'object') {
+        return toolBlock.input as Record<string, unknown>;
+      }
     }
-    throw new Error(`Bedrock returned no structured output for slot ${slot.slotId}`);
   }
 
-  return toolUse.toolUse.input;
+  // Fallback: parse first text block as JSON
+  for (const block of blocks) {
+    if ('text' in block && typeof block.text === 'string') {
+      try { return JSON.parse(block.text) as Record<string, unknown>; } catch {}
+    }
+  }
+
+  throw new Error(`Bedrock returned no structured output for slot ${slot.slotId}`);
 }

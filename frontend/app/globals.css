@@ -1271,6 +1271,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .vault-doc-type{color:var(--muted)}
 .vault-doc-date{color:var(--dim)}
 .vault-doc-error{font-size:11px;color:#EF4444;margin-top:4px}
+.vault-doc-eta{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic}
 .vault-doc-status{display:flex;flex-direction:column;gap:4px;align-items:flex-start;flex-shrink:0}
 .vault-finalized-at{font-size:11px;color:var(--dim)}
 .vault-doc-actions{display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0}
@@ -1424,8 +1425,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   font-size: 11px;
   color: rgba(255,255,255,0.3);
 }
-.fines-sys-link { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 12px; }
-.fines-sys-link:hover { color: rgba(255,255,255,0.8); }
+.fines-sys-link { display: inline-flex; align-items: center; gap: 4px; color: #93C5FD; font-size: 12px; font-weight: 600; background: rgba(147,197,253,0.08); border: 1px solid rgba(147,197,253,0.3); border-radius: 6px; padding: 5px 12px; text-decoration: none; transition: all .15s; font-family: inherit; cursor: pointer; }
+.fines-sys-link:hover { background: rgba(147,197,253,0.16); border-color: rgba(147,197,253,0.55); color: #BFDBFE; }
 
 .fines-empty {
   display: flex;

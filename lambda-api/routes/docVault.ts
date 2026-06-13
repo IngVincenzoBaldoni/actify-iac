@@ -29,6 +29,7 @@ const generateDocVaultSchema = z.object({
 export async function startDocGeneration(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth     = extractAuth(event);
   const systemId = event.pathParameters?.systemId;
+  console.log('[startDocGeneration]', { companyId: auth.companyId, systemId, body: event.body });
   if (!systemId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId required' }) };
 
   const idempotencyKey = event.headers?.['idempotency-key'] ?? event.headers?.['Idempotency-Key'];
