@@ -42,7 +42,7 @@ resource "aws_lambda_function" "doc_assemble_ctx" {
   role             = aws_iam_role.doc_pipeline.arn
   filename         = local.doc_stub_zip
   source_code_hash = local.doc_stub_hash
-  handler          = "assembleContext.handler"
+  handler          = "src/handlers/assembleContext.handler"
   runtime          = "nodejs20.x"
   memory_size      = 256
   timeout          = 30
@@ -61,7 +61,7 @@ resource "aws_lambda_function" "doc_generate_slot" {
   role             = aws_iam_role.doc_pipeline.arn
   filename         = local.doc_stub_zip
   source_code_hash = local.doc_stub_hash
-  handler          = "generateSlot.handler"
+  handler          = "src/handlers/generateSlot.handler"
   runtime          = "nodejs20.x"
   memory_size      = 256
   timeout          = 60
@@ -80,7 +80,7 @@ resource "aws_lambda_function" "doc_validate" {
   role             = aws_iam_role.doc_pipeline.arn
   filename         = local.doc_stub_zip
   source_code_hash = local.doc_stub_hash
-  handler          = "validateDocument.handler"
+  handler          = "src/handlers/validateDocument.handler"
   runtime          = "nodejs20.x"
   memory_size      = 256
   timeout          = 15
@@ -99,7 +99,7 @@ resource "aws_lambda_function" "doc_assemble" {
   role             = aws_iam_role.doc_pipeline.arn
   filename         = local.doc_stub_zip
   source_code_hash = local.doc_stub_hash
-  handler          = "assembleDocument.handler"
+  handler          = "src/handlers/assembleDocument.handler"
   runtime          = "nodejs20.x"
   memory_size      = 256
   timeout          = 15
@@ -118,7 +118,7 @@ resource "aws_lambda_function" "doc_persist" {
   role             = aws_iam_role.doc_pipeline.arn
   filename         = local.doc_stub_zip
   source_code_hash = local.doc_stub_hash
-  handler          = "persistAudit.handler"
+  handler          = "src/handlers/persistAudit.handler"
   runtime          = "nodejs20.x"
   memory_size      = 256
   timeout          = 15

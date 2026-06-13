@@ -760,10 +760,26 @@ function SystemDetailContent() {
   // ── Document generation handlers ─────────────────────────────────────────
 
   async function handleGenerate(gapId: string) {
+    // Prevent double-click: if already generating or a generation is active, bail out
+    if (generatingGapId === gapId) return;
+    const existingGen = docGenerations[gapId];
+    if (existingGen?.status === 'QUEUED' || existingGen?.status === 'RUNNING') return;
+
     setGeneratingGapId(gapId);
     try {
       const idempotencyKey = `${systemId}-${gapId}-${Date.now()}`;
       const { generationId } = await api.docPipeline.start(systemId, gapId, idempotencyKey);
+      const now = new Date().toISOString();
+      // Immediately set QUEUED state so button disappears without waiting for first poll
+      setDocGenerations(prev => ({
+        ...prev,
+        [gapId]: {
+          pk: '', sk: '', companyId: '', attempt: 0,
+          generationId, systemId: systemId!, gapId,
+          docType: '' as import('@/lib/types').DocType,
+          status: 'QUEUED', createdAt: now, updatedAt: now,
+        },
+      }));
       setGeneratingGapId(null);
       pollDocGeneration(generationId, gapId);
     } catch (err: unknown) {
