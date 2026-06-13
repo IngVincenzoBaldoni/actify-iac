@@ -43,18 +43,19 @@ const PLANS: Plan[] = [
       { label: 'Document Vault',          value: 'Tutte le categorie + FRIA',              ok: true },
       { label: 'Audit Trail',             value: null,                                     ok: true },
       { label: 'Testo AI Act ufficiale',  value: 'navigabile + link dalla Gap Analysis',   ok: true },
-      { label: 'Supporto prioritario',    value: '1 gg lavorativo + call mensile 30 min', ok: true },
+      { label: 'Supporto prioritario',    value: '1 gg lavorativo + call mensile 1h',     ok: true },
     ],
   },
   {
     tier: 'enterprise', name: 'Enterprise', monthly: 249, tagline: 'Funzionalità avanzate per grandi organizzazioni',
     highlight: false, badge: 'Prossimamente', onHold: true,
     features: [
-      { label: 'Tutto di Professional',    value: null, ok: true },
-      { label: 'AI Inventory illimitato',  value: null, ok: true },
-      { label: 'Vendor Hub / DPA tracker', value: null, ok: true },
-      { label: 'Regulatory Feed',          value: null, ok: true },
-      { label: 'SLA e supporto dedicato',  value: null, ok: true },
+      { label: 'AI Inventory illimitata',   value: 'Illimitata',                      ok: true },
+      { label: 'Document Vault',            value: 'Tutte le categorie + FRIA',       ok: true },
+      { label: 'Testo AI Act ufficiale',    value: 'navigabile + link Gap Analysis',  ok: true },
+      { label: 'Supporto prioritario',      value: '1 gg + call mensile 1h',          ok: true },
+      { label: 'Vendor Hub / DPA tracker',  value: null,                              ok: true },
+      { label: 'Regulatory Feed avanzato',  value: null,                              ok: true },
     ],
   },
 ];
@@ -398,7 +399,7 @@ function RegisterPageInner() {
               <div
                 key={plan.tier}
                 className={`plan-card${plan.highlight ? ' plan-card-premium plan-card-featured' : plan.tier === 'enterprise' ? ' plan-card-enterprise' : ' plan-card-base'}`}
-                style={isOnHold ? { opacity: 0.55, filter: 'grayscale(0.4)', pointerEvents: 'none' } : undefined}
+                style={isOnHold ? { position: 'relative', overflow: 'hidden' } : undefined}
               >
                 {plan.badge && (
                   <div
@@ -425,7 +426,7 @@ function RegisterPageInner() {
                   <span className="plan-price-period">/mese</span>
                 </div>
 
-                {!isOnHold && (annual ? (
+                {annual ? (
                   <div className="plan-price-annual">
                     €{yearlyPrice.toLocaleString('it-IT')}/anno
                     <span className="plan-price-saving"> · risparmia €{saving}</span>
@@ -434,11 +435,11 @@ function RegisterPageInner() {
                   <div className="plan-price-annual">
                     €{yearlyPrice.toLocaleString('it-IT')}/anno con fatturazione annuale
                   </div>
-                ))}
+                )}
 
                 {isOnHold ? (
                   <button className="plan-cta" disabled style={{ background: '#1e293b', color: '#64748b', border: '1px solid #334155', cursor: 'not-allowed' }}>
-                    🔒 In lavorazione — disponibile presto
+                    🔒 Disponibile presto
                   </button>
                 ) : (
                   <button
@@ -449,7 +450,7 @@ function RegisterPageInner() {
                   </button>
                 )}
 
-                <div className="plan-features">
+                <div className="plan-features" style={isOnHold ? { filter: 'blur(4px)', opacity: 0.4, userSelect: 'none', pointerEvents: 'none' } : undefined}>
                   <div className="plan-feat-title">Cosa include</div>
                   {plan.features.map(f => (
                     <div key={f.label} className={`plan-feat-row${!f.ok ? ' plan-feat-off' : ''}`}>
@@ -459,6 +460,28 @@ function RegisterPageInner() {
                     </div>
                   ))}
                 </div>
+
+                {isOnHold && (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 20 }}>
+                    <div style={{
+                      transform: 'rotate(-30deg)',
+                      padding: '11px 52px',
+                      background: 'rgba(15,23,42,0.6)',
+                      border: '2px solid rgba(234,179,8,0.6)',
+                      borderRadius: 6,
+                      color: 'rgba(250,204,21,0.92)',
+                      fontSize: 18,
+                      fontWeight: 900,
+                      letterSpacing: '5px',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                      textShadow: '0 0 24px rgba(234,179,8,0.5)',
+                      boxShadow: '0 4px 40px rgba(234,179,8,0.1)',
+                    }}>
+                      🚧 Work in Progress
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
