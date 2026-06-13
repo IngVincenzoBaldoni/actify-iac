@@ -94,7 +94,9 @@ export async function getDocument(event: APIGatewayProxyEventV2WithJWTAuthorizer
   return { statusCode: 200, body: JSON.stringify({ ...doc, preview_url }) };
 }
 
-// ─── PUT /api/documents/:documentId/finalize ─────────────────────────────────
+// ─── PUT /api/documents/:documentId/finalize  (= Segna come READY) ───────────
+// Sets status to 'final', removes TTL. Does NOT touch compliance_checklist —
+// the PMI must explicitly close the gap via POST /gaps/{id}/close.
 export async function finalizeDocument(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth       = extractAuth(event);
   const documentId = event.pathParameters?.documentId;
@@ -105,37 +107,49 @@ export async function finalizeDocument(event: APIGatewayProxyEventV2WithJWTAutho
     return { statusCode: 404, body: JSON.stringify({ error: 'not_found' }) };
   }
   if (doc.status !== 'draft') {
-    return { statusCode: 400, body: JSON.stringify({ error: 'not_draft', message: 'Solo i documenti bozza possono essere finalizzati' }) };
+    return { statusCode: 400, body: JSON.stringify({ error: 'not_draft', message: 'Solo i documenti bozza possono essere segnati come READY' }) };
   }
 
   const now = new Date().toISOString();
-
-  // Finalize: remove TTL (permanent), update status
-  await dynamo.updateDocument(documentId, {
-    status:       'final',
-    finalized_at: now,
-    ttl:          null,  // removes TTL → document never expires
-  });
-
-  // Update compliance_checklist on the system: article becomes 'present'
-  const system = await dynamo.getSystem(auth.companyId, doc.system_id as string);
-  if (system) {
-    const existingChecklist = (system.compliance_checklist ?? {}) as Record<string, unknown>;
-    const updatedChecklist = {
-      ...existingChecklist,
-      [doc.article as string]: {
-        status:       'present',
-        addressed_at: now.split('T')[0],
-        evidence_note: `Documento Actify: "${doc.title}" (ID: ${documentId})`,
-      },
-    };
-    await dynamo.updateSystem(auth.companyId, doc.system_id as string, {
-      compliance_checklist: updatedChecklist,
-      updated_at:           now,
-    });
-  }
+  await dynamo.updateDocument(documentId, { status: 'final', finalized_at: now, ttl: null });
 
   return { statusCode: 200, body: JSON.stringify({ success: true }) };
+}
+
+// ─── POST /api/documents/:documentId/reupload  (ricarica versione modificata) ─
+// Accepts a base64-encoded PDF, uploads to S3, keeps status as 'draft'.
+export async function reuploadDocument(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth       = extractAuth(event);
+  const documentId = event.pathParameters?.documentId;
+  if (!documentId) return { statusCode: 400, body: JSON.stringify({ error: 'documentId required' }) };
+
+  const doc = await dynamo.getDocument(documentId);
+  if (!doc || doc.company_id !== auth.companyId) {
+    return { statusCode: 404, body: JSON.stringify({ error: 'not_found' }) };
+  }
+
+  const body = JSON.parse(event.body ?? '{}') as { content_base64: string; filename?: string };
+  if (!body.content_base64) return { statusCode: 400, body: JSON.stringify({ error: 'content_base64 required' }) };
+
+  const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+  const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
+  const BUCKET = process.env.DOCUMENTS_BUCKET ?? 'actify-saas-documents';
+
+  const s3Key = (doc.s3_key as string) ?? `documents/${doc.company_id}/${doc.system_id}/${doc.document_type}/${documentId}_v1.pdf`;
+  const buffer = Buffer.from(body.content_base64, 'base64');
+
+  await s3.send(new PutObjectCommand({
+    Bucket:      BUCKET,
+    Key:         s3Key,
+    Body:        buffer,
+    ContentType: 'application/pdf',
+  }));
+
+  // Keep TTL alive: extend by 7 days on re-upload
+  const ttl = Math.floor(Date.now() / 1000) + 7 * 86400;
+  await dynamo.updateDocument(documentId, { s3_key: s3Key, ttl, uploaded_at: new Date().toISOString() });
+
+  return { statusCode: 200, body: JSON.stringify({ success: true, s3_key: s3Key }) };
 }
 
 // ─── GET /api/company/documents ──────────────────────────────────────────────

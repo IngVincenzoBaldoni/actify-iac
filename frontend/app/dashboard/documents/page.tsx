@@ -93,7 +93,9 @@ function DocumentVaultContent() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType]     = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleting, setDeleting]   = useState<string | null>(null);
+  const [readying, setReadying]   = useState<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -168,6 +170,36 @@ function DocumentVaultContent() {
       await load();
     } catch {
       alert('Errore durante la rigenerazione');
+    }
+  }
+
+  async function handleMarkReady(docId: string) {
+    setReadying(docId);
+    try {
+      await api.documents.finalize(docId);
+      await load();
+    } catch {
+      alert('Errore durante la finalizzazione');
+    } finally {
+      setReadying(null);
+    }
+  }
+
+  async function handleReupload(doc: ActifyDocument, file: File) {
+    setUploading(doc.document_id);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await api.documents.reupload(doc.document_id, base64, file.name);
+      await load();
+    } catch {
+      alert('Errore durante il caricamento');
+    } finally {
+      setUploading(null);
     }
   }
 
@@ -297,9 +329,9 @@ function DocumentVaultContent() {
                             <span className="vault-doc-art">{doc.article}</span>
                             <span className="vault-doc-type">{DOC_TYPE_LABELS[doc.document_type] ?? doc.document_type}</span>
                             <span className="vault-doc-date">{fmtDate(doc.generated_at)}</span>
-                            <span className={`badge ${st.cls}`}>{st.label}</span>
+                            <span className={`badge ${st.cls}`}>{doc.status === 'final' ? '✓ READY' : st.label}</span>
                             {doc.finalized_at && (
-                              <span className="vault-finalized-at">Finalizzato {fmtDate(doc.finalized_at)}</span>
+                              <span className="vault-finalized-at">Approvato {fmtDate(doc.finalized_at)}</span>
                             )}
                           </div>
                           {doc.status === 'error' && doc.error_message && (
@@ -310,6 +342,30 @@ function DocumentVaultContent() {
                               <button className="vault-btn vault-btn-open" onClick={() => openDocument(doc)}>
                                 ⬇ Scarica
                               </button>
+                            )}
+                            {doc.status === 'draft' && (
+                              <>
+                                <button
+                                  className="vault-btn vault-btn-open"
+                                  style={{ background: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.4)', color: '#818cf8' }}
+                                  disabled={readying === doc.document_id}
+                                  onClick={() => handleMarkReady(doc.document_id)}>
+                                  {readying === doc.document_id ? '…' : '✓ Segna READY'}
+                                </button>
+                                <label
+                                  className="vault-btn vault-btn-regen"
+                                  style={{ cursor: uploading === doc.document_id ? 'wait' : 'pointer' }}
+                                  title="Ricarica versione modificata (PDF)">
+                                  {uploading === doc.document_id ? '…' : '↑ Ricarica'}
+                                  <input
+                                    type="file"
+                                    accept=".pdf"
+                                    style={{ display: 'none' }}
+                                    disabled={!!uploading}
+                                    onChange={e => { const f = e.target.files?.[0]; if (f) handleReupload(doc, f); e.target.value = ''; }}
+                                  />
+                                </label>
+                              </>
                             )}
                             {doc.status !== 'generating' && (
                               <button className="vault-btn vault-btn-regen" onClick={() => handleRegenerate(doc)}>

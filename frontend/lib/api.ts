@@ -112,6 +112,10 @@ export const api = {
       request<Record<string, unknown>>('GET', `/api/documents/${documentId}`),
     finalize: (documentId: string) =>
       request<{ success: boolean }>('PUT', `/api/documents/${documentId}/finalize`, {}),
+    reupload: (documentId: string, content_base64: string, filename: string) =>
+      request<{ success: boolean; s3_key: string }>(
+        'POST', `/api/documents/${documentId}/reupload`, { content_base64, filename }
+      ),
     delete: (documentId: string) =>
       request<{ success: boolean }>('DELETE', `/api/documents/${documentId}`),
     regenerate: (documentId: string) =>

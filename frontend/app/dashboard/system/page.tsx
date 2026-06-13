@@ -19,10 +19,10 @@ const AUTO_LABELS: Record<string, string> = {
 
 // ─── Document Preview Modal ───────────────────────────────────────────────────
 
-function DocumentPreviewModal({ doc, onFinalize, onClose }: {
-  doc:        ActifyDocument;
-  onFinalize: () => void;
-  onClose:    () => void;
+function DocumentPreviewModal({ doc, onMarkReady, onClose }: {
+  doc:         ActifyDocument;
+  onMarkReady: () => void;
+  onClose:     () => void;
 }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -38,15 +38,16 @@ function DocumentPreviewModal({ doc, onFinalize, onClose }: {
         <div className="modal-body">
           <iframe src={doc.preview_url} className="pdf-preview-frame" title="Anteprima documento" />
           <p className="modal-disclaimer">
-            ⚠ Verifica il documento prima di salvarlo. Dopo la finalizzazione il gap verrà marcato come risolto.
+            ⚠ Verifica il documento. Puoi scaricarlo, modificarlo e ricaricarlo nel Document Vault.
+            Quando sei pronto, segnalo come READY — solo allora potrai chiudere il gap.
           </p>
         </div>
         <div className="modal-footer">
           <a href={doc.preview_url} target="_blank" rel="noopener noreferrer" className="btn-doc-download">
             ⬇ Scarica PDF
           </a>
-          <button className="btn-doc-finalize" onClick={onFinalize}>
-            ✓ Salva nel Vault — segna gap come risolto
+          <button className="btn-doc-finalize" onClick={onMarkReady}>
+            ✓ Segna come READY
           </button>
         </div>
       </div>
@@ -64,7 +65,7 @@ const GEN_STATUS_LABELS: Record<string, string> = {
   FAILED:           'Generazione fallita',
 };
 
-function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, onRegenerate, onOpenPreview, onSanctionUpdate }: {
+function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, onRegenerate, onOpenPreview, onSanctionUpdate, onCloseGap }: {
   gap:                ComplianceGap;
   doc?:               ActifyDocument;
   gen?:               DocGeneration;
@@ -74,6 +75,7 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
   onRegenerate:       (docId: string) => void;
   onOpenPreview:      (doc: ActifyDocument) => void;
   onSanctionUpdate?:  () => void;
+  onCloseGap?:        (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
 }) {
   const typeLabel = AUTO_LABELS[gap.automation_type!] ?? (gap.automation_type ?? '').replace(/_/g, ' ');
 
@@ -148,27 +150,34 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
         <div className="gap-gen-type">{typeLabel}</div>
         <div className="gap-gen-doc-row">
           <span className="gap-gen-doc-title">📄 {doc.title}</span>
-          <span className="badge-draft">Bozza</span>
+          <span className="badge-draft">Bozza nel Vault</span>
         </div>
+        <p className="gap-gen-hint">
+          Rivedi il documento, scaricalo e modificalo se necessario.
+          Quando è pronto, segnalo come READY — solo allora potrai chiudere il gap.
+        </p>
         <div className="gap-gen-actions">
           <button className="btn-doc-preview" onClick={() => onOpenPreview(doc)}>👁 Anteprima</button>
-          <button className="btn-doc-save" onClick={() => onFinalize(doc.document_id)}>✓ Salva nel Vault</button>
+          {doc.preview_url && (
+            <a href={doc.preview_url} target="_blank" rel="noopener noreferrer" className="btn-doc-regen">⬇ Scarica</a>
+          )}
+          <button className="btn-doc-save" onClick={() => onFinalize(doc.document_id)}>✓ Segna come READY</button>
           <button className="btn-doc-regen" onClick={() => onRegenerate(doc.document_id)}>↻ Rigenera</button>
         </div>
       </div>
     );
   }
 
-  // final
+  // final = READY
   return (
     <div className="gap-gen-block gap-gen-final">
       <div className="gap-gen-done-row">
-        <span className="gap-gen-done-badge">✓ Documento nel Vault</span>
+        <span className="gap-gen-done-badge">✓ Documento READY</span>
         <span className="gap-gen-doc-title">{doc.title}</span>
       </div>
-      <div className="gap-gen-actions">
+      <div className="gap-gen-actions" style={{ marginBottom: 12 }}>
         {doc.preview_url && (
-          <a href={doc.preview_url} target="_blank" rel="noopener noreferrer" className="btn-doc-open">📄 Apri</a>
+          <a href={doc.preview_url} target="_blank" rel="noopener noreferrer" className="btn-doc-open">⬇ Scarica</a>
         )}
         <button className="btn-doc-regen" onClick={() => onRegenerate(doc.document_id)}>↻ Rigenera</button>
         {onSanctionUpdate && (
@@ -177,6 +186,18 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
           </button>
         )}
       </div>
+      {onCloseGap && (
+        <div className="gap-gen-close-gap">
+          <p className="gap-gen-close-gap-hint">
+            Il documento è approvato. Dichiara che il requisito è soddisfatto per chiudere il gap e aggiornare la stima sanzionatoria.
+          </p>
+          <button
+            className="btn-hybrid-close"
+            onClick={() => onCloseGap(gap.gap_id)}>
+            ✓ Segna gap come conforme
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -505,6 +526,7 @@ function ComplianceChecklist({
                   onRegenerate={onRegenerate}
                   onOpenPreview={(d: ActifyDocument) => setPreviewDoc(d)}
                   onSanctionUpdate={onSanctionUpdate}
+                  onCloseGap={onCloseGap}
                 />
               ) : (
                 <div className="cl-manual-card">
@@ -534,7 +556,7 @@ function ComplianceChecklist({
         <DocumentPreviewModal
           doc={previewDoc}
           onClose={() => setPreviewDoc(null)}
-          onFinalize={async () => {
+          onMarkReady={async () => {
             await onFinalize(previewDoc.document_id);
             setPreviewDoc(null);
           }}

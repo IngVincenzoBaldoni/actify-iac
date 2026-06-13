@@ -11,7 +11,7 @@ import {
   triggerCheck, getLatestCheck, listChecks, executeCheckAsync,
 } from './routes/complianceCheck';
 import {
-  generateDocument, getDocument, finalizeDocument,
+  generateDocument, getDocument, finalizeDocument, reuploadDocument,
   listCompanyDocuments, listSystemDocuments,
   deleteDocument, regenerateDocument, closeGap,
 } from './routes/remediation';
@@ -195,6 +195,10 @@ export const handler = async (
     // /api/documents/{documentId}/regenerate
     if (method === 'POST' && /^\/api\/documents\/[^/]+\/regenerate$/.test(path))
       return { ...await regenerateDocument(ev), headers: CORS };
+
+    // /api/documents/{documentId}/reupload
+    if (method === 'POST' && /^\/api\/documents\/[^/]+\/reupload$/.test(path))
+      return { ...await reuploadDocument(ev), headers: CORS };
 
     // ── Partner ────────────────────────────────────────────────────────────
     if (method === 'GET'  && path === '/api/partner/me')
