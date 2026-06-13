@@ -83,6 +83,8 @@ resource "aws_iam_policy" "doc_pipeline" {
           "arn:aws:bedrock:${var.aws_region}::foundation-model/eu.amazon.nova-lite-v1:0",
           "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-pro-v1:0",
           "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-lite-v1:0",
+          "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-pro-v1:0",
+          "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-lite-v1:0",
         ]
       },
       # Lambda invoke — PDF generator
