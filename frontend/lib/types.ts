@@ -95,7 +95,8 @@ export type DocType =
   | 'MONITORING_PLAN'
   | 'AI_POLICY'
   | 'TECH_DOC'
-  | 'CONFORMITY_DECL';
+  | 'CONFORMITY_DECL'
+  | 'FRIA';
 
 export type DocGenStatus =
   | 'QUEUED'

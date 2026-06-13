@@ -464,10 +464,234 @@ export const CONFORMITY_DECL_V1: DocSchema = {
   ],
 };
 
+// ─── FRIA — Art. 27 (Fundamental Rights Impact Assessment) ───────────────────
+// Usa sempre Nova Pro: documento ad alta criticità legale, max dettaglio richiesto.
+export const FRIA_V1: DocSchema = {
+  docType:        'FRIA',
+  version:        '1.0.0',
+  status:         'ACTIVE',
+  modelTier:      'standard',
+  modelId:        'eu.amazon.nova-pro-v1:0',
+  outputLanguage: 'it',
+  createdAt:      NOW,
+  closingActions: [{
+    gapTypes: ['risk_assessment', '*'],
+    actions: [
+      "Far revisionare e approvare la FRIA dal responsabile compliance, dal DPO (se nominato) o da un consulente legale specializzato prima di qualsiasi utilizzo del sistema AI.",
+      "Coinvolgere, dove possibile, rappresentanti delle categorie di persone interessate (dipendenti, utenti, soggetti vulnerabili) nella verifica della valutazione dei rischi.",
+      "Comunicare la FRIA alle funzioni aziendali coinvolte nell'utilizzo del sistema (HR, Legal, IT, direzione) e al Responsabile della Supervisione AI nominato.",
+      "Verificare con un consulente legale se sussiste l'obbligo di notifica all'autorità di vigilanza del mercato competente (obbligatorio per enti pubblici e fornitori di servizi pubblici essenziali che usano sistemi AI Allegato III categorie 1, 2, 3, 4, 5(b), 5(d), 6, 7, 8).",
+      "Impostare un calendario di revisione periodica della FRIA (minimo annuale) e definire i trigger per revisione anticipata: incidenti, modifiche sostanziali al sistema, nuovi contesti d'uso, aggiornamenti normativi.",
+      "Conservare la FRIA per tutta la durata di utilizzo del sistema AI + 10 anni. Caricare copia firmata in Actify per chiudere il gap.",
+    ],
+  }],
+  sections: [
+    {
+      sectionId: 'intro',
+      title:     'Identificazione e Ambito della Valutazione',
+      order:     1,
+      kind:      'FIXED',
+      template:  "La presente Valutazione dell'Impatto sui Diritti Fondamentali (FRIA — Fundamental Rights Impact Assessment) è condotta da {{company.name}} in qualità di Deployer ai sensi dell'Art. 27 del Regolamento UE 2024/1689 (AI Act), in relazione al sistema di intelligenza artificiale {{system.name}} (fornitore: {{system.vendor}}).\n\nLa FRIA deve essere eseguita prima della messa in uso del sistema AI ad alto rischio e aggiornata in caso di modifiche sostanziali al sistema o al contesto di utilizzo. Il presente documento costituisce una bozza operativa da revisionare, completare e approvare prima dell'uso ufficiale.",
+      bindings:  ['company.name', 'system.name', 'system.vendor'],
+    },
+    {
+      sectionId: 'process_use',
+      title:     'Descrizione del Processo e Modalità di Utilizzo',
+      order:     2,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:          'process_use',
+        instruction:     "Descrivi con precisione: (1) il processo aziendale specifico in cui verrà utilizzato il sistema AI, incluse le decisioni che vengono prese con o tramite il sistema (es. selezione del personale, concessione di credito, erogazione di servizi, valutazione delle prestazioni, accesso a servizi pubblici); (2) se il sistema AI supporta una decisione umana, raccomanda un'azione, o determina autonomamente un esito — sii esplicito su questo punto; (3) la frequenza di utilizzo prevista (es. quotidiana, per ogni richiesta di servizio, mensile) e il periodo di impiego del sistema; (4) le categorie di dati personali elaborati dal sistema (es. dati identificativi, dati comportamentali, dati biometrici, dati relativi a vulnerabilità, dati economici). Adatta la descrizione al settore e alla dimensione dell'azienda.",
+        maxWords:        350,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:            'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['business_process', 'decision_type', 'frequency_and_period', 'data_categories'],
+          properties: {
+            business_process:     { type: 'string', description: 'Descrizione del processo aziendale specifico in cui il sistema AI è impiegato' },
+            decision_type:        { type: 'string', enum: ['supporto decisionale', 'raccomandazione', 'decisione autonoma', 'classificazione', 'altro'], description: 'Tipo di contributo del sistema AI al processo decisionale' },
+            frequency_and_period: { type: 'string', description: 'Frequenza di utilizzo e periodo previsto di impiego' },
+            data_categories:      { type: 'array', items: { type: 'string' }, description: 'Categorie di dati personali trattati (almeno 2)' },
+          },
+        },
+      },
+    },
+    {
+      sectionId: 'affected_persons',
+      title:     'Categorie di Persone Interessate e Gruppi Vulnerabili',
+      order:     3,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:          'affected_persons',
+        instruction:     "Identifica e descrivi sistematicamente tutte le persone fisiche che potrebbero essere influenzate dal sistema AI. Per ciascuna categoria: (1) descrivi la categoria (es. candidati a posizioni lavorative, clienti richiedenti credito, utenti di un servizio pubblico, pazienti, studenti); (2) fornisci una stima indicativa della scala di impatto (es. 'decine di persone/anno', 'potenzialmente tutta la clientela', 'popolazione di una specifica area geografica'); (3) specifica se l'impatto è diretto (il sistema prende/informa decisioni su di loro) o indiretto. Poi analizza i GRUPPI VULNERABILI tra gli interessati: esamina esplicitamente — anche se la conclusione è 'non presente nel contesto' — ciascuno dei seguenti: (a) minori (sotto i 18 anni); (b) anziani; (c) persone con disabilità fisica o cognitiva; (d) minoranze etniche, religiose o linguistiche; (e) migranti o richiedenti asilo; (f) persone economicamente svantaggiate o con basso livello di alfabetizzazione digitale; (g) lavoratori in posizione subordinata o precaria. Infine: specifica se il sistema tratta dati di categorie speciali (dati sulla salute, etnia, orientamento sessuale, opinioni politiche, biometria — rilevante per Art. 9 GDPR).",
+        maxWords:        400,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:            'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['affected_categories', 'vulnerable_groups', 'special_data_categories'],
+          properties: {
+            affected_categories: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['category', 'estimated_scale', 'impact_nature'],
+                properties: {
+                  category:        { type: 'string', description: 'Nome della categoria di persone interessate' },
+                  estimated_scale: { type: 'string', description: 'Stima indicativa della portata (es: "circa 50 persone/anno", "potenzialmente tutta la clientela")' },
+                  impact_nature:   { type: 'string', enum: ['diretto', 'indiretto', 'diretto e indiretto'] },
+                },
+              },
+              description: 'Almeno 1 categoria identificata',
+            },
+            vulnerable_groups: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['group', 'present_in_context', 'specific_risks'],
+                properties: {
+                  group:              { type: 'string', description: 'Nome del gruppo vulnerabile analizzato' },
+                  present_in_context: { type: 'boolean', description: 'true se questo gruppo è presente tra gli interessati nel contesto specifico' },
+                  specific_risks:     { type: 'string', description: 'Se presente: rischi specifici per questo gruppo. Se assente: motivazione breve.' },
+                },
+              },
+              description: 'Analisi di tutti i 7 gruppi vulnerabili elencati nell\'istruzione — anche quelli non presenti nel contesto',
+            },
+            special_data_categories: { type: 'boolean', description: 'true se il sistema elabora dati di categorie speciali ai sensi dell\'Art. 9 GDPR' },
+          },
+        },
+      },
+    },
+    {
+      sectionId: 'rights_risks',
+      title:     "Valutazione dei Rischi per i Diritti Fondamentali",
+      order:     4,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:          'rights_risks',
+        instruction:     "Conduci una valutazione strutturata dei rischi per i diritti fondamentali garantiti dalla Carta dei Diritti Fondamentali dell'UE. Per ciascun diritto analizzato, valuta: probabilità che il rischio si materializzi nel contesto specifico (alta/media/bassa), gravità dell'impatto potenziale (alta/media/bassa), e descrizione concreta del rischio. ANALIZZA OBBLIGATORIAMENTE tutti i seguenti diritti fondamentali in relazione al sistema AI e al suo contesto d'uso: (1) 'Non discriminazione e parità di trattamento' — rischi di bias algoritmici, discriminazione per genere, etnia, età, disabilità, orientamento sessuale nelle decisioni automatizzate o semi-automatizzate; (2) 'Protezione dei dati personali e riservatezza' — rischi di profilazione non autorizzata, accesso illecito, conservazione eccessiva, trasferimento a terzi senza base giuridica; (3) 'Dignità umana' — rischi di trattamento degradante, etichettatura automatica stigmatizzante, riduzione della persona a dati; (4) 'Accesso a servizi essenziali e libertà' — rischi di esclusione da servizi di lavoro, credito, assistenza, libertà di movimento o espressione causata da decisioni algoritmiche; (5) 'Diritto a un ricorso effettivo e alla revisione delle decisioni' — rischi che le persone interessate non possano contestare o comprendere una decisione automatizzata che le riguarda; (6) Diritti specifici al settore — se pertinente: diritti del minore, diritti dei lavoratori, diritto all'istruzione, presunzione di innocenza. Per i rischi con probabilità ALTA o gravità ALTA: espandi la descrizione con l'impatto concreto nel contesto aziendale specifico.",
+        maxWords:        500,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:            'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['risk_assessments', 'overall_risk_level', 'highest_risk_summary'],
+          properties: {
+            risk_assessments: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['fundamental_right', 'probability', 'severity', 'risk_description'],
+                properties: {
+                  fundamental_right: { type: 'string', description: 'Nome del diritto fondamentale (es: "Non discriminazione", "Protezione dei dati personali", "Dignità umana")' },
+                  probability:       { type: 'string', enum: ['alta', 'media', 'bassa', 'non applicabile'] },
+                  severity:          { type: 'string', enum: ['alta', 'media', 'bassa', 'non applicabile'] },
+                  risk_description:  { type: 'string', description: 'Descrizione concreta del rischio nel contesto specifico — almeno 1 frase per ogni diritto analizzato' },
+                },
+              },
+              description: 'Minimo 5 diritti analizzati, uno per ciascuno dei diritti elencati nell\'istruzione',
+            },
+            overall_risk_level: { type: 'string', enum: ['alto', 'medio', 'basso'], description: 'Livello di rischio complessivo risultante dall\'analisi' },
+            highest_risk_summary: { type: 'string', description: 'Sintesi narrativa dei rischi più elevati identificati (max 2 frasi)' },
+          },
+        },
+      },
+    },
+    {
+      sectionId: 'oversight_measures',
+      title:     "Misure di Supervisione Umana (Art. 26 AI Act)",
+      order:     5,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:          'oversight_measures',
+        instruction:     "Descrivi le misure di supervisione umana implementate per questo sistema AI, in conformità alle istruzioni d'uso fornite dal fornitore (Art. 26 AI Act): (1) meccanismi concreti di supervisione: chi verifica gli output del sistema, con quale procedura e frequenza, prima che una decisione impatti una persona — sii specifico (es. 'il responsabile HR rivede ogni output prima di comunicarlo al candidato'); (2) capacità di intervento e override umano: come un operatore può ignorare, modificare o annullare la raccomandazione/decisione del sistema AI, e in quali circostanze è obbligatorio farlo; (3) formazione e qualificazione richiesta agli operatori che supervisionano il sistema — specifica il livello minimo; (4) misure specifiche per i casi che coinvolgono i gruppi vulnerabili identificati (es. revisione addizionale obbligatoria, doppio controllo); (5) trasparenza verso gli interessati: come viene comunicato l'uso del sistema AI alle persone coinvolte e come possono richiedere un'interazione umana.",
+        maxWords:        350,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:            'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['supervision_mechanisms', 'override_procedure', 'operator_training', 'vulnerable_groups_measures', 'transparency_to_subjects'],
+          properties: {
+            supervision_mechanisms:    { type: 'array', items: { type: 'string' }, description: 'Almeno 2 meccanismi concreti di supervisione umana' },
+            override_procedure:        { type: 'string', description: 'Come un operatore può annullare o modificare la decisione AI' },
+            operator_training:         { type: 'string', description: 'Formazione minima richiesta per gli operatori del sistema' },
+            vulnerable_groups_measures: { type: 'string', description: 'Misure aggiuntive specifiche per soggetti vulnerabili (o "N/A — nessun gruppo vulnerabile identificato")' },
+            transparency_to_subjects:  { type: 'string', description: 'Come le persone interessate vengono informate dell\'utilizzo del sistema AI' },
+          },
+        },
+      },
+    },
+    {
+      sectionId: 'risk_mitigation',
+      title:     "Misure di Mitigazione, Governance Interna e Meccanismo di Reclamo",
+      order:     6,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:          'risk_mitigation',
+        instruction:     "Descrivi le misure di risposta ai rischi e la governance in conformità all'Art. 27(2)(e) AI Act: (1) per ciascun rischio ad alta o media probabilità/gravità identificato nella sezione precedente, definisci: la misura concreta di mitigazione (non generica — azione specifica adatta alla PMI), il ruolo aziendale responsabile dell'attuazione, e un timeframe realistico; (2) meccanismo di reclamo accessibile alle persone interessate (Art. 26(4)): specifica il canale di accesso (es. email dedicata, modulo web, sportello fisico), il ruolo che gestisce i reclami, e il tempo di risposta garantito; (3) struttura di governance interna per la FRIA: chi è responsabile dell'aggiornamento della valutazione, con quale frequenza viene rivista, chi approva le versioni aggiornate; (4) coordinamento con la DPIA GDPR: indica se è stata o sarà condotta una Valutazione d'Impatto sulla Protezione dei Dati (DPIA) separata o congiunta con questa FRIA — la FRIA non sostituisce la DPIA per trattamenti ad alto rischio GDPR. Max 400 parole.",
+        maxWords:        400,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:            'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['mitigation_measures', 'complaint_mechanism', 'governance_structure', 'gdpr_coordination'],
+          properties: {
+            mitigation_measures: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['risk_addressed', 'measure', 'responsible_role', 'timeframe'],
+                properties: {
+                  risk_addressed:   { type: 'string', description: 'Diritto fondamentale o rischio a cui si risponde' },
+                  measure:          { type: 'string', description: 'Misura concreta di mitigazione — specifica e adatta alla PMI' },
+                  responsible_role: { type: 'string', description: 'Ruolo aziendale responsabile (non nome proprio)' },
+                  timeframe:        { type: 'string', description: 'Es: "entro 30 giorni dall\'adozione della FRIA", "prima della messa in uso"' },
+                },
+              },
+              description: 'Almeno 1 misura per ogni rischio ad alta o media probabilità/gravità',
+            },
+            complaint_mechanism: {
+              type: 'object',
+              required: ['channel', 'handling_role', 'response_time'],
+              properties: {
+                channel:        { type: 'string', description: 'Canale di accesso al reclamo (es: "email: reclami@[azienda].it — completare con il recapito reale")' },
+                handling_role:  { type: 'string', description: 'Ruolo aziendale che gestisce i reclami (es: Responsabile Compliance, DPO, Responsabile HR)' },
+                response_time:  { type: 'string', description: 'Es: "entro 30 giorni lavorativi dalla ricezione del reclamo"' },
+              },
+            },
+            governance_structure: { type: 'string', description: 'Chi aggiorna la FRIA, con quale frequenza, chi firma la versione aggiornata' },
+            gdpr_coordination:    { type: 'string', description: 'Relazione tra questa FRIA e la DPIA GDPR (se il sistema tratta dati personali)' },
+          },
+        },
+      },
+    },
+    {
+      sectionId: 'normative_references',
+      title:     'Riferimenti Normativi',
+      order:     90,
+      kind:      'FIXED',
+    },
+    {
+      sectionId: 'required_actions',
+      title:     'Azioni Richieste per Rendere Efficace Questo Documento',
+      order:     91,
+      kind:      'FIXED',
+    },
+    {
+      sectionId: 'disclaimer',
+      title:     'Avvertenza Legale',
+      order:     99,
+      kind:      'FIXED',
+    },
+  ],
+};
+
 export const ALL_SCHEMAS = [
   DISCLOSURE_NOTICE_V1,
   MONITORING_PLAN_V1,
   AI_POLICY_V1,
   TECH_DOC_V1,
   CONFORMITY_DECL_V1,
+  FRIA_V1,
 ];

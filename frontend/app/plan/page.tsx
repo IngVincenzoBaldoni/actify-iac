@@ -25,34 +25,39 @@ interface Plan {
 const PLANS: Plan[] = [
   {
     tier: 'base',
-    name: 'Base',
-    monthly: 99,
+    name: 'Starter',
+    monthly: 79,
     tagline: 'Per chi inizia il percorso di compliance',
     color: 'plan-card-base',
     badge: null,
-    toolLimit: 5,
+    toolLimit: 10,
     features: [
-      { label: 'AI Inventory',          value: 'Fino a 5 tool', ok: true },
-      { label: 'Gap Analysis',          value: null,            ok: true },
-      { label: 'Fine Board Estimation', value: null,            ok: true },
-      { label: 'AI Literacy Tracker',   value: null,            ok: true },
-      { label: 'Audit Trail',           value: null,            ok: true },
+      { label: 'AI Inventory',           value: 'Fino a 10 tool',             ok: true },
+      { label: 'Gap Analysis',           value: null,                          ok: true },
+      { label: 'Fine Board Estimation',  value: null,                          ok: true },
+      { label: 'AI Literacy Tracker',    value: null,                          ok: true },
+      { label: 'Document Vault',         value: '5 categorie di documenti',    ok: true },
+      { label: 'Audit Trail',            value: null,                          ok: true },
+      { label: 'Supporto email standard',value: 'Risposta entro 3 gg lavorativi', ok: true },
     ],
   },
   {
     tier: 'premium',
-    name: 'Premium',
+    name: 'Professional',
     monthly: 149,
     tagline: 'Per aziende che vogliono compliance attiva',
     color: 'plan-card-premium',
     badge: 'Più popolare',
-    toolLimit: 20,
+    toolLimit: Infinity,
     features: [
-      { label: 'AI Inventory',          value: 'Fino a 20 tool', ok: true },
-      { label: 'Gap Analysis',          value: null,             ok: true },
-      { label: 'Fine Board Estimation', value: null,             ok: true },
-      { label: 'AI Literacy Tracker',   value: null,             ok: true },
-      { label: 'Audit Trail',           value: null,             ok: true },
+      { label: 'AI Inventory',           value: 'Illimitata',                              ok: true },
+      { label: 'Gap Analysis',           value: null,                                      ok: true },
+      { label: 'Fine Board Estimation',  value: null,                                      ok: true },
+      { label: 'AI Literacy Tracker',    value: null,                                      ok: true },
+      { label: 'Document Vault',         value: 'Tutte le categorie + FRIA',               ok: true },
+      { label: 'Audit Trail',            value: null,                                      ok: true },
+      { label: 'Testo AI Act ufficiale', value: 'navigabile + link dalla Gap Analysis',    ok: true },
+      { label: 'Supporto prioritario',   value: '1 gg lavorativo + call mensile 30 min',  ok: true },
     ],
   },
   {
@@ -65,7 +70,7 @@ const PLANS: Plan[] = [
     toolLimit: Infinity,
     onHold: true,
     features: [
-      { label: 'Tutto di Premium',         value: null, ok: true },
+      { label: 'Tutto di Professional',    value: null, ok: true },
       { label: 'AI Inventory illimitato',  value: null, ok: true },
       { label: 'Vendor Hub / DPA tracker', value: null, ok: true },
       { label: 'Regulatory Feed',          value: null, ok: true },
@@ -232,6 +237,16 @@ function PlanContent() {
       </div>
 
       {error && <div className="plan-error">{error}</div>}
+
+      <div style={{ maxWidth: 780, margin: '24px auto 8px', padding: '14px 20px', background: 'rgba(100,116,139,.06)', border: '1px solid rgba(100,116,139,.15)', borderRadius: 10, fontSize: 12, color: 'var(--muted)', lineHeight: 1.7 }}>
+        <strong style={{ color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Nota sul supporto — tutti i piani</strong>
+        Il supporto Actify è un <strong>supporto tecnico sull'utilizzo della piattaforma</strong>: risponde a domande su funzionalità, configurazione e utilizzo degli strumenti. Non include consulenza normativa, pareri legali né interpretazioni vincolanti del Reg. UE 2024/1689.
+        Per questioni di natura legale o normativa si raccomanda di rivolgersi a un professionista qualificato in materia di compliance AI.
+        <span style={{ display: 'block', marginTop: 6 }}>
+          <strong>Starter:</strong> supporto via email, risposta entro 3 giorni lavorativi, senza garanzia di SLA. &nbsp;|&nbsp;
+          <strong>Professional:</strong> email prioritaria con risposta entro 1 giorno lavorativo + 1 call di 30 minuti al mese con il team Actify.
+        </span>
+      </div>
 
       <div className="plan-footer-note">
         Nessuna carta di credito richiesta per iniziare. Puoi cambiare o disdire il piano in qualsiasi momento, senza penali.

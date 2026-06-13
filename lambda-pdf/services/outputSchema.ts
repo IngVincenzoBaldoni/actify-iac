@@ -60,13 +60,6 @@ export const reportOutputSchema = z.object({
 
   compliance_gaps: z.array(z.string()).min(1),
 
-  score_breakdown: z.object({
-    governance: z.number().int().min(0).max(10),
-    transparency: z.number().int().min(0).max(10),
-    documentation: z.number().int().min(0).max(10),
-    monitoring: z.number().int().min(0).max(10),
-  }),
-
   priority_actions: z
     .array(
       z.object({
@@ -135,16 +128,6 @@ export const OUTPUT_SCHEMA_TEMPLATE = {
   compliance_gaps: [
     "<gap identificato — max 10 parole — es: 'Assenza inventario sistemi AI documentato', 'Nessuna policy interna utilizzo AI per dipendenti', 'Trasparenza verso utenti finali non verificabile', 'Human oversight non formalizzato per sistemi decisionali', 'Documentazione tecnica sistemi AI assente o incompleta', 'Processo gestione incidenti AI non definito', 'Formazione dipendenti su utilizzo AI assente'>",
   ],
-  score_breakdown: {
-    governance:
-      "<0-10 — readiness governance AI: 0=nessuna struttura, 10=policy, ownership e processi completamente definiti>",
-    transparency:
-      "<0-10 — readiness trasparenza: 0=nessun disclosure AI, 10=tutti i sistemi hanno AI notice implementato>",
-    documentation:
-      "<0-10 — readiness documentazione: 0=nessun documento tecnico, 10=documentazione completa per tutti i sistemi>",
-    monitoring:
-      "<0-10 — readiness monitoraggio: 0=nessun log o monitoring, 10=logging attivo e revisione periodica formalizzata>",
-  },
   priority_actions: [
     {
       priority: "immediate | short_term | medium_term",

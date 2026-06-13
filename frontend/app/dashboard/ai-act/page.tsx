@@ -26,12 +26,12 @@ export default function DashboardAiActPage() {
       <div style={{ maxWidth: 520, textAlign: 'center' }}>
         <div style={{ fontSize: 56, marginBottom: 20 }}>⚖️</div>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>
-          Testo AI Act — Feature Premium
+          Testo AI Act — Feature Professional
         </h2>
         <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 28 }}>
           Accedi al testo ufficiale del Regolamento UE 2024/1689, navigabile articolo per articolo
           e collegato direttamente alla Gap Analysis dei tuoi sistemi AI.
-          Disponibile per gli account <strong style={{ color: 'var(--text2)' }}>Premium</strong> e <strong style={{ color: 'var(--text2)' }}>Enterprise</strong>.
+          Disponibile per gli account <strong style={{ color: 'var(--text2)' }}>Professional</strong> e <strong style={{ color: 'var(--text2)' }}>Enterprise</strong>.
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 32, textAlign: 'left' }}>
@@ -52,7 +52,7 @@ export default function DashboardAiActPage() {
           <a
             href="/dashboard/settings"
             style={{ display: 'inline-block', padding: '12px 32px', background: 'var(--green)', color: '#fff', borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: 'none', cursor: 'pointer' }}>
-            Passa a Premium — €149/mese
+            Passa a Professional — €149/mese
           </a>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>Upgrade immediato · Nessun vincolo</span>
         </div>

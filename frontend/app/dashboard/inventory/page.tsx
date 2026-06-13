@@ -81,10 +81,10 @@ const OVERSIGHT_LABEL: Record<string, string> = {
 };
 
 const PLAN_LIMITS: Record<string, number> = {
-  trial: 2, base: 5, premium: 20, enterprise: Infinity,
+  trial: 2, base: 10, premium: Infinity, enterprise: Infinity,
 };
 const PLAN_LABELS: Record<string, string> = {
-  trial: 'Trial', base: 'Base', premium: 'Premium', enterprise: 'Enterprise',
+  trial: 'Trial', base: 'Starter', premium: 'Professional', enterprise: 'Enterprise',
 };
 
 export default function InventoryPage() {

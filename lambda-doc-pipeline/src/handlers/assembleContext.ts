@@ -114,6 +114,14 @@ export const handler = async (event: AssembleContextInput): Promise<GenerationCo
 
   const articleNums = extractArticleNumbers(articleTexts);
   const allowedRefs = buildAllowedRefs(articleNums, true);
+
+  // FRIA (Art. 27) references the EU Charter of Fundamental Rights — add those articles
+  if (docType === 'FRIA') {
+    [1, 6, 7, 8, 14, 21, 23, 24, 26, 31, 41, 47, 48].forEach(n => {
+      allowedRefs.push(`Art. ${n}`, `Art ${n}`, `Articolo ${n}`, `articolo ${n}`);
+    });
+    allowedRefs.push('Carta dei Diritti Fondamentali', 'Carta UE', 'Carta di Nizza', 'GDPR', 'Reg. (UE) 2016/679', 'Regolamento (UE) 2016/679');
+  }
   const articleContext = formatArticleTextsForPrompt(articleTexts);
 
   // 5. Build context data for template resolution

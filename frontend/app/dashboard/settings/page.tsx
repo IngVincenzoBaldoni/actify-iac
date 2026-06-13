@@ -230,18 +230,20 @@ export default function SettingsPage() {
             <div className="rev-row"><span className="rk">Sede Legale</span><span className="rv">{company.sede_legale as string}</span></div>
             <div className="rev-row"><span className="rk">Ruolo AI Act</span><span className="rv">{company.ai_role as string}</span></div>
             <div className="rev-row"><span className="rk">Piano attivo</span><span className="rv">
-              <span className={`tier-badge tier-${company.subscription_tier}`}>{String(company.subscription_tier).toUpperCase()}</span>
+              <span className={`tier-badge tier-${company.subscription_tier}`}>
+                {({ trial: 'TRIAL', base: 'STARTER', premium: 'PROFESSIONAL', enterprise: 'ENTERPRISE' } as Record<string, string>)[String(company.subscription_tier)] ?? String(company.subscription_tier).toUpperCase()}
+              </span>
             </span></div>
           </div>
 
           <div className="plan-settings-card">
             <div className="plan-settings-left">
               <div className="plan-settings-name">
-                Piano {String(company.subscription_tier ?? 'trial').charAt(0).toUpperCase() + String(company.subscription_tier ?? 'trial').slice(1)}
+                Piano {({ trial: 'Trial', base: 'Starter', premium: 'Professional', enterprise: 'Enterprise' } as Record<string, string>)[String(company.subscription_tier ?? 'trial')] ?? String(company.subscription_tier ?? 'trial')}
               </div>
               <div className="plan-settings-sub">
-                {company.subscription_tier === 'base' && 'Fino a 5 tool AI · Document Vault limitato'}
-                {company.subscription_tier === 'premium' && 'Fino a 20 tool AI · Tutte le funzionalità core'}
+                {company.subscription_tier === 'base' && 'Fino a 10 tool AI · Document Vault (5 categorie) · Supporto email standard'}
+                {company.subscription_tier === 'premium' && 'AI Inventory illimitata · Document Vault + FRIA · Testo AI Act · Supporto prioritario'}
                 {company.subscription_tier === 'enterprise' && 'Tool illimitati · Accesso completo a tutte le feature'}
                 {(company.subscription_tier === 'trial' || !company.subscription_tier) && 'Account di prova — scegli un piano per sbloccare tutte le funzionalità'}
               </div>

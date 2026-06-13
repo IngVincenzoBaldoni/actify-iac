@@ -48,13 +48,6 @@ export interface ComplianceSummary {
   months_to_urgency: number | null;
 }
 
-export interface ScoreBreakdown {
-  governance: number;
-  transparency: number;
-  documentation: number;
-  monitoring: number;
-}
-
 export interface PriorityAction {
   priority: Priority;
   action: string;
@@ -70,7 +63,6 @@ export interface BedrockReportOutput {
   phase_relevance: PhaseRelevance;
   compliance_summary: ComplianceSummary;
   compliance_gaps: string[];
-  score_breakdown: ScoreBreakdown;
   priority_actions: PriorityAction[];
   recommended_documents: string[];
   key_findings_from_notes: string;

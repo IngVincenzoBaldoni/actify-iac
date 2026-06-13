@@ -17,6 +17,7 @@ const AUTOMATION_TO_DOCTYPE: Record<string, string> = {
   policy_template:        'AI_POLICY',
   document_generation:    'TECH_DOC',
   conformity_declaration: 'CONFORMITY_DECL',
+  risk_assessment:        'FRIA',
 };
 
 const generateDocVaultSchema = z.object({
