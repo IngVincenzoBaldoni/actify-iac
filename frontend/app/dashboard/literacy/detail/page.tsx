@@ -368,18 +368,14 @@ function ProfileCard({
 
           {/* Merge toggle — Deployer only, 2 profiles */}
           {showMerge && (
-            <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
-                <input
-                  type="checkbox"
-                  checked={isMerged}
-                  onChange={e => handleMerge(e.target.checked)}
-                  style={{ width: 14, height: 14, cursor: 'pointer' }}
-                />
-                <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>Stessa persona copre entrambi i ruoli</span>
-              </label>
+            <button
+              type="button"
+              onClick={() => handleMerge(!isMerged)}
+              style={{ marginBottom: 14, width: '100%', padding: '10px 14px', background: isMerged ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.06)', border: `1px solid ${isMerged ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.2)'}`, borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left' }}>
+              <span style={{ fontSize: 16, lineHeight: 1 }}>{isMerged ? '✅' : '⬜'}</span>
+              <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>PMI piccola</span>
-            </div>
+            </button>
           )}
 
           <button
