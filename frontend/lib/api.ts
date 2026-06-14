@@ -138,7 +138,7 @@ export const api = {
     suggest: (deptId: string) =>
       request<{ suggestions: unknown[] }>('POST', `/api/literacy/departments/${deptId}/suggest`, {}),
     listCerts: (deptId: string) =>
-      request<{ certifications: unknown[] }>('GET', `/api/literacy/departments/${deptId}/certifications`),
+      request<{ certifications: unknown[]; suggestions: unknown[] }>('GET', `/api/literacy/departments/${deptId}/certifications`),
     addCert: (deptId: string, body: {
       certification_name: string; issued_date: string;
       url?: string; people_count?: number; notes?: string;

@@ -25,8 +25,9 @@ const addCertSchema = z.object({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function deptRecordId(deptId: string)             { return `DEPT#${deptId}`; }
-function certRecordId(deptId: string, certId: string) { return `CERT#${deptId}#${certId}`; }
+function deptRecordId(deptId: string)                  { return `DEPT#${deptId}`; }
+function certRecordId(deptId: string, certId: string)  { return `CERT#${deptId}#${certId}`; }
+function suggestRecordId(deptId: string)               { return `SUGGEST#${deptId}`; }
 
 function isDeptRecord(item: Record<string, unknown>) {
   return (item.record_id as string).startsWith('DEPT#');
@@ -155,6 +156,12 @@ export async function suggestCerts(event: APIGatewayProxyEventV2WithJWTAuthorize
   const company = companyRaw as Record<string, unknown> | null;
   if (!company) return { statusCode: 404, body: JSON.stringify({ error: 'company_not_found' }) };
 
+  // Return cached suggestions if they exist (generate only once)
+  const cached = records.find(r => (r.record_id as string) === suggestRecordId(deptId));
+  if (cached) {
+    return { statusCode: 200, body: JSON.stringify({ suggestions: cached.suggestions, cached: true }) };
+  }
+
   // Find dept
   let deptName    = deptId;
   let headcount   = 1;
@@ -188,6 +195,15 @@ export async function suggestCerts(event: APIGatewayProxyEventV2WithJWTAuthorize
     tool_purpose:   toolPurpose || 'Uso aziendale',
     company_name:   company.name as string ?? '',
     company_sector: company.sector as string ?? '',
+  });
+
+  // Persist so they can be shown in detail view without regenerating
+  await dynamo.putLiteracyRecord({
+    company_id: auth.companyId,
+    record_id:  suggestRecordId(deptId),
+    dept_id:    deptId,
+    suggestions,
+    created_at: new Date().toISOString(),
   });
 
   return { statusCode: 200, body: JSON.stringify({ suggestions }) };
@@ -233,10 +249,12 @@ export async function listCertifications(event: APIGatewayProxyEventV2WithJWTAut
   const deptId = event.pathParameters?.deptId;
   if (!deptId) return { statusCode: 400, body: JSON.stringify({ error: 'deptId required' }) };
 
-  const records = await dynamo.listLiteracyRecords(auth.companyId);
-  const certs   = records.filter(r => isCertRecord(deptId, r));
+  const records        = await dynamo.listLiteracyRecords(auth.companyId);
+  const certs          = records.filter(r => isCertRecord(deptId, r));
+  const suggestRecord  = records.find(r => (r.record_id as string) === suggestRecordId(deptId));
+  const suggestions    = suggestRecord ? (suggestRecord.suggestions as unknown[]) : [];
 
-  return { statusCode: 200, body: JSON.stringify({ certifications: certs }) };
+  return { statusCode: 200, body: JSON.stringify({ certifications: certs, suggestions }) };
 }
 
 // ─── DELETE /api/literacy/certifications/:certId ── delete a cert ─────────────

@@ -113,68 +113,6 @@ function AddDeptModal({
   );
 }
 
-// ─── Suggest Modal ────────────────────────────────────────────────────────────
-
-function SuggestModal({ dept, onClose }: { dept: LiteracyDepartment; onClose: () => void }) {
-  const [suggestions, setSuggestions] = useState<CertSuggestion[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState('');
-
-  useEffect(() => {
-    api.literacy.suggest(dept.dept_id)
-      .then(r => setSuggestions((r as { suggestions: CertSuggestion[] }).suggestions))
-      .catch(e => setError((e as { message?: string }).message ?? 'Errore'))
-      .finally(() => setLoading(false));
-  }, [dept.dept_id]);
-
-  const levelLabel: Record<string, string> = { beginner: 'Base', intermediate: 'Intermedio', advanced: 'Avanzato' };
-  const levelColor: Record<string, string> = { beginner: '#16A34A', intermediate: '#CA8A04', advanced: '#DC2626' };
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box" style={{ maxWidth: 680 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-head">
-          <h3>Certificazioni consigliate — {dept.name}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div className="spin" style={{ margin: '0 auto 12px' }}></div>
-              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Analisi in corso con AI…</p>
-            </div>
-          )}
-          {error && <div className="alert-err show">{error}</div>}
-          {!loading && !error && suggestions.map((s, i) => (
-            <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '16px 18px', marginBottom: 12, background: 'var(--surface)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 4 }}>{s.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>{s.provider} · {s.format}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{s.description}</div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: `${levelColor[s.level]}22`, color: levelColor[s.level] }}>{levelLabel[s.level] ?? s.level}</span>
-                  <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query || `${s.name} ${s.provider}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>
-                    Cerca online →
-                  </a>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="modal-foot">
-          <button className="btn-ghost" onClick={onClose}>Chiudi</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Add Cert Modal ───────────────────────────────────────────────────────────
 
 function AddCertModal({ deptId, onSave, onClose }: { deptId: string; onSave: () => void; onClose: () => void }) {
@@ -247,28 +185,38 @@ function AddCertModal({ deptId, onSave, onClose }: { deptId: string; onSave: () 
   );
 }
 
+// ─── Cert suggestion helpers (used in DeptDetail) ────────────────────────────
+
+const LEVEL_LABEL: Record<string, string> = { beginner: 'Base', intermediate: 'Intermedio', advanced: 'Avanzato' };
+const LEVEL_COLOR: Record<string, string> = { beginner: '#16A34A', intermediate: '#CA8A04', advanced: '#DC2626' };
+
 // ─── Department Detail View ───────────────────────────────────────────────────
 
 function DeptDetail({
   deptId,
   departments,
+  literacySystems,
   onBack,
 }: {
   deptId: string;
   departments: LiteracyDepartment[];
+  literacySystems: Array<{ system_id: string; tool_name: string }>;
   onBack: () => void;
 }) {
-  const [certs, setCerts]     = useState<LiteracyCertification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
+  const [certs, setCerts]             = useState<LiteracyCertification[]>([]);
+  const [suggestions, setSuggestions] = useState<CertSuggestion[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [showAdd, setShowAdd]         = useState(false);
 
   const dept = departments.find(d => d.dept_id === deptId);
 
   async function load() {
     setLoading(true);
     try {
-      const r = await api.literacy.listCerts(deptId);
-      setCerts((r as { certifications: LiteracyCertification[] }).certifications);
+      const r    = await api.literacy.listCerts(deptId);
+      const typed = r as { certifications: LiteracyCertification[]; suggestions: CertSuggestion[] };
+      setCerts(typed.certifications);
+      setSuggestions(typed.suggestions ?? []);
     } catch { /* silent */ }
     setLoading(false);
   }
@@ -283,6 +231,14 @@ function DeptDetail({
 
   const coveredPeople = certs.reduce((s, c) => s + (c.people_count ?? 0), 0);
   const hc = dept?.headcount ?? 0;
+
+  // Resolve tools linked to this dept
+  const tools: Array<{ system_id: string; tool_name: string; purpose?: string }> =
+    dept?.source === 'inventory'
+      ? (dept.systems ?? [])
+      : (dept?.system_ids ?? [])
+          .map(id => literacySystems.find(s => s.system_id === id))
+          .filter((s): s is { system_id: string; tool_name: string } => !!s);
 
   return (
     <div className="inv-page">
@@ -302,8 +258,26 @@ function DeptDetail({
             <button className="btn-submit" onClick={() => setShowAdd(true)}>+ Registra Certificazione</button>
           </div>
 
+          {/* Tool AI usati da questo dipartimento */}
+          {tools.length > 0 && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 22px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Tool AI usati da questo dipartimento</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {tools.map(t => (
+                  <div key={t.system_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <span style={{ fontSize: 16 }}>🤖</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{t.tool_name}</div>
+                      {'purpose' in t && t.purpose && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{t.purpose as string}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {hc > 0 && (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 22px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
               <div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: coveredPeople >= hc ? '#22C55E' : '#CA8A04' }}>
                   {Math.min(Math.round(coveredPeople / hc * 100), 100)}%
@@ -318,6 +292,41 @@ function DeptDetail({
               </div>
             </div>
           )}
+
+          {/* Certificazioni consigliate (persistite da Bedrock) */}
+          {suggestions.length > 0 && (
+            <div style={{ background: 'var(--surface)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 12, padding: '16px 22px', marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>💡 Certificazioni consigliate</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {suggestions.map((s, i) => (
+                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', background: 'var(--bg)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 3 }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{s.provider} · {s.format}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>{s.description}</div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${LEVEL_COLOR[s.level]}22`, color: LEVEL_COLOR[s.level] }}>
+                          {LEVEL_LABEL[s.level] ?? s.level}
+                        </span>
+                        <a
+                          href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query || `${s.name} ${s.provider}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>
+                          Cerca online →
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Certificazioni registrate */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Certificazioni registrate</div>
 
           {certs.length === 0 && (
             <div className="inv-empty">
@@ -360,8 +369,8 @@ function LiteracyContent() {
   const [departments, setDepartments] = useState<LiteracyDepartment[]>([]);
   const [systems, setSystems]         = useState<Array<{ system_id: string; tool_name: string }>>([]);
   const [loading, setLoading]         = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [suggestDept, setSuggestDept]   = useState<LiteracyDepartment | null>(null);
+  const [showAddModal, setShowAddModal]   = useState(false);
+  const [suggestingDeptId, setSuggestingDeptId] = useState<string | null>(null);
   const [allSystems, setAllSystems]         = useState<Array<Record<string, unknown>>>([]);
   const [markingSystemId, setMarkingSystemId] = useState<string | null>(null);
   const [markResults, setMarkResults]         = useState<Record<string, { ok: boolean; message: string }>>({});
@@ -387,6 +396,15 @@ function LiteracyContent() {
     if (!confirm(`Eliminare il dipartimento "${dept.name}"?`)) return;
     await api.literacy.deleteDept(dept.dept_id);
     load();
+  }
+
+  async function handleSuggest(dept: LiteracyDepartment) {
+    setSuggestingDeptId(dept.dept_id);
+    try {
+      await api.literacy.suggest(dept.dept_id);
+    } catch { /* navigate to detail anyway; suggestions may load from cache */ }
+    setSuggestingDeptId(null);
+    router.push(`/dashboard/literacy?dept=${dept.dept_id}`);
   }
 
   async function handleMarkArt4ForSystem(s: Record<string, unknown>) {
@@ -424,6 +442,7 @@ function LiteracyContent() {
       <DeptDetail
         deptId={activeDept}
         departments={departments}
+        literacySystems={systems}
         onBack={() => router.push('/dashboard/literacy')}
       />
     );
@@ -583,8 +602,13 @@ function LiteracyContent() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => setSuggestDept(dept)} style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', color: '#6366F1', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                  💡 Consigliami certificazioni
+                <button
+                  onClick={() => handleSuggest(dept)}
+                  disabled={suggestingDeptId === dept.dept_id}
+                  style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', color: '#6366F1', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: suggestingDeptId === dept.dept_id ? 'default' : 'pointer', opacity: suggestingDeptId === dept.dept_id ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  {suggestingDeptId === dept.dept_id
+                    ? <><span className="spin" style={{ width: 12, height: 12, borderWidth: 2 }} /> Analisi AI…</>
+                    : '💡 Consigliami certificazioni'}
                 </button>
                 <button onClick={() => router.push(`/dashboard/literacy?dept=${dept.dept_id}`)} style={{ background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                   Dettaglio →
@@ -605,8 +629,6 @@ function LiteracyContent() {
           onClose={() => setShowAddModal(false)}
         />
       )}
-
-      {suggestDept && <SuggestModal dept={suggestDept} onClose={() => setSuggestDept(null)} />}
     </div>
   );
 }
