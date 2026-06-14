@@ -18,6 +18,9 @@ export type AuditEventType =
   | 'literacy_dept_deleted'
   | 'literacy_cert_added'
   | 'literacy_cert_deleted'
+  | 'literacy_profile_updated'
+  | 'literacy_evidence_added'
+  | 'literacy_report_generated'
   | 'user_invited'
   | 'user_deleted';
 
@@ -38,6 +41,9 @@ const EVENT_LABELS: Record<AuditEventType, string> = {
   literacy_dept_deleted:       'Reparto rimosso (AI Literacy)',
   literacy_cert_added:         'Certificazione registrata',
   literacy_cert_deleted:       'Certificazione rimossa',
+  literacy_profile_updated:    'Profilo literacy aggiornato',
+  literacy_evidence_added:     'Evidenza formazione registrata',
+  literacy_report_generated:   'Report Art. 4 generato',
   user_invited:                'Utente invitato',
   user_deleted:                'Utente rimosso',
 };

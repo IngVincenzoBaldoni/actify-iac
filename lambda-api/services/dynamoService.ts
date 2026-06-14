@@ -284,6 +284,21 @@ export async function getLiteracyRecord(companyId: string, recordId: string) {
   return r.Item ?? null;
 }
 
+export async function updateLiteracyRecord(companyId: string, recordId: string, updates: Record<string, unknown>) {
+  const entries = Object.entries(defined(updates));
+  if (entries.length === 0) return;
+  const expr   = 'SET ' + entries.map((_, i) => `#k${i} = :v${i}`).join(', ');
+  const names  = Object.fromEntries(entries.map(([k], i) => [`#k${i}`, k]));
+  const values = Object.fromEntries(entries.map(([, v], i) => [`:v${i}`, v]));
+  await client.send(new UpdateCommand({
+    TableName:                 TABLES.literacy,
+    Key:                       { company_id: companyId, record_id: recordId },
+    UpdateExpression:          expr,
+    ExpressionAttributeNames:  names,
+    ExpressionAttributeValues: values,
+  }));
+}
+
 // ─── Partners ─────────────────────────────────────────────────────────────────
 
 export async function getPartner(partnerId: string) {

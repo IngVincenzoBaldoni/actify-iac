@@ -145,27 +145,53 @@ export interface ActifyDocument {
 
 // ─── AI Literacy Tracker ──────────────────────────────────────────────────────
 
-export interface LiteracyDepartment {
-  dept_id:         string;
-  name:            string;
-  headcount:       number;
-  system_ids:      string[];
-  systems?:        Array<{ system_id: string; tool_name: string; purpose: string }>;
-  source:          'manual' | 'inventory';
-  cert_count:      number;
-  has_suggestions: boolean;
-  created_at?:     string;
+// ─── AI Literacy v2 ──────────────────────────────────────────────────────────
+
+export interface LiteracySystemSummary {
+  system_id:        string;
+  tool_name:        string;
+  vendor:           string;
+  system_role:      'provider' | 'deployer';
+  category:         string;
+  literacy_status:  'not_started' | 'in_progress' | 'compliant';
+  profiles_total:   number;
+  profiles_covered: number;
+  evidence_count:   number;
 }
 
-export interface LiteracyCertification {
-  cert_id:            string;
-  dept_id:            string;
-  certification_name: string;
-  issued_date:        string;
-  url?:               string | null;
-  people_count?:      number | null;
-  notes?:             string | null;
-  created_at:         string;
+export interface LiteracyEvidence {
+  evidence_id:    string;
+  profile_id:     string;
+  system_id:      string;
+  evidence_type:  'certification' | 'internal_training';
+  title:          string;
+  date:           string;
+  people_count:   number;
+  // certification fields
+  issuer?:        string | null;
+  url?:           string | null;
+  // internal_training fields
+  topics?:        string[] | null;
+  responsible?:   string | null;
+  notes?:         string | null;
+  created_at:     string;
+}
+
+export interface LiteracyProfile {
+  record_id:    string;
+  profile_id:   string;
+  system_id:    string;
+  system_name:  string;
+  system_role:  'provider' | 'deployer';
+  profile_type: string;
+  label:        string;
+  description:  string;
+  headcount:    number;
+  merged_with:  string | null;
+  coverage_pct: number;
+  evidences:    LiteracyEvidence[];
+  created_at:   string;
+  updated_at:   string;
 }
 
 export interface CertSuggestion {

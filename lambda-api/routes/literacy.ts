@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { parseBody } from '../middleware/validator';
 import { extractAuth } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
@@ -7,272 +8,389 @@ import { logEvent } from '../services/auditService';
 import { suggestCertifications } from '../services/literacySuggestService';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION ?? 'eu-central-1' });
 
-const addDeptSchema = z.object({
-  name:       z.string().min(1).max(200),
-  headcount:  z.number().int().min(1).max(1000000),
-  system_ids: z.array(z.string().uuid()).min(1).max(50),
-});
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const addCertSchema = z.object({
-  certification_name: z.string().min(1).max(300),
-  issued_date:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  url:                z.string().url().max(2000).optional(),
-  people_count:       z.number().int().min(1).max(1000000).optional(),
-  notes:              z.string().max(500).optional(),
-});
+type ProfileType = 'operational_users' | 'supervisors' | 'dev_team' | 'qa_team' | 'commercial_team';
+type SystemRole  = 'provider' | 'deployer';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function deptRecordId(deptId: string)                  { return `DEPT#${deptId}`; }
-function certRecordId(deptId: string, certId: string)  { return `CERT#${deptId}#${certId}`; }
-function suggestRecordId(deptId: string)               { return `SUGGEST#${deptId}`; }
+function profileRecordId(systemId: string, pt: string): string { return `PROFILE#${systemId}#${pt}`; }
+function evidenceRecordId(profileId: string, evidenceId: string): string { return `EVIDENCE#${profileId}#${evidenceId}`; }
+function suggestKeyId(systemId: string, pt: string): string { return `SUGGEST#${systemId}#${pt}`; }
 
-function isDeptRecord(item: Record<string, unknown>) {
-  return (item.record_id as string).startsWith('DEPT#');
+function getProfilesForRole(role: SystemRole): ProfileType[] {
+  if (role === 'deployer') return ['operational_users', 'supervisors'];
+  if (role === 'provider') return ['dev_team', 'qa_team', 'commercial_team'];
+  return [];
 }
-function isCertRecord(deptId: string, item: Record<string, unknown>) {
-  return (item.record_id as string).startsWith(`CERT#${deptId}#`);
+
+const PROFILE_LABELS: Record<string, string> = {
+  operational_users: 'Utenti operativi',
+  supervisors:       'Supervisori',
+  dev_team:          'Team di sviluppo',
+  qa_team:           'Team QA / Testing',
+  commercial_team:   'Team Commerciale',
+};
+
+const PROFILE_DESCRIPTIONS: Record<string, string> = {
+  operational_users: "Chi usa il sistema AI nel lavoro quotidiano — Art. 4 richiede literacy adeguata all'uso specifico e ai rischi connessi.",
+  supervisors:       "Chi controlla o valida l'output del sistema AI — Art. 4 richiede literacy sulla supervisione umana e sul rischio residuo.",
+  dev_team:          'Developer e data scientist che sviluppano o mantengono il sistema — Art. 4 richiede literacy tecnica e normativa approfondita.',
+  qa_team:           'Team di testing e monitoraggio — Art. 4 richiede literacy su valutazione rischi, bias e qualità dei dati.',
+  commercial_team:   'Chi vende o supporta il sistema presso i clienti — Art. 4 richiede literacy sulle implicazioni normative verso i deployer.',
+};
+
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+const updateProfileSchema = z.object({
+  headcount:   z.number().int().min(0).max(1000000).optional(),
+  merged_with: z.string().nullable().optional(),
+});
+
+const evidenceSchema = z.discriminatedUnion('evidence_type', [
+  z.object({
+    evidence_type: z.literal('certification'),
+    title:         z.string().min(1).max(300),
+    date:          z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    people_count:  z.number().int().min(1),
+    issuer:        z.string().max(200).optional(),
+    url:           z.string().url().max(2000).optional(),
+    notes:         z.string().max(500).optional(),
+  }),
+  z.object({
+    evidence_type: z.literal('internal_training'),
+    title:         z.string().min(1).max(300),
+    date:          z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    people_count:  z.number().int().min(1),
+    topics:        z.array(z.string().min(1).max(200)).min(1).max(20),
+    responsible:   z.string().max(200).optional(),
+    notes:         z.string().max(500).optional(),
+  }),
+]);
+
+// ─── Coverage helpers ─────────────────────────────────────────────────────────
+
+function calcCoverage(headcount: number, evidences: Record<string, unknown>[]): number {
+  if (headcount === 0) return 0;
+  const covered = evidences.reduce((sum, e) => sum + ((e.people_count as number) ?? 0), 0);
+  return Math.min(Math.round((covered / headcount) * 100), 100);
 }
 
-// ─── GET /api/literacy ── list all departments (from AI systems + manually added) ──
+function literacyStatus(
+  profiles: Array<{ headcount: number; coverage_pct: number; merged_with: string | null }>
+): 'not_started' | 'in_progress' | 'compliant' {
+  const active = profiles.filter(p => !p.merged_with);
+  if (active.length === 0 || active.every(p => p.headcount === 0)) return 'not_started';
+  if (active.every(p => p.coverage_pct >= 80)) return 'compliant';
+  return 'in_progress';
+}
 
-export async function listDepartments(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+// ─── GET /api/literacy ── list systems with literacy status ───────────────────
+
+export async function listSystemsLiteracy(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth = extractAuth(event);
 
-  // Load manual dept records + all AI systems (to extract dept data)
-  const [records, systems] = await Promise.all([
-    dynamo.listLiteracyRecords(auth.companyId),
+  const [systems, records] = await Promise.all([
     dynamo.getSystemsByCompany(auth.companyId),
+    dynamo.listLiteracyRecords(auth.companyId),
   ]);
 
-  // Manual departments stored in the literacy table
-  const manualDepts = records.filter(isDeptRecord);
+  // Build per-system profile summary from PROFILE# records
+  const profilesBySys = new Map<string, Array<{ headcount: number; coverage_pct: number; merged_with: string | null }>>();
 
-  // Auto-derive departments from AI systems that have a `department` field
-  const systemDeptsMap = new Map<string, {
-    name: string; headcount: number; systems: { system_id: string; tool_name: string; purpose: string }[];
-  }>();
-  for (const sys of systems as Array<Record<string, unknown>>) {
-    if (!sys.department) continue;
-    const deptName = sys.department as string;
-    if (!systemDeptsMap.has(deptName)) {
-      systemDeptsMap.set(deptName, { name: deptName, headcount: (sys.headcount as number) ?? 0, systems: [] });
-    }
-    const entry = systemDeptsMap.get(deptName)!;
-    if ((sys.headcount as number) > entry.headcount) entry.headcount = sys.headcount as number;
-    entry.systems.push({
-      system_id: sys.system_id as string,
-      tool_name: sys.tool_name as string,
-      purpose:   sys.purpose as string,
-    });
+  for (const rec of records) {
+    const rid = rec.record_id as string;
+    if (!rid.startsWith('PROFILE#')) continue;
+    const parts = rid.split('#');
+    const systemId = parts[1];
+    if (!systemId) continue;
+
+    const headcount  = (rec.headcount as number) ?? 0;
+    const mergedWith = (rec.merged_with as string | null) ?? null;
+    const profileId  = rec.profile_id as string;
+    const evidences  = records.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${profileId}#`));
+    const coverage   = calcCoverage(headcount, evidences as Record<string, unknown>[]);
+
+    if (!profilesBySys.has(systemId)) profilesBySys.set(systemId, []);
+    profilesBySys.get(systemId)!.push({ headcount, coverage_pct: coverage, merged_with: mergedWith });
   }
 
-  // Build unified dept list, preferring manual records (they have dept_id, cert counts, etc.)
-  const certsByDept    = new Map<string, number>();
-  const suggestedDepts = new Set<string>();
-  for (const r of records) {
-    const rid = r.record_id as string;
-    if (rid.startsWith('CERT#')) {
-      const deptId = rid.split('#')[1];
-      certsByDept.set(deptId, (certsByDept.get(deptId) ?? 0) + 1);
-    } else if (rid.startsWith('SUGGEST#')) {
-      suggestedDepts.add(rid.replace('SUGGEST#', ''));
-    }
-  }
+  const result = (systems as Array<Record<string, unknown>>).map(sys => {
+    const systemId = sys.system_id as string;
+    const profiles = profilesBySys.get(systemId) ?? [];
+    const active   = profiles.filter(p => !p.merged_with);
+    const status   = literacyStatus(profiles);
 
-  const depts: Record<string, unknown>[] = manualDepts.map(d => ({
-    dept_id:        d.dept_id,
-    name:           d.name,
-    headcount:      d.headcount,
-    system_ids:     d.system_ids,
-    source:         'manual',
-    cert_count:     certsByDept.get(d.dept_id as string) ?? 0,
-    has_suggestions: suggestedDepts.has(d.dept_id as string),
-    created_at:     d.created_at,
-  }));
-
-  // Add auto-derived from systems, skip if there's already a manual dept with same name
-  const existingNames = new Set(depts.map(d => (d.name as string).toLowerCase()));
-  for (const [, sd] of systemDeptsMap) {
-    if (existingNames.has(sd.name.toLowerCase())) continue;
-    const autoDeptId = `sys-${sd.name.toLowerCase().replace(/\s+/g, '-')}`;
-    depts.push({
-      dept_id:         autoDeptId,
-      name:            sd.name,
-      headcount:       sd.headcount,
-      system_ids:      sd.systems.map(s => s.system_id),
-      systems:         sd.systems,
-      source:          'inventory',
-      cert_count:      0,
-      has_suggestions: suggestedDepts.has(autoDeptId),
-    });
-  }
-
-  return { statusCode: 200, body: JSON.stringify({ departments: depts, systems }) };
-}
-
-// ─── POST /api/literacy/departments ── create manual department ───────────────
-
-export async function createDepartment(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
-  const auth = extractAuth(event);
-  const body = parseBody(event.body, addDeptSchema);
-  const now  = new Date().toISOString();
-  const deptId = uuidv4();
-
-  await dynamo.putLiteracyRecord({
-    company_id:  auth.companyId,
-    record_id:   deptRecordId(deptId),
-    dept_id:     deptId,
-    name:        body.name,
-    headcount:   body.headcount,
-    system_ids:  body.system_ids,
-    created_at:  now,
+    return {
+      system_id:        systemId,
+      tool_name:        sys.tool_name,
+      vendor:           sys.vendor,
+      system_role:      (sys.system_role as SystemRole) ?? 'deployer',
+      category:         sys.category,
+      literacy_status:  status,
+      profiles_total:   active.length,
+      profiles_covered: active.filter(p => p.coverage_pct >= 80).length,
+      evidence_count:   records.filter(r => (r.record_id as string).startsWith('EVIDENCE#') &&
+        profiles.some(p => (r.record_id as string).includes((p as unknown as Record<string, unknown>).profile_id as string ?? ''))).length,
+    };
   });
 
-  await logEvent(auth.companyId, 'literacy_dept_created', { dept_id: deptId, name: body.name, headcount: body.headcount }, auth.email);
-  return { statusCode: 201, body: JSON.stringify({ dept_id: deptId }) };
+  return { statusCode: 200, body: JSON.stringify({ systems: result }) };
 }
 
-// ─── DELETE /api/literacy/departments/:deptId ─────────────────────────────────
+// ─── GET /api/literacy/{systemId}/profiles ── lazy init ──────────────────────
 
-export async function deleteDepartment(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
-  const auth   = extractAuth(event);
-  const deptId = event.pathParameters?.deptId;
-  if (!deptId) return { statusCode: 400, body: JSON.stringify({ error: 'deptId required' }) };
+export async function getSystemProfiles(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth     = extractAuth(event);
+  const systemId = event.pathParameters?.systemId;
+  if (!systemId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId required' }) };
 
-  await dynamo.deleteLiteracyRecord(auth.companyId, deptRecordId(deptId));
-  await logEvent(auth.companyId, 'literacy_dept_deleted', { dept_id: deptId }, auth.email);
-  return { statusCode: 200, body: JSON.stringify({ message: 'Dipartimento eliminato.' }) };
-}
-
-// ─── POST /api/literacy/departments/:deptId/suggest ── Bedrock cert suggestions
-
-export async function suggestCerts(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
-  const auth   = extractAuth(event);
-  const deptId = event.pathParameters?.deptId;
-  if (!deptId) return { statusCode: 400, body: JSON.stringify({ error: 'deptId required' }) };
-
-  // Load dept record (check both manual and auto-derived)
-  const [records, systems, companyRaw] = await Promise.all([
+  const [records, system] = await Promise.all([
     dynamo.listLiteracyRecords(auth.companyId),
-    dynamo.getSystemsByCompany(auth.companyId),
+    dynamo.getSystem(auth.companyId, systemId),
+  ]);
+
+  if (!system) return { statusCode: 404, body: JSON.stringify({ error: 'system_not_found' }) };
+
+  const sys  = system as Record<string, unknown>;
+  const role = (sys.system_role as SystemRole) ?? 'deployer';
+  const pts  = getProfilesForRole(role);
+  const now  = new Date().toISOString();
+
+  const existingProfiles = records.filter(r => (r.record_id as string).startsWith(`PROFILE#${systemId}#`));
+
+  if (existingProfiles.length === 0) {
+    await Promise.all(pts.map(pt => dynamo.putLiteracyRecord({
+      company_id:   auth.companyId,
+      record_id:    profileRecordId(systemId, pt),
+      profile_id:   uuidv4(),
+      system_id:    systemId,
+      system_name:  sys.tool_name as string,
+      system_role:  role,
+      profile_type: pt,
+      headcount:    0,
+      merged_with:  null,
+      created_at:   now,
+      updated_at:   now,
+    })));
+    // Reload after lazy init
+    const fresh = await dynamo.listLiteracyRecords(auth.companyId);
+    records.splice(0, records.length, ...fresh);
+  }
+
+  const profiles = pts.map(pt => {
+    const rec = records.find(r => (r.record_id as string) === profileRecordId(systemId, pt));
+    if (!rec) return null;
+    const evidences = records
+      .filter(r => (r.record_id as string).startsWith(`EVIDENCE#${rec.profile_id as string}#`))
+      .sort((a, b) => ((b.date as string) > (a.date as string) ? 1 : -1));
+    const hc = (rec.headcount as number) ?? 0;
+    return {
+      ...rec,
+      label:        PROFILE_LABELS[pt],
+      description:  PROFILE_DESCRIPTIONS[pt],
+      headcount:    hc,
+      merged_with:  (rec.merged_with as string | null) ?? null,
+      coverage_pct: calcCoverage(hc, evidences as Record<string, unknown>[]),
+      evidences,
+    };
+  }).filter((p): p is NonNullable<typeof p> => Boolean(p));
+
+  const allStatus = literacyStatus(profiles.map(p => ({
+    headcount:    p.headcount,
+    coverage_pct: p.coverage_pct,
+    merged_with:  p.merged_with,
+  })));
+
+  return { statusCode: 200, body: JSON.stringify({ system: sys, profiles, literacy_status: allStatus }) };
+}
+
+// ─── PATCH /api/literacy/{systemId}/profiles/{profileId} ─────────────────────
+
+export async function updateProfile(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth      = extractAuth(event);
+  const systemId  = event.pathParameters?.systemId;
+  const profileId = event.pathParameters?.profileId;
+  if (!systemId || !profileId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId and profileId required' }) };
+
+  const body    = parseBody(event.body, updateProfileSchema);
+  const now     = new Date().toISOString();
+  const records = await dynamo.listLiteracyRecords(auth.companyId);
+
+  const profileRec = records.find(r =>
+    (r.record_id as string).startsWith(`PROFILE#${systemId}#`) && r.profile_id === profileId
+  );
+  if (!profileRec) return { statusCode: 404, body: JSON.stringify({ error: 'profile_not_found' }) };
+
+  const updates: Record<string, unknown> = { updated_at: now };
+  if (body.headcount   !== undefined) updates.headcount   = body.headcount;
+  if (body.merged_with !== undefined) updates.merged_with = body.merged_with;
+
+  await dynamo.updateLiteracyRecord(auth.companyId, profileRec.record_id as string, updates);
+  await logEvent(auth.companyId, 'literacy_profile_updated', { profile_id: profileId, system_id: systemId, ...updates }, auth.email);
+
+  return { statusCode: 200, body: JSON.stringify({ message: 'Profilo aggiornato.' }) };
+}
+
+// ─── POST /api/literacy/{systemId}/profiles/{profileId}/evidence ──────────────
+
+export async function addEvidence(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth      = extractAuth(event);
+  const systemId  = event.pathParameters?.systemId;
+  const profileId = event.pathParameters?.profileId;
+  if (!systemId || !profileId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId and profileId required' }) };
+
+  const body       = parseBody(event.body, evidenceSchema);
+  const now        = new Date().toISOString();
+  const evidenceId = uuidv4();
+
+  const record: Record<string, unknown> = {
+    company_id:   auth.companyId,
+    record_id:    evidenceRecordId(profileId, evidenceId),
+    evidence_id:  evidenceId,
+    profile_id:   profileId,
+    system_id:    systemId,
+    evidence_type: body.evidence_type,
+    title:        body.title,
+    date:         body.date,
+    people_count: body.people_count,
+    notes:        body.notes ?? null,
+    created_at:   now,
+  };
+
+  if (body.evidence_type === 'certification') {
+    record.issuer = body.issuer ?? null;
+    record.url    = body.url    ?? null;
+  } else {
+    record.topics      = body.topics;
+    record.responsible = body.responsible ?? null;
+  }
+
+  await dynamo.putLiteracyRecord(record);
+  await logEvent(auth.companyId, 'literacy_evidence_added', {
+    evidence_id: evidenceId, profile_id: profileId, system_id: systemId,
+    evidence_type: body.evidence_type, title: body.title, people_count: body.people_count,
+  }, auth.email);
+
+  return { statusCode: 201, body: JSON.stringify({ evidence_id: evidenceId }) };
+}
+
+// ─── DELETE /api/literacy/{systemId}/profiles/{profileId}/evidence/{evidenceId} ─
+
+export async function deleteEvidence(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth       = extractAuth(event);
+  const profileId  = event.pathParameters?.profileId;
+  const evidenceId = event.pathParameters?.evidenceId;
+  if (!profileId || !evidenceId) return { statusCode: 400, body: JSON.stringify({ error: 'profileId and evidenceId required' }) };
+
+  await dynamo.deleteLiteracyRecord(auth.companyId, evidenceRecordId(profileId, evidenceId));
+  return { statusCode: 200, body: JSON.stringify({ message: 'Evidenza eliminata.' }) };
+}
+
+// ─── GET /api/literacy/suggestions/{systemId}/{profileType} ──────────────────
+
+export async function getSuggestions(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth        = extractAuth(event);
+  const systemId    = event.pathParameters?.systemId;
+  const profileType = event.pathParameters?.profileType;
+  if (!systemId || !profileType) return { statusCode: 400, body: JSON.stringify({ error: 'systemId and profileType required' }) };
+
+  const cached = await dynamo.getLiteracyRecord(auth.companyId, suggestKeyId(systemId, profileType));
+  if (cached) return { statusCode: 200, body: JSON.stringify({ suggestions: cached.suggestions, cached: true }) };
+
+  const [system, company] = await Promise.all([
+    dynamo.getSystem(auth.companyId, systemId),
     dynamo.getCompany(auth.companyId),
   ]);
+  if (!system || !company) return { statusCode: 404, body: JSON.stringify({ error: 'not_found' }) };
 
-  const company = companyRaw as Record<string, unknown> | null;
-  if (!company) return { statusCode: 404, body: JSON.stringify({ error: 'company_not_found' }) };
-
-  // Return cached suggestions if they exist (generate only once)
-  const cached = records.find(r => (r.record_id as string) === suggestRecordId(deptId));
-  if (cached) {
-    return { statusCode: 200, body: JSON.stringify({ suggestions: cached.suggestions, cached: true }) };
-  }
-
-  // Find dept
-  let deptName    = deptId;
-  let headcount   = 1;
-  let toolName    = '';
-  let toolPurpose = '';
-
-  const manualRecord = records.find(r => r.dept_id === deptId);
-  if (manualRecord) {
-    deptName  = manualRecord.name as string;
-    headcount = manualRecord.headcount as number;
-    const sysIds = manualRecord.system_ids as string[];
-    const linkedSys = (systems as Array<Record<string, unknown>>).find(s => sysIds.includes(s.system_id as string));
-    if (linkedSys) { toolName = linkedSys.tool_name as string; toolPurpose = linkedSys.purpose as string; }
-  } else {
-    // auto-derived: deptId = `sys-<name>`
-    const linkedSys = (systems as Array<Record<string, unknown>>).find(
-      s => s.department && `sys-${(s.department as string).toLowerCase().replace(/\s+/g, '-')}` === deptId
-    );
-    if (linkedSys) {
-      deptName    = linkedSys.department as string;
-      headcount   = (linkedSys.headcount as number) ?? 1;
-      toolName    = linkedSys.tool_name as string;
-      toolPurpose = linkedSys.purpose as string;
-    }
-  }
+  const sys = system as Record<string, unknown>;
+  const co  = company as Record<string, unknown>;
 
   const suggestions = await suggestCertifications({
-    dept_name:      deptName,
-    headcount,
-    tool_name:      toolName || 'Strumento AI',
-    tool_purpose:   toolPurpose || 'Uso aziendale',
-    company_name:   company.name as string ?? '',
-    company_sector: company.sector as string ?? '',
+    system_id:      systemId,
+    system_role:    (sys.system_role as 'provider' | 'deployer') ?? 'deployer',
+    profile_type:   profileType,
+    category:       (sys.category as string) ?? '',
+    tool_name:      (sys.tool_name as string) ?? '',
+    tool_purpose:   (sys.purpose as string) ?? '',
+    company_name:   (co.name as string) ?? '',
+    company_sector: (co.sector as string) ?? '',
   });
 
-  // Persist so they can be shown in detail view without regenerating
   await dynamo.putLiteracyRecord({
-    company_id: auth.companyId,
-    record_id:  suggestRecordId(deptId),
-    dept_id:    deptId,
+    company_id:   auth.companyId,
+    record_id:    suggestKeyId(systemId, profileType),
+    system_id:    systemId,
+    profile_type: profileType,
     suggestions,
-    created_at: new Date().toISOString(),
+    created_at:   new Date().toISOString(),
   });
 
   return { statusCode: 200, body: JSON.stringify({ suggestions }) };
 }
 
-// ─── POST /api/literacy/departments/:deptId/certifications ── record a cert ───
+// ─── GET /api/literacy/{systemId}/report ─────────────────────────────────────
 
-export async function addCertification(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
-  const auth   = extractAuth(event);
-  const deptId = event.pathParameters?.deptId;
-  if (!deptId) return { statusCode: 400, body: JSON.stringify({ error: 'deptId required' }) };
+export async function generateArt4Report(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth     = extractAuth(event);
+  const systemId = event.pathParameters?.systemId;
+  if (!systemId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId required' }) };
 
-  const body   = parseBody(event.body, addCertSchema);
-  const now    = new Date().toISOString();
-  const certId = uuidv4();
+  const [records, system, company] = await Promise.all([
+    dynamo.listLiteracyRecords(auth.companyId),
+    dynamo.getSystem(auth.companyId, systemId),
+    dynamo.getCompany(auth.companyId),
+  ]);
+  if (!system || !company) return { statusCode: 404, body: JSON.stringify({ error: 'not_found' }) };
 
-  await dynamo.putLiteracyRecord({
-    company_id:         auth.companyId,
-    record_id:          certRecordId(deptId, certId),
-    cert_id:            certId,
-    dept_id:            deptId,
-    certification_name: body.certification_name,
-    issued_date:        body.issued_date,
-    url:                body.url ?? null,
-    people_count:       body.people_count ?? null,
-    notes:              body.notes ?? null,
-    created_at:         now,
-  });
+  const sys  = system as Record<string, unknown>;
+  const co   = company as Record<string, unknown>;
+  const role = (sys.system_role as SystemRole) ?? 'deployer';
+  const pts  = getProfilesForRole(role);
 
-  await logEvent(auth.companyId, 'literacy_cert_added', {
-    cert_id: certId, dept_id: deptId,
-    certification_name: body.certification_name,
-    issued_date: body.issued_date,
-    people_count: body.people_count,
-  }, auth.email);
-  return { statusCode: 201, body: JSON.stringify({ cert_id: certId }) };
-}
+  const profiles = pts.map(pt => {
+    const rec = records.find(r => (r.record_id as string) === profileRecordId(systemId, pt));
+    if (!rec) return null;
+    const evidences  = records.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${rec.profile_id as string}#`));
+    const headcount  = (rec.headcount as number) ?? 0;
+    return {
+      profile_type: pt,
+      label:        PROFILE_LABELS[pt],
+      headcount,
+      merged_with:  (rec.merged_with as string | null) ?? null,
+      coverage_pct: calcCoverage(headcount, evidences as Record<string, unknown>[]),
+      evidences,
+    };
+  }).filter(Boolean);
 
-// ─── GET /api/literacy/departments/:deptId/certifications ── list certs ───────
+  const payload = {
+    _literacyReportRequest: {
+      company_name: (co.name as string) ?? 'Azienda',
+      tool_name:    (sys.tool_name as string) ?? 'Sistema AI',
+      vendor:       (sys.vendor as string) ?? '',
+      category:     (sys.category as string) ?? '',
+      system_role:  role,
+      profiles,
+      generated_at: new Date().toISOString(),
+    },
+  };
 
-export async function listCertifications(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
-  const auth   = extractAuth(event);
-  const deptId = event.pathParameters?.deptId;
-  if (!deptId) return { statusCode: 400, body: JSON.stringify({ error: 'deptId required' }) };
+  const response = await lambdaClient.send(new InvokeCommand({
+    FunctionName:   process.env.LAMBDA_PDF_ARN!,
+    InvocationType: 'RequestResponse',
+    Payload:        Buffer.from(JSON.stringify(payload)),
+  }));
 
-  const records        = await dynamo.listLiteracyRecords(auth.companyId);
-  const certs          = records.filter(r => isCertRecord(deptId, r));
-  const suggestRecord  = records.find(r => (r.record_id as string) === suggestRecordId(deptId));
-  const suggestions    = suggestRecord ? (suggestRecord.suggestions as unknown[]) : [];
+  const result = JSON.parse(Buffer.from(response.Payload!).toString()) as { pdfBase64?: string };
+  if (!result.pdfBase64) return { statusCode: 500, body: JSON.stringify({ error: 'pdf_generation_failed' }) };
 
-  return { statusCode: 200, body: JSON.stringify({ certifications: certs, suggestions }) };
-}
+  await logEvent(auth.companyId, 'literacy_report_generated', { system_id: systemId }, auth.email);
 
-// ─── DELETE /api/literacy/certifications/:certId ── delete a cert ─────────────
-
-export async function deleteCertification(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
-  const auth   = extractAuth(event);
-  const deptId = event.pathParameters?.deptId;
-  const certId = event.pathParameters?.certId;
-  if (!deptId || !certId) return { statusCode: 400, body: JSON.stringify({ error: 'deptId and certId required' }) };
-
-  await dynamo.deleteLiteracyRecord(auth.companyId, certRecordId(deptId, certId));
-  return { statusCode: 200, body: JSON.stringify({ message: 'Certificazione eliminata.' }) };
+  const toolSlug = ((sys.tool_name as string) ?? systemId).replace(/\s+/g, '-').toLowerCase().slice(0, 30);
+  const filename = `actify-art4-${toolSlug}-${new Date().toISOString().slice(0, 10)}.pdf`;
+  return { statusCode: 200, body: JSON.stringify({ pdfBase64: result.pdfBase64, filename }) };
 }

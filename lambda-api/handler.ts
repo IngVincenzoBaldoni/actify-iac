@@ -20,8 +20,8 @@ import {
   startDocGeneration, getDocGenerationStatus, listSystemDocGenerations, listCompanyDocGenerations,
 } from './routes/docVault';
 import {
-  listDepartments, createDepartment, deleteDepartment,
-  suggestCerts, addCertification, listCertifications, deleteCertification,
+  listSystemsLiteracy, getSystemProfiles, updateProfile,
+  addEvidence, deleteEvidence, getSuggestions, generateArt4Report,
 } from './routes/literacy';
 import {
   registerPartner, getPartnerMe, updatePartnerMe,
@@ -250,32 +250,33 @@ export const handler = async (
         return { ...await getPartnerSystemCheck(ev), headers: CORS };
     }
 
-    // ── AI Literacy ────────────────────────────────────────────────────────
-    if (method === 'GET'  && path === '/api/literacy')
-      return { ...await listDepartments(ev), headers: CORS };
-    if (method === 'POST' && path === '/api/literacy/departments')
-      return { ...await createDepartment(ev), headers: CORS };
+    // ── AI Literacy v2 ─────────────────────────────────────────────────────────
+    if (method === 'GET' && path === '/api/literacy')
+      return { ...await listSystemsLiteracy(ev), headers: CORS };
 
-    // /api/literacy/departments/:deptId
-    const singleDept = path.match(/^\/api\/literacy\/departments\/([^/]+)$/);
-    if (singleDept) {
-      if (method === 'DELETE') return { ...await deleteDepartment(ev), headers: CORS };
-    }
+    // GET /api/literacy/suggestions/{systemId}/{profileType}  ← must come before /{systemId}/profiles
+    if (method === 'GET' && /^\/api\/literacy\/suggestions\/[^/]+\/[^/]+$/.test(path))
+      return { ...await getSuggestions(ev), headers: CORS };
 
-    // /api/literacy/departments/:deptId/suggest
-    if (method === 'POST' && /^\/api\/literacy\/departments\/[^/]+\/suggest$/.test(path))
-      return { ...await suggestCerts(ev), headers: CORS };
+    // GET /api/literacy/{systemId}/profiles
+    if (method === 'GET' && /^\/api\/literacy\/[^/]+\/profiles$/.test(path))
+      return { ...await getSystemProfiles(ev), headers: CORS };
 
-    // /api/literacy/departments/:deptId/certifications
-    const certBase = path.match(/^\/api\/literacy\/departments\/([^/]+)\/certifications$/);
-    if (certBase) {
-      if (method === 'GET')  return { ...await listCertifications(ev), headers: CORS };
-      if (method === 'POST') return { ...await addCertification(ev), headers: CORS };
-    }
+    // GET /api/literacy/{systemId}/report
+    if (method === 'GET' && /^\/api\/literacy\/[^/]+\/report$/.test(path))
+      return { ...await generateArt4Report(ev), headers: CORS };
 
-    // /api/literacy/departments/:deptId/certifications/:certId
-    if (method === 'DELETE' && /^\/api\/literacy\/departments\/[^/]+\/certifications\/[^/]+$/.test(path))
-      return { ...await deleteCertification(ev), headers: CORS };
+    // PATCH /api/literacy/{systemId}/profiles/{profileId}
+    if (method === 'PATCH' && /^\/api\/literacy\/[^/]+\/profiles\/[^/]+$/.test(path))
+      return { ...await updateProfile(ev), headers: CORS };
+
+    // POST /api/literacy/{systemId}/profiles/{profileId}/evidence
+    if (method === 'POST' && /^\/api\/literacy\/[^/]+\/profiles\/[^/]+\/evidence$/.test(path))
+      return { ...await addEvidence(ev), headers: CORS };
+
+    // DELETE /api/literacy/{systemId}/profiles/{profileId}/evidence/{evidenceId}
+    if (method === 'DELETE' && /^\/api\/literacy\/[^/]+\/profiles\/[^/]+\/evidence\/[^/]+$/.test(path))
+      return { ...await deleteEvidence(ev), headers: CORS };
 
     // /api/audit-trail
     if (method === 'GET' && path === '/api/audit-trail')

@@ -128,23 +128,27 @@ export const api = {
       request<{ documents: unknown[] }>('GET', '/api/company/documents'),
   },
 
-  // ─── AI Literacy ────────────────────────────────────────────────────────────
+  // ─── AI Literacy v2 ─────────────────────────────────────────────────────────
   literacy: {
-    list: () => request<{ departments: unknown[]; systems: unknown[] }>('GET', '/api/literacy'),
-    createDept: (body: { name: string; headcount: number; system_ids: string[] }) =>
-      request<{ dept_id: string }>('POST', '/api/literacy/departments', body),
-    deleteDept: (deptId: string) =>
-      request<{ message: string }>('DELETE', `/api/literacy/departments/${deptId}`),
-    suggest: (deptId: string) =>
-      request<{ suggestions: unknown[] }>('POST', `/api/literacy/departments/${deptId}/suggest`, {}),
-    listCerts: (deptId: string) =>
-      request<{ certifications: unknown[]; suggestions: unknown[] }>('GET', `/api/literacy/departments/${deptId}/certifications`),
-    addCert: (deptId: string, body: {
-      certification_name: string; issued_date: string;
-      url?: string; people_count?: number; notes?: string;
-    }) => request<{ cert_id: string }>('POST', `/api/literacy/departments/${deptId}/certifications`, body),
-    deleteCert: (deptId: string, certId: string) =>
-      request<{ message: string }>('DELETE', `/api/literacy/departments/${deptId}/certifications/${certId}`),
+    listSystems: () =>
+      request<{ systems: unknown[] }>('GET', '/api/literacy'),
+    getProfiles: (systemId: string) =>
+      request<{ system: unknown; profiles: unknown[]; literacy_status: string }>('GET', `/api/literacy/${systemId}/profiles`),
+    updateProfile: (systemId: string, profileId: string, body: { headcount?: number; merged_with?: string | null }) =>
+      request<{ message: string }>('PATCH', `/api/literacy/${systemId}/profiles/${profileId}`, body),
+    addEvidence: (systemId: string, profileId: string, body: {
+      evidence_type: 'certification' | 'internal_training';
+      title: string; date: string; people_count: number;
+      issuer?: string; url?: string;
+      topics?: string[]; responsible?: string;
+      notes?: string;
+    }) => request<{ evidence_id: string }>('POST', `/api/literacy/${systemId}/profiles/${profileId}/evidence`, body),
+    deleteEvidence: (systemId: string, profileId: string, evidenceId: string) =>
+      request<{ message: string }>('DELETE', `/api/literacy/${systemId}/profiles/${profileId}/evidence/${evidenceId}`),
+    getSuggestions: (systemId: string, profileType: string) =>
+      request<{ suggestions: unknown[]; cached?: boolean }>('GET', `/api/literacy/suggestions/${systemId}/${profileType}`),
+    generateReport: (systemId: string) =>
+      request<{ pdfBase64: string; filename: string }>('GET', `/api/literacy/${systemId}/report`),
   },
 
   // ─── Partner ────────────────────────────────────────────────────────────────
