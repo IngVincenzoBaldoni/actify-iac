@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { LiteracyProfile, LiteracyEvidence, CertSuggestion } from '@/lib/types';
@@ -218,9 +218,14 @@ function ProfileCard({
   const [savingHc, setSavingHc]     = useState(false);
   const [showAdd, setShowAdd]       = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [mergeState, setMergeState] = useState(!!profile.merged_with);
+  const mergingRef                  = useRef(false);
 
-  const isMerged = !!profile.merged_with;
+  const isMerged = mergeState;
   const color    = statusColor(profile.coverage_pct, profile.headcount);
+
+  // Sync optimistic state when server data updates
+  useEffect(() => { setMergeState(!!profile.merged_with); }, [profile.merged_with]);
 
   async function saveHeadcount() {
     const hc = Number(hcInput);
@@ -235,11 +240,21 @@ function ProfileCard({
   }
 
   async function handleMerge(checked: boolean) {
-    const other = allProfiles.find(p => p.profile_id !== profile.profile_id);
+    if (mergingRef.current) return;
+    // Use record_id (always unique) instead of profile_id for comparison
+    const other = allProfiles.find(p => p.record_id !== profile.record_id);
     if (!other) return;
-    const mergeWith = checked ? other.profile_type : null;
-    await api.literacy.updateProfile(systemId, profile.profile_id, { merged_with: mergeWith });
-    onRefresh();
+    mergingRef.current = true;
+    setMergeState(checked); // optimistic update
+    try {
+      const mergeWith = checked ? other.profile_type : null;
+      await api.literacy.updateProfile(systemId, profile.profile_id, { merged_with: mergeWith });
+      onRefresh();
+    } catch {
+      setMergeState(!checked); // revert on error
+    } finally {
+      mergingRef.current = false;
+    }
   }
 
   async function handleDeleteEvidence(ev: LiteracyEvidence) {
