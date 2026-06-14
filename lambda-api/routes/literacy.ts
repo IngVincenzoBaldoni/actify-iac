@@ -21,6 +21,10 @@ function profileRecordId(systemId: string, pt: string): string { return `PROFILE
 function evidenceRecordId(profileId: string, evidenceId: string): string { return `EVIDENCE#${profileId}#${evidenceId}`; }
 function suggestKeyId(systemId: string, pt: string): string { return `SUGGEST#${systemId}#${pt}`; }
 
+function seg(event: APIGatewayProxyEventV2WithJWTAuthorizer): string[] {
+  return (event.requestContext?.http?.path ?? event.rawPath ?? '').split('/');
+}
+
 function getProfilesForRole(role: SystemRole): ProfileType[] {
   if (role === 'deployer') return ['operational_users', 'supervisors'];
   if (role === 'provider') return ['dev_team', 'qa_team', 'commercial_team'];
@@ -145,7 +149,8 @@ export async function listSystemsLiteracy(event: APIGatewayProxyEventV2WithJWTAu
 
 export async function getSystemProfiles(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth     = extractAuth(event);
-  const systemId = event.pathParameters?.systemId;
+  const s        = seg(event); // ['', 'api', 'literacy', systemId, 'profiles']
+  const systemId = event.pathParameters?.systemId ?? s[3];
   if (!systemId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId required' }) };
 
   const [records, system] = await Promise.all([
@@ -212,8 +217,9 @@ export async function getSystemProfiles(event: APIGatewayProxyEventV2WithJWTAuth
 
 export async function updateProfile(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth      = extractAuth(event);
-  const systemId  = event.pathParameters?.systemId;
-  const profileId = event.pathParameters?.profileId;
+  const s         = seg(event); // ['', 'api', 'literacy', systemId, 'profiles', profileId]
+  const systemId  = event.pathParameters?.systemId  ?? s[3];
+  const profileId = event.pathParameters?.profileId ?? s[5];
   if (!systemId || !profileId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId and profileId required' }) };
 
   const body    = parseBody(event.body, updateProfileSchema);
@@ -239,8 +245,9 @@ export async function updateProfile(event: APIGatewayProxyEventV2WithJWTAuthoriz
 
 export async function addEvidence(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth      = extractAuth(event);
-  const systemId  = event.pathParameters?.systemId;
-  const profileId = event.pathParameters?.profileId;
+  const s         = seg(event); // ['', 'api', 'literacy', systemId, 'profiles', profileId, 'evidence']
+  const systemId  = event.pathParameters?.systemId  ?? s[3];
+  const profileId = event.pathParameters?.profileId ?? s[5];
   if (!systemId || !profileId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId and profileId required' }) };
 
   const body       = parseBody(event.body, evidenceSchema);
@@ -282,8 +289,9 @@ export async function addEvidence(event: APIGatewayProxyEventV2WithJWTAuthorizer
 
 export async function deleteEvidence(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth       = extractAuth(event);
-  const profileId  = event.pathParameters?.profileId;
-  const evidenceId = event.pathParameters?.evidenceId;
+  const s          = seg(event); // ['', 'api', 'literacy', systemId, 'profiles', profileId, 'evidence', evidenceId]
+  const profileId  = event.pathParameters?.profileId  ?? s[5];
+  const evidenceId = event.pathParameters?.evidenceId ?? s[7];
   if (!profileId || !evidenceId) return { statusCode: 400, body: JSON.stringify({ error: 'profileId and evidenceId required' }) };
 
   await dynamo.deleteLiteracyRecord(auth.companyId, evidenceRecordId(profileId, evidenceId));
@@ -294,8 +302,9 @@ export async function deleteEvidence(event: APIGatewayProxyEventV2WithJWTAuthori
 
 export async function getSuggestions(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth        = extractAuth(event);
-  const systemId    = event.pathParameters?.systemId;
-  const profileType = event.pathParameters?.profileType;
+  const s           = seg(event); // ['', 'api', 'literacy', 'suggestions', systemId, profileType]
+  const systemId    = event.pathParameters?.systemId    ?? s[4];
+  const profileType = event.pathParameters?.profileType ?? s[5];
   if (!systemId || !profileType) return { statusCode: 400, body: JSON.stringify({ error: 'systemId and profileType required' }) };
 
   const cached = await dynamo.getLiteracyRecord(auth.companyId, suggestKeyId(systemId, profileType));
@@ -337,7 +346,8 @@ export async function getSuggestions(event: APIGatewayProxyEventV2WithJWTAuthori
 
 export async function generateArt4Report(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth     = extractAuth(event);
-  const systemId = event.pathParameters?.systemId;
+  const s        = seg(event); // ['', 'api', 'literacy', systemId, 'report']
+  const systemId = event.pathParameters?.systemId ?? s[3];
   if (!systemId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId required' }) };
 
   const [records, system, company] = await Promise.all([
