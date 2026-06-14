@@ -322,6 +322,10 @@ function DeptDetail({
                   </div>
                 ))}
               </div>
+              <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(100,116,139,0.06)', border: '1px solid rgba(100,116,139,0.15)', borderRadius: 8, fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
+                <strong style={{ color: 'var(--text2)' }}>Nota:</strong> quelle elencate sono certificazioni suggerite a titolo indicativo sulla base del dipartimento e dei tool AI in uso.
+                La PMI può valutare liberamente qualsiasi altra certificazione o percorso formativo ritenuto idoneo per il proprio contesto e per gli obiettivi di compliance Art. 4 EU AI Act.
+              </div>
             </div>
           )}
 
@@ -602,14 +606,16 @@ function LiteracyContent() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button
-                  onClick={() => handleSuggest(dept)}
-                  disabled={suggestingDeptId === dept.dept_id}
-                  style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', color: '#6366F1', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: suggestingDeptId === dept.dept_id ? 'default' : 'pointer', opacity: suggestingDeptId === dept.dept_id ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  {suggestingDeptId === dept.dept_id
-                    ? <><span className="spin" style={{ width: 12, height: 12, borderWidth: 2 }} /> Analisi AI…</>
-                    : '💡 Consigliami certificazioni'}
-                </button>
+                {!dept.has_suggestions && (
+                  <button
+                    onClick={() => handleSuggest(dept)}
+                    disabled={suggestingDeptId === dept.dept_id}
+                    style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', color: '#6366F1', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: suggestingDeptId === dept.dept_id ? 'default' : 'pointer', opacity: suggestingDeptId === dept.dept_id ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    {suggestingDeptId === dept.dept_id
+                      ? <><span className="spin" style={{ width: 12, height: 12, borderWidth: 2 }} /> Analisi AI…</>
+                      : '💡 Consigliami certificazioni'}
+                  </button>
+                )}
                 <button onClick={() => router.push(`/dashboard/literacy?dept=${dept.dept_id}`)} style={{ background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                   Dettaglio →
                 </button>

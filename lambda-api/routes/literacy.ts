@@ -70,35 +70,43 @@ export async function listDepartments(event: APIGatewayProxyEventV2WithJWTAuthor
   }
 
   // Build unified dept list, preferring manual records (they have dept_id, cert counts, etc.)
-  const certsByDept = new Map<string, number>();
+  const certsByDept    = new Map<string, number>();
+  const suggestedDepts = new Set<string>();
   for (const r of records) {
-    if (!(r.record_id as string).startsWith('CERT#')) continue;
-    const deptId = (r.record_id as string).split('#')[1];
-    certsByDept.set(deptId, (certsByDept.get(deptId) ?? 0) + 1);
+    const rid = r.record_id as string;
+    if (rid.startsWith('CERT#')) {
+      const deptId = rid.split('#')[1];
+      certsByDept.set(deptId, (certsByDept.get(deptId) ?? 0) + 1);
+    } else if (rid.startsWith('SUGGEST#')) {
+      suggestedDepts.add(rid.replace('SUGGEST#', ''));
+    }
   }
 
   const depts: Record<string, unknown>[] = manualDepts.map(d => ({
-    dept_id:     d.dept_id,
-    name:        d.name,
-    headcount:   d.headcount,
-    system_ids:  d.system_ids,
-    source:      'manual',
-    cert_count:  certsByDept.get(d.dept_id as string) ?? 0,
-    created_at:  d.created_at,
+    dept_id:        d.dept_id,
+    name:           d.name,
+    headcount:      d.headcount,
+    system_ids:     d.system_ids,
+    source:         'manual',
+    cert_count:     certsByDept.get(d.dept_id as string) ?? 0,
+    has_suggestions: suggestedDepts.has(d.dept_id as string),
+    created_at:     d.created_at,
   }));
 
   // Add auto-derived from systems, skip if there's already a manual dept with same name
   const existingNames = new Set(depts.map(d => (d.name as string).toLowerCase()));
   for (const [, sd] of systemDeptsMap) {
     if (existingNames.has(sd.name.toLowerCase())) continue;
+    const autoDeptId = `sys-${sd.name.toLowerCase().replace(/\s+/g, '-')}`;
     depts.push({
-      dept_id:    `sys-${sd.name.toLowerCase().replace(/\s+/g, '-')}`,
-      name:       sd.name,
-      headcount:  sd.headcount,
-      system_ids: sd.systems.map(s => s.system_id),
-      systems:    sd.systems,
-      source:     'inventory',
-      cert_count: 0,
+      dept_id:         autoDeptId,
+      name:            sd.name,
+      headcount:       sd.headcount,
+      system_ids:      sd.systems.map(s => s.system_id),
+      systems:         sd.systems,
+      source:          'inventory',
+      cert_count:      0,
+      has_suggestions: suggestedDepts.has(autoDeptId),
     });
   }
 

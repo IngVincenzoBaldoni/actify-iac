@@ -146,14 +146,15 @@ export interface ActifyDocument {
 // ─── AI Literacy Tracker ──────────────────────────────────────────────────────
 
 export interface LiteracyDepartment {
-  dept_id:    string;
-  name:       string;
-  headcount:  number;
-  system_ids: string[];
-  systems?:   Array<{ system_id: string; tool_name: string; purpose: string }>;
-  source:     'manual' | 'inventory';
-  cert_count: number;
-  created_at?: string;
+  dept_id:         string;
+  name:            string;
+  headcount:       number;
+  system_ids:      string[];
+  systems?:        Array<{ system_id: string; tool_name: string; purpose: string }>;
+  source:          'manual' | 'inventory';
+  cert_count:      number;
+  has_suggestions: boolean;
+  created_at?:     string;
 }
 
 export interface LiteracyCertification {
