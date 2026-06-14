@@ -130,7 +130,7 @@ function LiteracyContent() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/dashboard/literacy/${sys.system_id}`)}
+                  onClick={() => router.push(`/dashboard/literacy/detail?id=${sys.system_id}`)}
                   style={{ flexShrink: 0, background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   Gestisci →
                 </button>
