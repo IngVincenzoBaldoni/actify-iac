@@ -148,7 +148,7 @@ export const api = {
     getSuggestions: (systemId: string, profileType: string) =>
       request<{ suggestions: unknown[]; cached?: boolean }>('GET', `/api/literacy/suggestions/${systemId}/${profileType}`),
     generateReport: (systemId: string) =>
-      request<{ pdfBase64: string; filename: string }>('GET', `/api/literacy/${systemId}/report`),
+      request<{ document_id: string; title: string }>('GET', `/api/literacy/${systemId}/report`),
   },
 
   // ─── Partner ────────────────────────────────────────────────────────────────

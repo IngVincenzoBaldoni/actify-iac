@@ -57,13 +57,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const nav = [
-    { href: '/dashboard/inventory',  label: 'AI Inventory',    icon: '⬡',  badge: showInventoryBadge, callout: 'Aggiungi i tuoi strumenti AI', premium: false },
-    { href: '/dashboard/literacy',   label: 'AI Literacy',     icon: '🎓', badge: false, callout: '', premium: false },
-    { href: '/dashboard/documents',  label: 'Document Vault',  icon: '⊟',  badge: false, callout: '', premium: false },
-    { href: '/dashboard/fines',      label: 'Fine Board',      icon: '📈', badge: false, callout: '', premium: false },
+    { href: '/dashboard/inventory',   label: 'AIPI - AI Passports Inventory', icon: '🛂', badge: showInventoryBadge, callout: 'Aggiungi i tuoi AI Passport', premium: false },
+    { href: '/dashboard/fines',       label: 'FBE - Fine Estimation Board',   icon: '📈', badge: false, callout: '', premium: false },
+    { href: '/dashboard/literacy',    label: 'AI Literacy',    icon: '🎓', badge: false, callout: '', premium: false },
+    { href: '/dashboard/documents',   label: 'Document Vault', icon: '⊟',  badge: false, callout: '', premium: false },
     { href: '/dashboard/audit-trail', label: 'Audit Trail',    icon: '🔒', badge: false, callout: '', premium: false },
-    { href: '/dashboard/ai-act',     label: 'Testo AI Act',    icon: '⚖️', badge: false, callout: '', premium: true },
-    { href: '/dashboard/settings',   label: 'Impostazioni',    icon: '⚙',  badge: showSettingsBadge, callout: 'Completa il profilo aziendale', premium: false },
+    { href: '/dashboard/ai-act',      label: 'Testo AI Act',   icon: '⚖️', badge: false, callout: '', premium: true },
+    { href: '/dashboard/settings',    label: 'Impostazioni',   icon: '⚙',  badge: showSettingsBadge, callout: 'Completa il profilo aziendale', premium: false },
   ];
 
   return (

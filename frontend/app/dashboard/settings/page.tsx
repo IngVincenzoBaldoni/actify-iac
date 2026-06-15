@@ -241,14 +241,43 @@ export default function SettingsPage() {
               <div className="plan-settings-name">
                 Piano {({ trial: 'Trial', base: 'Starter', premium: 'Professional', enterprise: 'Enterprise' } as Record<string, string>)[String(company.subscription_tier ?? 'trial')] ?? String(company.subscription_tier ?? 'trial')}
               </div>
-              <div className="plan-settings-sub">
-                {company.subscription_tier === 'base' && 'Fino a 10 tool AI · Document Vault (5 categorie) · Supporto email standard'}
-                {company.subscription_tier === 'premium' && 'AI Inventory illimitata · Document Vault + FRIA · Testo AI Act · Supporto prioritario'}
-                {company.subscription_tier === 'enterprise' && 'Tool illimitati · Accesso completo a tutte le feature'}
-                {(company.subscription_tier === 'trial' || !company.subscription_tier) && 'Account di prova — scegli un piano per sbloccare tutte le funzionalità'}
-              </div>
+              {(company.subscription_tier === 'trial' || !company.subscription_tier) ? (
+                <div className="plan-settings-sub">Account di prova — scegli un piano per sbloccare tutte le funzionalità</div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', marginTop: 8 }}>
+                  {(company.subscription_tier === 'base' ? [
+                    'AIPI (fino a 10 tool)',
+                    'Gap Analysis',
+                    'FEB (Fine Board Estimation)',
+                    'AI Literacy Tracker',
+                    'Document Vault (5 categorie)',
+                    'Audit Trail',
+                    'Supporto email standard',
+                  ] : company.subscription_tier === 'premium' ? [
+                    'AIPI illimitata',
+                    'Gap Analysis',
+                    'FEB (Fine Board Estimation)',
+                    'AI Literacy Tracker',
+                    'Document Vault (tutte le categorie + FRIA)',
+                    'Audit Trail',
+                    'Testo AI Act ufficiale',
+                    'Supporto prioritario',
+                  ] : [
+                    'AIPI illimitata',
+                    'Document Vault (tutte le categorie + FRIA)',
+                    'Testo AI Act ufficiale',
+                    'Supporto prioritario',
+                    'Vendor Hub / DPA tracker',
+                    'Regulatory Feed avanzato',
+                  ]).map(f => (
+                    <span key={f} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: 'var(--text2)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 9px' }}>
+                      <span style={{ color: '#22C55E', fontSize: 10 }}>✓</span> {f}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <a href="/plan" className="btn-change-plan">
+            <a href="/plan" className="btn-change-plan" style={{ flexShrink: 0 }}>
               {(company.subscription_tier === 'trial' || !company.subscription_tier) ? 'Scegli piano →' : 'Cambia piano →'}
             </a>
           </div>

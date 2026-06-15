@@ -1,5 +1,15 @@
 # Memory Index
 
-- [Actify Release 1 — progetto e infrastruttura](project_actify_release1.md) — stack AWS, naming convention, scope Release 1, specs Lambda e Bedrock
-- [Actify Release 2 — SaaS platform](project_actify_release2.md) — Cognito, DynamoDB, Lambda API, SSR frontend, async compliance check, Terraform provisioning steps
-- [Actify Partner Feature](project_actify_partner.md) — Partner multi-client feature: DynamoDB tables, routes, white-label assessment form, registration split
+## Leggere prima di tutto in ogni sessione
+
+- [Actify Core — stack, branch rule, ID AWS, novità recenti](project_actify_core.md) — PRIMO da leggere: punta a CLAUDE.md, ha gli ID critici e l'ultimo aggiornamento
+
+## Regole di comportamento
+
+- [Regole sessione — come lavora Vince](feedback_session_rules.md) — risposte brevi, autonomia, italiano UI, no commit automatici, aggiornare CLAUDE.md
+- [SanctionOverview placement](feedback_sanction_overview_placement.md) — pannello sanzionatorio SOLO in /dashboard/fines, mai nel dettaglio sistema
+
+## Feature — contesto non derivabile dal codice
+
+- [AI Literacy Tracker v2](project_actify_literacy_v2.md) — schema DynamoDB (PROFILE#/EVIDENCE#/SUGGEST#), PMI unified mode, report → Document Vault, gotcha noti
+- [Actify Partner Feature](project_actify_partner.md) — multi-client dashboard, tabelle partner/partner-pmi, white-label assessment, login routing per role

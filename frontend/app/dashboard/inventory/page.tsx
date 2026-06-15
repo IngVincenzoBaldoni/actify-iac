@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { markSvg } from '@/lib/branding';
 
-// Threats positioned around the shield ring
 const THREATS = [
   { icon: '⚖️', label: 'Garante AI',         angle: 0   },
   { icon: '🏢', label: 'Clienti Enterprise', angle: 60  },
@@ -15,7 +14,6 @@ const THREATS = [
   { icon: '👤', label: 'Dipendenti',         angle: 300 },
 ] as const;
 
-// Stage 480×480, center (240,240). Angle 0=top, clockwise.
 function sPos(angleDeg: number, r: number) {
   const a = angleDeg * Math.PI / 180;
   return { x: 240 + r * Math.sin(a), y: 240 - r * Math.cos(a) };
@@ -27,31 +25,68 @@ interface AISystem {
   vendor: string;
   category: string;
   role: 'provider' | 'deployer';
-  compliance_status: 'unchecked' | 'checking' | 'gap_found' | 'compliant';
-  last_check_at: string | null;
+  purpose: string;
+  department?: string;
+  headcount?: number;
+  target_users: string[];
   makes_automated_decisions: boolean;
   human_oversight_level: string;
-  last_exposure_min?: number;
-  last_exposure_max?: number;
-  last_article_sanctions?: string; // JSON: Record<article, {min,max}>
-  compliance_checklist?: Record<string, { status?: string }>;
+  decision_domains: string[];
+  affects_vulnerable_groups: boolean;
+  data_types: string[];
+  output_type?: string;
+  annex_iii_domains?: string[];
+  is_safety_component?: boolean;
+  compliance_status: 'unchecked' | 'checking' | 'gap_found' | 'compliant';
+  last_check_at: string | null;
+  last_article_sanctions?: string;
+  compliance_checklist?: Record<string, string | { status?: string }>;
 }
 
-// Compute the EFFECTIVE exposure by subtracting articles the user declared as "present"
-function computeEffectiveExposure(sys: AISystem): { min: number; max: number } {
-  if (!sys.last_article_sanctions) {
-    return { min: sys.last_exposure_min ?? 0, max: sys.last_exposure_max ?? 0 };
+// ── Derived metadata helpers ────────────────────────────────────────────────
+
+const AVATAR_PALETTE = [
+  '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
+  '#F97316', '#EAB308', '#22C55E', '#14B8A6',
+  '#0EA5E9', '#3B82F6',
+];
+
+function avatarColor(name: string): string {
+  return AVATAR_PALETTE[name.charCodeAt(0) % AVATAR_PALETTE.length];
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+}
+
+function riskLevel(sys: AISystem): { label: string; color: string; bg: string } {
+  if (sys.makes_automated_decisions && (sys.human_oversight_level === 'never' || sys.human_oversight_level === 'sometimes')) {
+    return { label: 'ALTO',  color: '#EF4444', bg: 'rgba(239,68,68,0.2)'  };
   }
+  if (sys.makes_automated_decisions || sys.human_oversight_level === 'never') {
+    return { label: 'MEDIO', color: '#F97316', bg: 'rgba(249,115,22,0.2)' };
+  }
+  return   { label: 'BASSO', color: '#22C55E', bg: 'rgba(34,197,94,0.2)'  };
+}
+
+
+function computeEffectiveExposure(sys: AISystem): { min: number; max: number } {
+  if (!sys.last_article_sanctions) return { min: 0, max: 0 };
   try {
     const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
     const checklist = sys.compliance_checklist ?? {};
     let min = 0, max = 0;
     for (const [art, val] of Object.entries(sanctions)) {
-      if (checklist[art]?.status !== 'present') { min += val.min; max += val.max; }
+      const entry = checklist[art];
+      const st = typeof entry === 'string' ? entry : (entry as { status?: string })?.status;
+      if (st !== 'present') { min += val.min; max += val.max; }
     }
     return { min, max };
   } catch {
-    return { min: sys.last_exposure_min ?? 0, max: sys.last_exposure_max ?? 0 };
+    return { min: 0, max: 0 };
   }
 }
 
@@ -61,11 +96,7 @@ function effectiveStatus(sys: AISystem): AISystem['compliance_status'] {
   return max === 0 ? 'compliant' : 'gap_found';
 }
 
-function fmtEur(n: number): string {
-  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1).replace('.0', '')}M`;
-  if (n >= 1_000)     return `€${(n / 1_000).toFixed(0)}K`;
-  return `€${n.toLocaleString('it-IT')}`;
-}
+// ── Static label maps ───────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
   unchecked: 'Non analizzato', checking: 'Analisi in corso…',
@@ -75,9 +106,19 @@ const STATUS_CLASS: Record<string, string> = {
   unchecked: 'status-unchecked', checking: 'status-checking',
   gap_found: 'status-gap', compliant: 'status-ok',
 };
-const OVERSIGHT_LABEL: Record<string, string> = {
-  always: 'Supervisione: sempre', sometimes: 'Supervisione: a volte',
-  never: 'Supervisione: mai', na: 'N/A',
+const ROLE_LABEL: Record<string, string> = {
+  provider: 'Provider', deployer: 'Deployer',
+};
+const OUTPUT_LABEL: Record<string, string> = {
+  content_generation: 'Generazione contenuti',
+  recommendation:     'Raccomandazione',
+  scoring:            'Scoring',
+  automated_decision: 'Decisione auto.',
+};
+const CAT_LABEL: Record<string, string> = {
+  hr: 'HR', finance: 'Finanza', llm: 'LLM',
+  marketing: 'Marketing', operations: 'Operations',
+  legal: 'Legal', tech: 'Tech', healthcare: 'Healthcare', altro: 'Altro',
 };
 
 const PLAN_LIMITS: Record<string, number> = {
@@ -86,6 +127,8 @@ const PLAN_LIMITS: Record<string, number> = {
 const PLAN_LABELS: Record<string, string> = {
   trial: 'Trial', base: 'Starter', premium: 'Professional', enterprise: 'Enterprise',
 };
+
+// ── Component ───────────────────────────────────────────────────────────────
 
 export default function InventoryPage() {
   const router = useRouter();
@@ -104,15 +147,13 @@ export default function InventoryPage() {
       ]);
       setSystems(data as AISystem[]);
       setTier((company as Record<string, unknown>).subscription_tier as string ?? 'trial');
-    } catch {
-      /* handled */ } finally {
+    } catch { /* handled */ } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadSystems(); }, [loadSystems]);
 
-  // Poll for any systems currently in "checking" state
   useEffect(() => {
     const checking = systems.filter(s => s.compliance_status === 'checking');
     if (checking.length === 0) return;
@@ -137,7 +178,6 @@ export default function InventoryPage() {
     setCheckingIds(prev => new Set(prev).add(systemId));
     try {
       await api.compliance.trigger(systemId);
-      // Update local state immediately to show "checking"
       setSystems(prev => prev.map(s =>
         s.system_id === systemId ? { ...s, compliance_status: 'checking' } : s
       ));
@@ -155,44 +195,20 @@ export default function InventoryPage() {
   const pct       = limit === Infinity ? 0 : Math.min(100, Math.round((systems.length / limit) * 100));
   const fillClass = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : '';
 
-  const total         = systems.length;
-  const compliant     = systems.filter(s => effectiveStatus(s) === 'compliant').length;
-  const gapFound      = systems.filter(s => effectiveStatus(s) === 'gap_found').length;
-  const unchecked     = systems.filter(s => s.compliance_status === 'unchecked').length;
-  const checking      = systems.filter(s => s.compliance_status === 'checking').length;
-  const analyzed      = compliant + gapFound;
-  const riskAuto      = systems.filter(s => s.makes_automated_decisions).length;
-  const score         = analyzed > 0 ? Math.round((compliant / analyzed) * 100) : null;
-  // Merge per-article sanctions, skipping articles declared as "present" in checklist
-  const mergedArticles = new Map<string, { min: number; max: number }>();
-  for (const s of systems) {
-    if (!s.last_article_sanctions) continue;
-    try {
-      const map: Record<string, { min: number; max: number }> = JSON.parse(s.last_article_sanctions);
-      const checklist = s.compliance_checklist ?? {};
-      for (const [art, val] of Object.entries(map)) {
-        if (checklist[art]?.status === 'present') continue;
-        const existing = mergedArticles.get(art);
-        if (!existing || val.max > existing.max) mergedArticles.set(art, val);
-      }
-    } catch { /* malformed JSON — skip */ }
-  }
-  let totalExposMax = 0, totalExposMin = 0;
-  Array.from(mergedArticles.values()).forEach(v => { totalExposMax += v.max; totalExposMin += v.min; });
-  // Fallback: sum effective per-system exposure for systems without last_article_sanctions
-  if (totalExposMax === 0) {
-    systems.forEach(s => {
-      const e = computeEffectiveExposure(s);
-      totalExposMax += e.max; totalExposMin += e.min;
-    });
-  }
-  const hasExposure = totalExposMax > 0;
+  const total     = systems.length;
+  const compliant = systems.filter(s => effectiveStatus(s) === 'compliant').length;
+  const gapFound  = systems.filter(s => effectiveStatus(s) === 'gap_found').length;
+  const unchecked = systems.filter(s => s.compliance_status === 'unchecked').length;
+  const checking  = systems.filter(s => s.compliance_status === 'checking').length;
+  const analyzed  = compliant + gapFound;
+  const riskAuto  = systems.filter(s => s.makes_automated_decisions).length;
+  const score     = analyzed > 0 ? Math.round((compliant / analyzed) * 100) : null;
 
   return (
     <div className="inv-page">
       <div className="inv-header">
         <div>
-          <h1 className="inv-title">AI Inventory</h1>
+          <h1 className="inv-title">AIPI — AI Passports Inventory</h1>
           <p className="inv-sub">{total} sistema{total !== 1 ? 'i' : ''} censit{total !== 1 ? 'i' : 'o'}</p>
         </div>
         <div className="inv-header-actions">
@@ -201,20 +217,23 @@ export default function InventoryPage() {
               className="btn-inv-reload"
               disabled={reloading}
               onClick={async () => { setReloading(true); await loadSystems(); setReloading(false); }}
-              title="Ricarica stati e stime aggiornate"
+              title="Ricarica stati aggiornati"
             >
               {reloading ? '⟳' : '↺'} Ricarica
             </button>
           )}
           {atLimit ? (
-            <a href="/plan" className="btn-add-system" style={{ background: 'rgba(239,68,68,.1)', borderColor: 'rgba(239,68,68,.3)', color: '#EF4444' }}
+            <a href="/plan" className="btn-add-system"
+              style={{ background: 'rgba(239,68,68,.1)', borderColor: 'rgba(239,68,68,.3)', color: '#EF4444' }}
               title={`Piano ${PLAN_LABELS[tier]}: limite di ${limit} tool raggiunto`}>
               ⬆ Upgrade piano
             </a>
           ) : (
             <a href="/dashboard/setup?add=1" className="btn-add-system">
-              <svg width="14" height="14" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-              Aggiungi Sistema
+              <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                <path d="M7.5 1v13M1 7.5h13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              Nuovo AI Passport
             </a>
           )}
         </div>
@@ -223,19 +242,16 @@ export default function InventoryPage() {
       {/* Plan limit bar */}
       {limit !== Infinity && (
         <div className="plan-limit-bar-wrap">
-          <span className="plan-limit-label">
-            Piano <strong>{PLAN_LABELS[tier]}</strong>
-          </span>
+          <span className="plan-limit-label">Piano <strong>{PLAN_LABELS[tier]}</strong></span>
           <div className="plan-limit-track">
             <div className={`plan-limit-fill ${fillClass}`} style={{ width: `${pct}%` }} />
           </div>
-          <span className="plan-limit-count">{systems.length}/{limit} tool</span>
-          {atLimit && (
-            <a href="/plan" className="plan-limit-upgrade">Passa a Premium →</a>
-          )}
+          <span className="plan-limit-count">{systems.length}/{limit} passaporti</span>
+          {atLimit && <a href="/plan" className="plan-limit-upgrade">Passa a Premium →</a>}
         </div>
       )}
 
+      {/* Stats */}
       {total > 0 && (
         <div className="inv-stats">
           <div className="stats-grid">
@@ -244,9 +260,8 @@ export default function InventoryPage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
               </div>
               <div className="stat-num">{total}</div>
-              <div className="stat-label">Sistemi totali</div>
+              <div className="stat-label">Passaporti</div>
             </div>
-
             <div className="stat-card">
               <div className="stat-icon stat-icon-green">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -254,7 +269,6 @@ export default function InventoryPage() {
               <div className="stat-num stat-green">{compliant}</div>
               <div className="stat-label">Conformi</div>
             </div>
-
             <div className="stat-card">
               <div className="stat-icon stat-icon-red">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -262,15 +276,13 @@ export default function InventoryPage() {
               <div className="stat-num stat-red">{gapFound}</div>
               <div className="stat-label">Gap trovati</div>
             </div>
-
             <div className="stat-card">
               <div className="stat-icon stat-icon-dim">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               </div>
               <div className="stat-num">{unchecked}{checking > 0 && <span className="stat-checking"> +{checking}</span>}</div>
-              <div className="stat-label">Non analizzati{checking > 0 ? ` (${checking} in corso)` : ''}</div>
+              <div className="stat-label">Non analizzati</div>
             </div>
-
             <div className="stat-card stat-card-score">
               <div className="stat-icon stat-icon-orange">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
@@ -287,95 +299,40 @@ export default function InventoryPage() {
                 </>
               )}
             </div>
-
             <div className="stat-card">
               <div className="stat-icon stat-icon-orange">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
               </div>
               <div className={`stat-num ${riskAuto > 0 ? 'stat-orange' : ''}`}>{riskAuto}</div>
-              <div className="stat-label">Decisioni automatizzate</div>
+              <div className="stat-label">Decisioni auto.</div>
             </div>
           </div>
 
-          {/* Full-width exposure banner */}
-          <div className={`exp-banner ${hasExposure ? 'exp-banner-active' : 'exp-banner-empty'}`}>
-            <div className="exp-banner-left">
-              <div className="exp-banner-icon">⚖️</div>
-              <div>
-                <div className="exp-banner-title">Esposizione Sanzionatoria Stimata</div>
-                <div className="exp-banner-sub">Art. 99 AI Act · Basata sui gap di compliance rilevati</div>
-              </div>
+          <div className="stats-bar-wrap">
+            <div className="stats-bar-label">
+              <span>Distribuzione compliance</span>
+              <span className="stats-bar-note">{analyzed} di {total} analizzati</span>
             </div>
-            <div className="exp-banner-center">
-              {hasExposure ? (
-                <>
-                  <div className="exp-banner-num">{fmtEur(totalExposMax)}</div>
-                  <div className="exp-banner-range">da {fmtEur(totalExposMin)}</div>
-                  <div className="exp-banner-dedup-note">
-                    Per ogni articolo violato si applica una sola sanzione — violazioni multiple dello stesso articolo non si sommano (Art. 99 AI Act)
-                  </div>
-                </>
-              ) : (
-                <div className="exp-banner-none">Esegui un compliance check per stimare le sanzioni</div>
-              )}
+            <div className="stats-bar">
+              {compliant > 0 && <div className="sbar-seg sbar-green"  style={{ width: `${(compliant / total) * 100}%` }} title={`Conformi: ${compliant}`} />}
+              {gapFound  > 0 && <div className="sbar-seg sbar-red"    style={{ width: `${(gapFound  / total) * 100}%` }} title={`Gap trovati: ${gapFound}`} />}
+              {checking  > 0 && <div className="sbar-seg sbar-check"  style={{ width: `${(checking  / total) * 100}%` }} title={`In analisi: ${checking}`} />}
+              {unchecked > 0 && <div className="sbar-seg sbar-dim"    style={{ width: `${(unchecked / total) * 100}%` }} title={`Non analizzati: ${unchecked}`} />}
             </div>
-            {hasExposure && (
-              <div className="exp-banner-right">
-                <div className="exp-banner-systems">
-                  {[...systems]
-                    .map(s => ({ s, eff: computeEffectiveExposure(s) }))
-                    .filter(({ eff }) => eff.max > 0)
-                    .sort((a, b) => b.eff.max - a.eff.max)
-                    .map(({ s, eff }) => {
-                      const maxE = Math.max(...systems.map(x => computeEffectiveExposure(x).max));
-                      const pct = Math.max(5, (eff.max / maxE) * 100);
-                      const color = eff.max > 1_000_000 ? '#EF4444' : eff.max > 200_000 ? '#F97316' : '#EAB308';
-                      return (
-                        <div key={s.system_id} className="exp-mini-row" onClick={() => router.push(`/dashboard/system?id=${s.system_id}`)}>
-                          <span className="exp-mini-name">{s.tool_name}</span>
-                          <div className="exp-mini-bar-wrap">
-                            <div className="exp-mini-bar-fill" style={{ width: `${pct}%`, background: color }} />
-                          </div>
-                          <span className="exp-mini-amt" style={{ color }}>{fmtEur(eff.max)}</span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
+            <div className="stats-bar-legend">
+              {compliant > 0 && <span className="sbl-item"><span className="sbl-dot sbl-green"/>Conformi {compliant}</span>}
+              {gapFound  > 0 && <span className="sbl-item"><span className="sbl-dot sbl-red"/>Gap trovati {gapFound}</span>}
+              {checking  > 0 && <span className="sbl-item"><span className="sbl-dot sbl-check"/>In analisi {checking}</span>}
+              {unchecked > 0 && <span className="sbl-item"><span className="sbl-dot sbl-dim"/>Non analizzati {unchecked}</span>}
+            </div>
           </div>
-
-          {total > 0 && (
-            <div className="stats-bar-wrap">
-              <div className="stats-bar-label">
-                <span>Distribuzione compliance</span>
-                <span className="stats-bar-note">{analyzed} di {total} analizzati</span>
-              </div>
-              <div className="stats-bar">
-                {compliant > 0  && <div className="sbar-seg sbar-green"  style={{ width: `${(compliant / total) * 100}%` }} title={`Conformi: ${compliant}`} />}
-                {gapFound > 0   && <div className="sbar-seg sbar-red"    style={{ width: `${(gapFound  / total) * 100}%` }} title={`Gap trovati: ${gapFound}`} />}
-                {checking > 0   && <div className="sbar-seg sbar-check"  style={{ width: `${(checking  / total) * 100}%` }} title={`In analisi: ${checking}`} />}
-                {unchecked > 0  && <div className="sbar-seg sbar-dim"    style={{ width: `${(unchecked / total) * 100}%` }} title={`Non analizzati: ${unchecked}`} />}
-              </div>
-              <div className="stats-bar-legend">
-                {compliant > 0 && <span className="sbl-item"><span className="sbl-dot sbl-green"/>Conformi {compliant}</span>}
-                {gapFound  > 0 && <span className="sbl-item"><span className="sbl-dot sbl-red"/>Gap trovati {gapFound}</span>}
-                {checking  > 0 && <span className="sbl-item"><span className="sbl-dot sbl-check"/>In analisi {checking}</span>}
-                {unchecked > 0 && <span className="sbl-item"><span className="sbl-dot sbl-dim"/>Non analizzati {unchecked}</span>}
-              </div>
-            </div>
-          )}
-
         </div>
       )}
 
+      {/* Empty state */}
       {total === 0 ? (
         <div className="sv-wrap">
-
-          {/* ── Shield stage ───────────────────────────────── */}
           <div className="sv-stage">
-
-            {/* SVG overlay: dashed blocked arrows from threats toward shield */}
             <svg className="sv-svg" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg">
               {THREATS.map(t => {
                 const p1 = sPos(t.angle, 175);
@@ -393,31 +350,20 @@ export default function InventoryPage() {
                 );
               })}
             </svg>
-
-            {/* Rings */}
-            <div className="sv-ring sv-r3" />
-            <div className="sv-ring sv-r2" />
+            <div className="sv-ring sv-r3" /><div className="sv-ring sv-r2" />
             <div className="sv-ring sv-r1"><div className="sv-r1-arc" /></div>
-
-            {/* ── Center: PMI (phase 1) then PMI+Actify (phase 2+) */}
             <div className="sv-core">
               <div className="sv-core-box">
-                {/* Building — always visible */}
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
-                  stroke="rgba(203,213,225,0.9)" strokeWidth="1.5">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(203,213,225,0.9)" strokeWidth="1.5">
                   <path d="M3 21h18M3 21V7l9-4 9 4v14M9 21v-4h6v4"/>
                   <rect x="9" y="9" width="2" height="2" fill="rgba(203,213,225,0.9)" stroke="none"/>
                   <rect x="13" y="9" width="2" height="2" fill="rgba(203,213,225,0.9)" stroke="none"/>
                 </svg>
-                {/* Actify mark — fades in after PMI-alone phase */}
                 <div className="sv-core-divider sv-actify-in" />
-                <span className="sv-actify-in"
-                  dangerouslySetInnerHTML={{ __html: markSvg(30, 'green') }} />
+                <span className="sv-actify-in" dangerouslySetInnerHTML={{ __html: markSvg(30, 'green') }} />
               </div>
               <div className="sv-core-tag sv-actify-in">AI Act Protected</div>
             </div>
-
-            {/* Threat nodes */}
             {THREATS.map((t, i) => {
               const pos = sPos(t.angle, 202);
               return (
@@ -429,15 +375,13 @@ export default function InventoryPage() {
               );
             })}
           </div>
-
-          {/* ── Text below stage */}
-          <h2 className="ief-title">Inizia a censire i tuoi strumenti AI</h2>
+          <h2 className="ief-title">Crea il primo AI Passport</h2>
           <p className="ief-desc">
-            Aggiungi i tuoi strumenti AI. Actify costruisce uno scudo di compliance
+            Censisci i tuoi strumenti AI nell&apos;AI Passports Inventory. Actify costruisce uno scudo di compliance
             che ti protegge da sanzioni, audit e richieste di clienti enterprise.
           </p>
           <div className="ief-pills">
-            <span className="ief-pill"><span>⚖️</span> Stima sanzioni Art. 99</span>
+            <span className="ief-pill"><span>🛂</span> AI Passports certificati</span>
             <span className="ief-pill"><span>⊙</span> Compliance check automatico</span>
             <span className="ief-pill"><span>📋</span> Roadmap correttiva</span>
           </div>
@@ -445,79 +389,210 @@ export default function InventoryPage() {
             <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
               <path d="M7.5 1v13M1 7.5h13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
-            Aggiungi il primo sistema AI
+            Aggiungi il primo AI Passport
           </a>
         </div>
       ) : (
+        /* ── Passport grid ── */
         <div className="inv-grid">
-          {systems.map(sys => (
-            <div key={sys.system_id} className="sys-card">
-              <div className="sys-card-head">
-                <div>
-                  <div className="sys-name">{sys.tool_name}</div>
-                  {sys.vendor && <div className="sys-vendor">{sys.vendor}</div>}
-                </div>
-                <div className="sys-badges">
-                  <span className={`role-badge ${sys.role}`}>{sys.role}</span>
-                  <span className="cat-badge">{sys.category}</span>
-                </div>
-              </div>
-              <div className="sys-card-body">
-                {(() => {
-                  const effSt = effectiveStatus(sys);
-                  const eff = computeEffectiveExposure(sys);
-                  return (
-                    <>
-                      <div className={`compliance-badge ${STATUS_CLASS[effSt]}`}>
-                        {effSt === 'checking' && <span className="pulse-dot"></span>}
-                        {STATUS_LABEL[effSt]}
-                      </div>
-                      {eff.max > 0 && (
-                        <div className="sys-exposure">
-                          <span className="sys-exp-label">⚖️ Sanzione stimata:</span>
-                          <span className="sys-exp-val">{fmtEur(eff.min)} – {fmtEur(eff.max)}</span>
-                        </div>
+          {systems.map(sys => {
+            const effSt      = effectiveStatus(sys);
+            const isDeleting = deletingIds.has(sys.system_id);
+            const isChecking = checkingIds.has(sys.system_id);
+            const risk       = riskLevel(sys);
+            const avColor    = avatarColor(sys.tool_name);
+            const avInit     = initials(sys.tool_name);
+            const annexCount = (sys.annex_iii_domains ?? []).length;
+            const users      = sys.target_users ?? [];
+            const dataTypes  = sys.data_types ?? [];
+
+            return (
+              <div key={sys.system_id} className="sys-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
+                {/* ══ PASSPORT HEADER ══ */}
+                <div style={{ background: 'linear-gradient(135deg, #0E0E10 0%, #181818 60%, #111113 100%)', padding: '18px 20px', display: 'flex', alignItems: 'flex-start', gap: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  {/* Avatar */}
+                  <div style={{ width: 52, height: 52, borderRadius: 10, background: avColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#fff', flexShrink: 0, border: '2px solid rgba(255,255,255,0.12)', letterSpacing: 0.5 }}>
+                    {avInit}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Name */}
+                    <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', lineHeight: 1.15, marginBottom: 8, letterSpacing: 0.2 }}>{sys.tool_name}</div>
+                    {/* Badges row */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 7 }}>
+                      {/* Role — prominente */}
+                      <span style={{
+                        fontSize: 13, fontWeight: 900, padding: '5px 14px', borderRadius: 6, letterSpacing: 0.5,
+                        background: sys.role === 'provider' ? 'rgba(99,102,241,0.35)' : 'rgba(14,165,233,0.35)',
+                        color:      sys.role === 'provider' ? '#A5B4FC' : '#7DD3FC',
+                        border:     `1px solid ${sys.role === 'provider' ? 'rgba(99,102,241,0.6)' : 'rgba(14,165,233,0.6)'}`,
+                      }}>
+                        {ROLE_LABEL[sys.role]}
+                      </span>
+                      {/* Risk */}
+                      <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 5, background: risk.bg, color: risk.color, letterSpacing: 1, textTransform: 'uppercase', border: `1px solid ${risk.color}40` }}>
+                        {risk.label}
+                      </span>
+                      {/* Vulnerable groups warning */}
+                      {sys.affects_vulnerable_groups && (
+                        <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 5, background: 'rgba(234,179,8,0.15)', color: '#FDE68A', letterSpacing: 0.5, border: '1px solid rgba(234,179,8,0.35)' }}>
+                          ⚠ Vuln.
+                        </span>
                       )}
-                    </>
-                  );
-                })()}
-                <div className="sys-meta">
-                  <span>{OVERSIGHT_LABEL[sys.human_oversight_level] ?? ''}</span>
-                  {sys.last_check_at && (
-                    <span>Ultimo check: {new Date(sys.last_check_at).toLocaleDateString('it-IT')}</span>
-                  )}
+                    </div>
+                    {/* Vendor · Category */}
+                    {(sys.vendor || sys.category) && (
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', fontStyle: 'italic' }}>
+                        {[sys.vendor, sys.category ? CAT_LABEL[sys.category] ?? sys.category : null].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
+                    {/* Purpose — short description */}
+                    {sys.purpose && (
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 5, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {sys.purpose}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Top-right passport label */}
+                  <div style={{ fontSize: 8, fontWeight: 800, color: 'rgba(255,255,255,0.18)', letterSpacing: 2.5, textTransform: 'uppercase', textAlign: 'right', flexShrink: 0, lineHeight: 1.6 }}>
+                    AI<br/>PASS<br/>PORT
+                  </div>
                 </div>
-              </div>
-              <div className="sys-card-footer">
-                {sys.compliance_status === 'unchecked' && (
+
+                {/* ══ DATA GRID ══ */}
+                <div style={{ padding: '20px 20px 16px', flex: 1 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', marginBottom: 20 }}>
+
+                    {/* SUPERVISIONE */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Supervisione</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
+                        {{ always: 'Sempre', sometimes: 'A volte', never: 'Mai', na: 'N/A' }[sys.human_oversight_level] ?? '—'}
+                      </div>
+                    </div>
+
+                    {/* DECISIONI AUTONOME */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Decisioni Auto.</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: sys.makes_automated_decisions ? '#EF4444' : '#22C55E' }}>
+                        {sys.makes_automated_decisions ? '⚠ Sì' : '✓ No'}
+                      </div>
+                    </div>
+
+                    {/* DATI TRATTATI */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Dati Trattati</div>
+                      {dataTypes.length > 0 ? (
+                        <div>
+                          {dataTypes.slice(0, 2).map(d => (
+                            <div key={d} style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{d}</div>
+                          ))}
+                          {dataTypes.length > 2 && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>+{dataTypes.length - 2} altri</div>}
+                        </div>
+                      ) : <span style={{ fontSize: 14, color: 'var(--muted)', fontStyle: 'italic' }}>—</span>}
+                    </div>
+
+                    {/* OUTPUT */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Output</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                        {sys.output_type ? (OUTPUT_LABEL[sys.output_type] ?? sys.output_type) : <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>—</span>}
+                      </div>
+                    </div>
+
+                    {/* UTENTI TARGET */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Utenti Target</div>
+                      {users.length > 0 ? (
+                        <div>
+                          {users.slice(0, 2).map(u => (
+                            <div key={u} style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{u}</div>
+                          ))}
+                          {users.length > 2 && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>+{users.length - 2} altri</div>}
+                          {sys.headcount && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>~{sys.headcount} persone</div>}
+                        </div>
+                      ) : <span style={{ fontSize: 14, color: 'var(--muted)', fontStyle: 'italic' }}>—</span>}
+                    </div>
+
+                    {/* ALLEGATO III */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Allegato III</div>
+                      {annexCount > 0 ? (
+                        <span style={{ display: 'inline-block', fontSize: 13, fontWeight: 700, padding: '3px 10px', borderRadius: 5, background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+                          {annexCount} domin{annexCount === 1 ? 'io' : 'i'}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#22C55E' }}>Nessuno</span>
+                      )}
+                    </div>
+
+                    {/* REPARTO */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Reparto</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                        {sys.department ? sys.department : <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>—</span>}
+                      </div>
+                    </div>
+
+                    {/* GRUPPI VULNERABILI */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 5 }}>Gruppi Vulnerabili</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: sys.affects_vulnerable_groups ? '#FDE68A' : '#22C55E' }}>
+                        {sys.affects_vulnerable_groups ? '⚠ Coinvolti' : '✓ No'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Status row ── */}
+                  <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className={`compliance-badge ${STATUS_CLASS[effSt]}`} style={{ fontSize: 13, padding: '6px 16px', fontWeight: 800 }}>
+                      {effSt === 'checking' && <span className="pulse-dot" />}
+                      {STATUS_LABEL[effSt]}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>
+                      {sys.last_check_at
+                        ? `Check: ${new Date(sys.last_check_at).toLocaleDateString('it-IT')}`
+                        : <em>Mai analizzato</em>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ══ FOOTER ══ */}
+                <div style={{ borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {sys.compliance_status === 'unchecked' && (
+                    <button
+                      className="sys-check-btn"
+                      style={{ flex: 1, fontSize: 12 }}
+                      disabled={isChecking}
+                      onClick={() => activateCheck(sys.system_id)}
+                    >
+                      {isChecking ? '⟳ Avvio…' : '▶ Avvia Check'}
+                    </button>
+                  )}
+                  {sys.compliance_status === 'checking' && (
+                    <button className="sys-check-btn" style={{ flex: 1, fontSize: 12 }} disabled>⟳ In analisi…</button>
+                  )}
                   <button
-                    className="sys-check-btn"
-                    disabled={checkingIds.has(sys.system_id)}
-                    onClick={() => activateCheck(sys.system_id)}
+                    className="sys-detail-btn sys-detail-btn-full"
+                    style={{ flex: 2, fontSize: 14, fontWeight: 900, padding: '10px 0', letterSpacing: 0.2 }}
+                    onClick={() => router.push(`/dashboard/system?id=${sys.system_id}`)}
                   >
-                    {checkingIds.has(sys.system_id) ? '⟳ Avvio…' : '▶ Avvia Compliance Check'}
-                  </button>
-                )}
-                {sys.compliance_status === 'checking' && (
-                  <button className="sys-check-btn" disabled>⟳ Analisi in corso…</button>
-                )}
-                {(effectiveStatus(sys) === 'gap_found' || effectiveStatus(sys) === 'compliant') && (
-                  <button className="sys-detail-btn sys-detail-btn-full"
-                    onClick={() => router.push(`/dashboard/system?id=${sys.system_id}`)}>
                     Dettaglio →
                   </button>
-                )}
-                <button
-                  className="sys-delete-btn"
-                  disabled={deletingIds.has(sys.system_id)}
-                  onClick={() => deleteSystem(sys.system_id, sys.tool_name)}
-                  title="Elimina sistema"
-                >
-                  {deletingIds.has(sys.system_id) ? '…' : '🗑'}
-                </button>
+                  <button
+                    className="sys-delete-btn"
+                    disabled={isDeleting}
+                    onClick={() => deleteSystem(sys.system_id, sys.tool_name)}
+                    title="Elimina passaporto"
+                  >
+                    {isDeleting ? '…' : '🗑'}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

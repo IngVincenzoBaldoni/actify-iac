@@ -19,6 +19,7 @@ const DOC_TYPE_ICONS: Record<string, string> = {
   policy_template:        '📋',
   document_generation:    '📄',
   conformity_declaration: '✅',
+  art4_literacy_report:   '🎓',
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -28,6 +29,7 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   policy_template:        'Policy AI',
   document_generation:    'Documentazione Tecnica',
   conformity_declaration: 'Dichiarazione di Conformità',
+  art4_literacy_report:   'Report Art. 4 — AI Literacy',
 };
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {

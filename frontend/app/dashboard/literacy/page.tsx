@@ -54,6 +54,9 @@ function LiteracyContent() {
               di un livello adeguato di competenze in base al proprio ruolo. Actify genera automaticamente
               i <strong>profili di utenza</strong> corretti (Provider vs Deployer) per ogni sistema censito
               nell&apos;AI Inventory e traccia le evidenze — certificazioni esterne o formazione interna.
+              {' '}Quando le evidenze coprono <strong>almeno l&apos;80% delle persone</strong> in ogni profilo attivo,
+              il sistema viene marcato automaticamente come <strong>Conforme</strong> e diventa possibile
+              generare il <strong>Report Art. 4</strong> da salvare nel Document Vault come prova ispettiva.
             </p>
           </div>
         </div>

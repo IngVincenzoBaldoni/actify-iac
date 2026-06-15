@@ -103,30 +103,42 @@ export async function listSystemsLiteracy(event: APIGatewayProxyEventV2WithJWTAu
   ]);
 
   // Build per-system profile summary from PROFILE# records
-  const profilesBySys = new Map<string, Array<{ headcount: number; coverage_pct: number; merged_with: string | null }>>();
+  type SysProfile = { headcount: number; coverage_pct: number; merged_with: string | null; profile_type: string; evidences: Record<string, unknown>[] };
+  const profilesBySys = new Map<string, SysProfile[]>();
 
   for (const rec of records) {
     const rid = rec.record_id as string;
     if (!rid.startsWith('PROFILE#')) continue;
-    const parts = rid.split('#');
-    const systemId = parts[1];
-    if (!systemId) continue;
+    const parts       = rid.split('#');
+    const systemId    = parts[1];
+    const profileType = parts[2];
+    if (!systemId || !profileType) continue;
 
     const headcount  = (rec.headcount as number) ?? 0;
     const mergedWith = (rec.merged_with as string | null) ?? null;
     const profileId  = rec.profile_id as string;
-    const evidences  = records.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${profileId}#`));
-    const coverage   = calcCoverage(headcount, evidences as Record<string, unknown>[]);
+    const evidences  = records.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${profileId}#`)) as Record<string, unknown>[];
+    const coverage   = calcCoverage(headcount, evidences);
 
     if (!profilesBySys.has(systemId)) profilesBySys.set(systemId, []);
-    profilesBySys.get(systemId)!.push({ headcount, coverage_pct: coverage, merged_with: mergedWith });
+    profilesBySys.get(systemId)!.push({ headcount, coverage_pct: coverage, merged_with: mergedWith, profile_type: profileType, evidences });
   }
 
   const result = (systems as Array<Record<string, unknown>>).map(sys => {
-    const systemId = sys.system_id as string;
-    const profiles = profilesBySys.get(systemId) ?? [];
-    const active   = profiles.filter(p => !p.merged_with);
-    const status   = literacyStatus(profiles);
+    const systemId    = sys.system_id as string;
+    const rawProfiles = profilesBySys.get(systemId) ?? [];
+
+    // Primary profiles include evidences from their merged secondaries in coverage
+    const profiles = rawProfiles.map(p => {
+      if (p.merged_with !== null) return p;
+      const secondaries = rawProfiles.filter(s => s.merged_with === p.profile_type);
+      if (secondaries.length === 0) return p;
+      const allEvidences = [...p.evidences, ...secondaries.flatMap(s => s.evidences)];
+      return { ...p, coverage_pct: calcCoverage(p.headcount, allEvidences) };
+    });
+
+    const active = profiles.filter(p => !p.merged_with);
+    const status = literacyStatus(profiles);
 
     return {
       system_id:        systemId,
@@ -137,8 +149,7 @@ export async function listSystemsLiteracy(event: APIGatewayProxyEventV2WithJWTAu
       literacy_status:  status,
       profiles_total:   active.length,
       profiles_covered: active.filter(p => p.coverage_pct >= 80).length,
-      evidence_count:   records.filter(r => (r.record_id as string).startsWith('EVIDENCE#') &&
-        profiles.some(p => (r.record_id as string).includes((p as unknown as Record<string, unknown>).profile_id as string ?? ''))).length,
+      evidence_count:   rawProfiles.reduce((s, p) => s + p.evidences.length, 0),
     };
   });
 
@@ -204,13 +215,27 @@ export async function getSystemProfiles(event: APIGatewayProxyEventV2WithJWTAuth
     };
   }).filter((p): p is NonNullable<typeof p> => Boolean(p));
 
-  const allStatus = literacyStatus(profiles.map(p => ({
+  // Primary profiles include evidences from their merged secondaries in coverage
+  const finalProfiles = profiles.map(p => {
+    const mergedWith = p.merged_with as string | null;
+    if (mergedWith !== null) return p;
+    const pt = (p as unknown as Record<string, unknown>).profile_type as string;
+    const secondaries = profiles.filter(s => (s.merged_with as string | null) === pt);
+    if (secondaries.length === 0) return p;
+    const allEvidences = [
+      ...(p.evidences as Record<string, unknown>[]),
+      ...secondaries.flatMap(s => s.evidences as Record<string, unknown>[]),
+    ];
+    return { ...p, coverage_pct: calcCoverage(p.headcount, allEvidences) };
+  });
+
+  const allStatus = literacyStatus(finalProfiles.map(p => ({
     headcount:    p.headcount,
     coverage_pct: p.coverage_pct,
     merged_with:  p.merged_with,
   })));
 
-  return { statusCode: 200, body: JSON.stringify({ system: sys, profiles, literacy_status: allStatus }) };
+  return { statusCode: 200, body: JSON.stringify({ system: sys, profiles: finalProfiles, literacy_status: allStatus }) };
 }
 
 // ─── PATCH /api/literacy/{systemId}/profiles/{profileId} ─────────────────────
@@ -342,11 +367,11 @@ export async function getSuggestions(event: APIGatewayProxyEventV2WithJWTAuthori
   return { statusCode: 200, body: JSON.stringify({ suggestions }) };
 }
 
-// ─── GET /api/literacy/{systemId}/report ─────────────────────────────────────
+// ─── GET /api/literacy/{systemId}/report ── saves to Document Vault ──────────
 
 export async function generateArt4Report(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth     = extractAuth(event);
-  const s        = seg(event); // ['', 'api', 'literacy', systemId, 'report']
+  const s        = seg(event);
   const systemId = event.pathParameters?.systemId ?? s[3];
   if (!systemId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId required' }) };
 
@@ -362,20 +387,35 @@ export async function generateArt4Report(event: APIGatewayProxyEventV2WithJWTAut
   const role = (sys.system_role as SystemRole) ?? 'deployer';
   const pts  = getProfilesForRole(role);
 
-  const profiles = pts.map(pt => {
+  // Build profiles with PMI-aware coverage:
+  // if a profile is merged into another, that profile's evidence also counts for the primary.
+  const profileRecs = pts.map(pt => {
     const rec = records.find(r => (r.record_id as string) === profileRecordId(systemId, pt));
     if (!rec) return null;
-    const evidences  = records.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${rec.profile_id as string}#`));
+    const evidences = records.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${rec.profile_id as string}#`));
+    return { pt, rec, evidences };
+  }).filter(Boolean) as Array<{ pt: string; rec: Record<string, unknown>; evidences: Record<string, unknown>[] }>;
+
+  const profiles = profileRecs.map(({ pt, rec, evidences }) => {
     const headcount  = (rec.headcount as number) ?? 0;
+    const mergedWith = (rec.merged_with as string | null) ?? null;
+
+    // For primary profile (not merged): include secondary's evidences in coverage
+    let allEvidences = evidences;
+    if (!mergedWith) {
+      const secondary = profileRecs.find(x => (x.rec.merged_with as string | null) === pt);
+      if (secondary) allEvidences = [...evidences, ...secondary.evidences];
+    }
+
     return {
       profile_type: pt,
       label:        PROFILE_LABELS[pt],
       headcount,
-      merged_with:  (rec.merged_with as string | null) ?? null,
-      coverage_pct: calcCoverage(headcount, evidences as Record<string, unknown>[]),
-      evidences,
+      merged_with:  mergedWith,
+      coverage_pct: calcCoverage(headcount, allEvidences),
+      evidences:    allEvidences,
     };
-  }).filter(Boolean);
+  });
 
   const payload = {
     _literacyReportRequest: {
@@ -398,9 +438,38 @@ export async function generateArt4Report(event: APIGatewayProxyEventV2WithJWTAut
   const result = JSON.parse(Buffer.from(response.Payload!).toString()) as { pdfBase64?: string };
   if (!result.pdfBase64) return { statusCode: 500, body: JSON.stringify({ error: 'pdf_generation_failed' }) };
 
-  await logEvent(auth.companyId, 'literacy_report_generated', { system_id: systemId }, auth.email);
+  // Save PDF to S3 and create Document Vault record
+  const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+  const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
+  const BUCKET = process.env.DOCUMENTS_BUCKET ?? 'actify-saas-documents';
 
-  const toolSlug = ((sys.tool_name as string) ?? systemId).replace(/\s+/g, '-').toLowerCase().slice(0, 30);
-  const filename = `actify-art4-${toolSlug}-${new Date().toISOString().slice(0, 10)}.pdf`;
-  return { statusCode: 200, body: JSON.stringify({ pdfBase64: result.pdfBase64, filename }) };
+  const documentId = uuidv4();
+  const now        = new Date().toISOString();
+  const toolSlug   = ((sys.tool_name as string) ?? systemId).replace(/\s+/g, '-').toLowerCase().slice(0, 30);
+  const s3Key      = `documents/${auth.companyId}/${systemId}/art4_literacy_report/${documentId}_v1.pdf`;
+  const title      = `Report Art. 4 — ${sys.tool_name as string} (${now.slice(0, 10)})`;
+
+  await s3.send(new PutObjectCommand({
+    Bucket:      BUCKET,
+    Key:         s3Key,
+    Body:        Buffer.from(result.pdfBase64, 'base64'),
+    ContentType: 'application/pdf',
+  }));
+
+  await dynamo.putDocument({
+    document_id:   documentId,
+    company_id:    auth.companyId,
+    system_id:     systemId,
+    document_type: 'art4_literacy_report',
+    title,
+    status:        'final',
+    s3_key:        s3Key,
+    generated_at:  now,
+    generated_by:  auth.email ?? 'actify',
+    ttl:           null,
+  });
+
+  await logEvent(auth.companyId, 'literacy_report_generated', { system_id: systemId, document_id: documentId }, auth.email);
+
+  return { statusCode: 200, body: JSON.stringify({ document_id: documentId, title }) };
 }

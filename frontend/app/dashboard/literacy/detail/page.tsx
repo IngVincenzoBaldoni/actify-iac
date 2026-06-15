@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { LiteracyProfile, LiteracyEvidence, CertSuggestion } from '@/lib/types';
@@ -19,13 +19,6 @@ function statusColor(pct: number, hc: number) {
   if (pct >= 80) return '#22C55E';
   if (pct > 0)   return '#CA8A04';
   return '#DC2626';
-}
-
-function downloadPdf(base64: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = `data:application/pdf;base64,${base64}`;
-  a.download = filename;
-  a.click();
 }
 
 // ─── AddEvidence Modal ────────────────────────────────────────────────────────
@@ -202,30 +195,212 @@ function AddEvidenceModal({
   );
 }
 
-// ─── Profile card ─────────────────────────────────────────────────────────────
+// ─── Unified Profile Card (PMI mode ON) ───────────────────────────────────────
+
+type EvidenceWithPid = LiteracyEvidence & { _pid: string };
+
+function UnifiedProfileCard({
+  primaryProfile, secondaryProfile, systemId, onRefresh,
+}: {
+  primaryProfile: LiteracyProfile;
+  secondaryProfile: LiteracyProfile;
+  systemId: string;
+  onRefresh: () => void;
+}) {
+  const [editHc, setEditHc]         = useState(false);
+  const [hcInput, setHcInput]       = useState(String(primaryProfile.headcount));
+  const [savingHc, setSavingHc]     = useState(false);
+  const [showAdd, setShowAdd]       = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unmerging, setUnmerging]   = useState(false);
+
+  const allEvidences: EvidenceWithPid[] = [
+    ...primaryProfile.evidences.map(e => ({ ...e, _pid: primaryProfile.profile_id })),
+    ...secondaryProfile.evidences.map(e => ({ ...e, _pid: secondaryProfile.profile_id })),
+  ];
+  const totalCovered = allEvidences.reduce((s, e) => s + (e.people_count ?? 0), 0);
+  const headcount    = primaryProfile.headcount;
+  const coveragePct  = headcount > 0 ? Math.min(100, Math.round((totalCovered / headcount) * 100)) : 0;
+  const color        = statusColor(coveragePct, headcount);
+
+  async function saveHeadcount() {
+    const hc = Number(hcInput);
+    if (isNaN(hc) || hc < 0) return;
+    setSavingHc(true);
+    try {
+      await api.literacy.updateProfile(systemId, primaryProfile.profile_id, { headcount: hc });
+      setEditHc(false);
+      onRefresh();
+    } catch { /* silent */ }
+    setSavingHc(false);
+  }
+
+  async function handleUnmerge() {
+    setUnmerging(true);
+    try {
+      await api.literacy.updateProfile(systemId, secondaryProfile.profile_id, { merged_with: null });
+      onRefresh();
+    } catch { /* silent */ }
+    finally { setUnmerging(false); }
+  }
+
+  async function handleDelete(ev: EvidenceWithPid) {
+    if (!confirm(`Eliminare l'evidenza "${ev.title}"?`)) return;
+    setDeletingId(ev.evidence_id);
+    try {
+      await api.literacy.deleteEvidence(systemId, ev._pid, ev.evidence_id);
+      onRefresh();
+    } catch { /* silent */ }
+    setDeletingId(null);
+  }
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 14, overflow: 'hidden', gridColumn: '1 / -1' }}>
+      {/* Header */}
+      <div style={{ padding: '14px 20px', background: 'rgba(99,102,241,0.05)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 8 }}>
+            {primaryProfile.label} + {secondaryProfile.label}
+            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', background: 'rgba(99,102,241,0.15)', color: '#6366F1', borderRadius: 4 }}>Profilo unificato</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>Una persona copre entrambi i ruoli — Art. 4 PMI piccola</div>
+        </div>
+        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1 }}>
+            {headcount === 0 ? '—' : `${coveragePct}%`}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--muted)' }}>copertura combinata</div>
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 20px' }}>
+        {/* PMI note */}
+        <div style={{ marginBottom: 14, padding: '8px 12px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, fontSize: 12, color: '#6366F1', lineHeight: 1.5 }}>
+          Le evidenze qui registrate coprono entrambi i profili ({primaryProfile.label} e {secondaryProfile.label}) ai fini del calcolo Art. 4.
+        </div>
+
+        {/* Headcount */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Persone nel ruolo:</span>
+          {editHc ? (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                type="number" min={0} value={hcInput}
+                onChange={e => setHcInput(e.target.value)}
+                style={{ width: 80, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 12 }}
+                autoFocus
+              />
+              <button onClick={saveHeadcount} disabled={savingHc} style={{ padding: '4px 10px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                {savingHc ? '…' : 'Salva'}
+              </button>
+              <button onClick={() => { setEditHc(false); setHcInput(String(primaryProfile.headcount)); }} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: headcount === 0 ? 'var(--muted)' : 'var(--text)' }}>
+                {headcount === 0 ? 'Non configurato' : headcount}
+              </span>
+              <button onClick={() => setEditHc(true)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✎ Modifica</button>
+            </div>
+          )}
+        </div>
+
+        {/* Coverage bar */}
+        {headcount > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
+              <div style={{ height: '100%', width: `${coveragePct}%`, background: color, borderRadius: 3 }} />
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+              {totalCovered} / {headcount} persone formate (evidenze combinate)
+            </div>
+          </div>
+        )}
+
+        {/* Evidences */}
+        {allEvidences.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+            {allEvidences.map(ev => (
+              <div key={ev.evidence_id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 9 }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>{ev.evidence_type === 'certification' ? '🎓' : '📋'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{ev.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <span>📅 {fmtDate(ev.date)}</span>
+                    <span>👥 {ev.people_count} persone</span>
+                    {ev.issuer && <span>🏛 {ev.issuer}</span>}
+                    {ev.url && <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>🔗 Link</a>}
+                    {ev.topics?.length ? <span>📌 {ev.topics.slice(0, 3).join(', ')}{ev.topics.length > 3 ? `…+${ev.topics.length - 3}` : ''}</span> : null}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDelete(ev)}
+                  disabled={deletingId === ev.evidence_id}
+                  style={{ flexShrink: 0, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', borderRadius: 7, padding: '5px 9px', fontSize: 11, cursor: 'pointer' }}>
+                  {deletingId === ev.evidence_id ? '…' : '✕'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {allEvidences.length === 0 && (
+          <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }}>
+            Nessuna evidenza registrata. Aggiungi certificazioni o formazione interna per coprire entrambi i profili.
+          </p>
+        )}
+
+        {/* Un-merge toggle */}
+        <button
+          type="button"
+          onClick={handleUnmerge}
+          disabled={unmerging}
+          style={{ marginBottom: 14, width: '100%', padding: '10px 14px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: unmerging ? 'wait' : 'pointer', textAlign: 'left', opacity: unmerging ? 0.7 : 1 }}>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>{unmerging ? '⏳' : '✅'}</span>
+          <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>PMI piccola · clicca per separare</span>
+        </button>
+
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{ width: '100%', padding: '9px', background: 'rgba(34,197,94,0.08)', border: '1px dashed rgba(34,197,94,0.4)', color: 'var(--green)', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          + Aggiungi evidenza
+        </button>
+      </div>
+
+      {showAdd && (
+        <AddEvidenceModal
+          systemId={systemId}
+          profileId={primaryProfile.profile_id}
+          profileLabel={`${primaryProfile.label} + ${secondaryProfile.label}`}
+          onSave={() => { setShowAdd(false); onRefresh(); }}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Profile Card (PMI mode OFF only) ────────────────────────────────────────
 
 function ProfileCard({
-  profile, systemId, allProfiles,
-  onRefresh,
+  profile, systemId, allProfiles, onRefresh,
 }: {
   profile: LiteracyProfile;
   systemId: string;
   allProfiles: LiteracyProfile[];
   onRefresh: () => void;
 }) {
-  const [editHc, setEditHc]         = useState(false);
-  const [hcInput, setHcInput]       = useState(String(profile.headcount));
-  const [savingHc, setSavingHc]     = useState(false);
-  const [showAdd, setShowAdd]       = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [mergeState, setMergeState] = useState(!!profile.merged_with);
-  const mergingRef                  = useRef(false);
+  const [editHc, setEditHc]           = useState(false);
+  const [hcInput, setHcInput]         = useState(String(profile.headcount));
+  const [savingHc, setSavingHc]       = useState(false);
+  const [showAdd, setShowAdd]         = useState(false);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [mergeSaving, setMergeSaving] = useState(false);
 
-  const isMerged = mergeState;
-  const color    = statusColor(profile.coverage_pct, profile.headcount);
-
-  // Sync optimistic state when server data updates
-  useEffect(() => { setMergeState(!!profile.merged_with); }, [profile.merged_with]);
+  const color     = statusColor(profile.coverage_pct, profile.headcount);
+  const other     = allProfiles.find(p => p.profile_type !== profile.profile_type);
+  const showMerge = profile.system_role === 'deployer' && allProfiles.length === 2;
 
   async function saveHeadcount() {
     const hc = Number(hcInput);
@@ -239,22 +414,15 @@ function ProfileCard({
     setSavingHc(false);
   }
 
-  async function handleMerge(checked: boolean) {
-    if (mergingRef.current) return;
-    // Use record_id (always unique) instead of profile_id for comparison
-    const other = allProfiles.find(p => p.record_id !== profile.record_id);
-    if (!other) return;
-    mergingRef.current = true;
-    setMergeState(checked); // optimistic update
+  async function handleMerge() {
+    if (mergeSaving || !other) return;
+    setMergeSaving(true);
     try {
-      const mergeWith = checked ? other.profile_type : null;
-      await api.literacy.updateProfile(systemId, profile.profile_id, { merged_with: mergeWith });
+      // ProfileCard only renders when PMI is OFF → merge THIS card to enable PMI
+      await api.literacy.updateProfile(systemId, profile.profile_id, { merged_with: other.profile_type });
       onRefresh();
-    } catch {
-      setMergeState(!checked); // revert on error
-    } finally {
-      mergingRef.current = false;
-    }
+    } catch { /* silent */ }
+    finally { setMergeSaving(false); }
   }
 
   async function handleDeleteEvidence(ev: LiteracyEvidence) {
@@ -267,124 +435,111 @@ function ProfileCard({
     setDeletingId(null);
   }
 
-  const isDeployer = profile.system_role === 'deployer';
-  const showMerge  = isDeployer && allProfiles.length === 2;
-
   return (
-    <div style={{ background: 'var(--surface)', border: `1px solid ${isMerged ? 'var(--border)' : color + '40'}`, borderRadius: 14, overflow: 'hidden', opacity: isMerged ? 0.6 : 1 }}>
+    <div style={{ background: 'var(--surface)', border: `1px solid ${color}40`, borderRadius: 14, overflow: 'hidden' }}>
       {/* Card header */}
-      <div style={{ padding: '14px 20px', background: isMerged ? 'var(--bg)' : `${color}0a`, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '14px 20px', background: `${color}0a`, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 3 }}>
-            {profile.label}
-            {isMerged && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, padding: '2px 7px', background: 'var(--border)', color: 'var(--muted)', borderRadius: 4 }}>Unificato</span>}
-          </div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 3 }}>{profile.label}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>{profile.description}</div>
         </div>
-        {!isMerged && (
-          <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1 }}>
-              {profile.headcount === 0 ? '—' : `${profile.coverage_pct}%`}
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--muted)' }}>copertura</div>
+        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1 }}>
+            {profile.headcount === 0 ? '—' : `${profile.coverage_pct}%`}
           </div>
-        )}
+          <div style={{ fontSize: 10, color: 'var(--muted)' }}>copertura</div>
+        </div>
       </div>
 
-      {isMerged ? (
-        <div style={{ padding: '12px 20px', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
-          Profilo unificato — le evidenze del profilo principale coprono anche questo ruolo.
+      <div style={{ padding: '16px 20px' }}>
+        {/* Headcount row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Persone nel ruolo:</span>
+          {editHc ? (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                type="number" min={0} value={hcInput}
+                onChange={e => setHcInput(e.target.value)}
+                style={{ width: 80, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 12 }}
+                autoFocus
+              />
+              <button onClick={saveHeadcount} disabled={savingHc} style={{ padding: '4px 10px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                {savingHc ? '…' : 'Salva'}
+              </button>
+              <button onClick={() => { setEditHc(false); setHcInput(String(profile.headcount)); }} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: profile.headcount === 0 ? 'var(--muted)' : 'var(--text)' }}>
+                {profile.headcount === 0 ? 'Non configurato' : profile.headcount}
+              </span>
+              <button onClick={() => setEditHc(true)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✎ Modifica</button>
+            </div>
+          )}
         </div>
-      ) : (
-        <div style={{ padding: '16px 20px' }}>
-          {/* Headcount row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Persone nel ruolo:</span>
-            {editHc ? (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input
-                  type="number" min={0} value={hcInput}
-                  onChange={e => setHcInput(e.target.value)}
-                  style={{ width: 80, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 12 }}
-                  autoFocus
-                />
-                <button onClick={saveHeadcount} disabled={savingHc} style={{ padding: '4px 10px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                  {savingHc ? '…' : 'Salva'}
-                </button>
-                <button onClick={() => { setEditHc(false); setHcInput(String(profile.headcount)); }} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: profile.headcount === 0 ? 'var(--muted)' : 'var(--text)' }}>
-                  {profile.headcount === 0 ? 'Non configurato' : profile.headcount}
-                </span>
-                <button onClick={() => setEditHc(true)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✎ Modifica</button>
-              </div>
-            )}
+
+        {/* Coverage bar */}
+        {profile.headcount > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
+              <div style={{ height: '100%', width: `${profile.coverage_pct}%`, background: color, borderRadius: 3 }} />
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+              {profile.evidences.reduce((s, e) => s + (e.people_count ?? 0), 0)} / {profile.headcount} persone formate
+            </div>
           </div>
+        )}
 
-          {/* Coverage bar */}
-          {profile.headcount > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
-                <div style={{ height: '100%', width: `${profile.coverage_pct}%`, background: color, borderRadius: 3 }} />
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                {profile.evidences.reduce((s, e) => s + (e.people_count ?? 0), 0)} / {profile.headcount} persone formate
-              </div>
-            </div>
-          )}
-
-          {/* Evidences */}
-          {profile.evidences.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-              {profile.evidences.map(ev => (
-                <div key={ev.evidence_id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 9 }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>{ev.evidence_type === 'certification' ? '🎓' : '📋'}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{ev.title}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                      <span>📅 {fmtDate(ev.date)}</span>
-                      <span>👥 {ev.people_count} persone</span>
-                      {ev.issuer && <span>🏛 {ev.issuer}</span>}
-                      {ev.url && <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>🔗 Link</a>}
-                      {ev.topics?.length ? <span>📌 {ev.topics.slice(0, 3).join(', ')}{ev.topics.length > 3 ? `…+${ev.topics.length - 3}` : ''}</span> : null}
-                    </div>
+        {/* Evidences */}
+        {profile.evidences.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+            {profile.evidences.map(ev => (
+              <div key={ev.evidence_id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 9 }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>{ev.evidence_type === 'certification' ? '🎓' : '📋'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{ev.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <span>📅 {fmtDate(ev.date)}</span>
+                    <span>👥 {ev.people_count} persone</span>
+                    {ev.issuer && <span>🏛 {ev.issuer}</span>}
+                    {ev.url && <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>🔗 Link</a>}
+                    {ev.topics?.length ? <span>📌 {ev.topics.slice(0, 3).join(', ')}{ev.topics.length > 3 ? `…+${ev.topics.length - 3}` : ''}</span> : null}
                   </div>
-                  <button
-                    onClick={() => handleDeleteEvidence(ev)}
-                    disabled={deletingId === ev.evidence_id}
-                    style={{ flexShrink: 0, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', borderRadius: 7, padding: '5px 9px', fontSize: 11, cursor: 'pointer' }}>
-                    {deletingId === ev.evidence_id ? '…' : '✕'}
-                  </button>
                 </div>
-              ))}
-            </div>
-          )}
+                <button
+                  onClick={() => handleDeleteEvidence(ev)}
+                  disabled={deletingId === ev.evidence_id}
+                  style={{ flexShrink: 0, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', borderRadius: 7, padding: '5px 9px', fontSize: 11, cursor: 'pointer' }}>
+                  {deletingId === ev.evidence_id ? '…' : '✕'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-          {profile.evidences.length === 0 && (
-            <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }}>Nessuna evidenza registrata per questo profilo.</p>
-          )}
+        {profile.evidences.length === 0 && (
+          <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }}>Nessuna evidenza registrata per questo profilo.</p>
+        )}
 
-          {/* Merge toggle — Deployer only, 2 profiles */}
-          {showMerge && (
-            <button
-              type="button"
-              onClick={() => handleMerge(!isMerged)}
-              style={{ marginBottom: 14, width: '100%', padding: '10px 14px', background: isMerged ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.06)', border: `1px solid ${isMerged ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.2)'}`, borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left' }}>
-              <span style={{ fontSize: 16, lineHeight: 1 }}>{isMerged ? '✅' : '⬜'}</span>
-              <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>PMI piccola</span>
-            </button>
-          )}
-
+        {/* Merge toggle — enables PMI mode (⬜ = PMI OFF, this card renders only when PMI is OFF) */}
+        {showMerge && (
           <button
-            onClick={() => setShowAdd(true)}
-            style={{ width: '100%', padding: '9px', background: 'rgba(34,197,94,0.08)', border: '1px dashed rgba(34,197,94,0.4)', color: 'var(--green)', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-            + Aggiungi evidenza
+            type="button"
+            onClick={handleMerge}
+            disabled={mergeSaving}
+            style={{ marginBottom: 14, width: '100%', padding: '10px 14px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: mergeSaving ? 'wait' : 'pointer', textAlign: 'left', opacity: mergeSaving ? 0.7 : 1 }}>
+            <span style={{ fontSize: 16, lineHeight: 1 }}>{mergeSaving ? '⏳' : '⬜'}</span>
+            <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>PMI piccola</span>
           </button>
-        </div>
-      )}
+        )}
+
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{ width: '100%', padding: '9px', background: 'rgba(34,197,94,0.08)', border: '1px dashed rgba(34,197,94,0.4)', color: 'var(--green)', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          + Aggiungi evidenza
+        </button>
+      </div>
 
       {showAdd && (
         <AddEvidenceModal
@@ -486,9 +641,8 @@ function LiteracyDetailContent() {
   async function handleGenerateReport() {
     setGeneratingPdf(true);
     try {
-      const r = await api.literacy.generateReport(systemId);
-      const typed = r as { pdfBase64: string; filename: string };
-      downloadPdf(typed.pdfBase64, typed.filename);
+      await api.literacy.generateReport(systemId);
+      router.push('/dashboard/documents');
     } catch { /* silent */ }
     setGeneratingPdf(false);
   }
@@ -514,14 +668,17 @@ function LiteracyDetailContent() {
 
   if (loading) return <div className="db-loading"><div className="spin"></div></div>;
 
-  const toolName    = (system?.tool_name as string) ?? systemId;
-  const vendor      = (system?.vendor as string) ?? '';
-  const category    = (system?.category as string) ?? '';
-  const systemRole  = (system?.system_role as string) ?? 'deployer';
-  const roleLabel   = systemRole === 'provider' ? 'Provider' : 'Deployer';
-  const roleColor   = systemRole === 'provider' ? '#6366F1' : '#0EA5E9';
+  const toolName   = (system?.tool_name as string) ?? systemId;
+  const vendor     = (system?.vendor as string) ?? '';
+  const category   = (system?.category as string) ?? '';
+  const systemRole = (system?.system_role as string) ?? 'deployer';
+  const roleLabel  = systemRole === 'provider' ? 'Provider' : 'Deployer';
+  const roleColor  = systemRole === 'provider' ? '#6366F1' : '#0EA5E9';
 
-  const activeProfiles = profiles.filter(p => !p.merged_with);
+  // PMI mode: one profile has merged_with set (secondary), the other doesn't (primary)
+  const mergedProfile  = profiles.find(p => !!p.merged_with);
+  const primaryProfile = profiles.find(p => !p.merged_with);
+  const inPMIMode      = !!mergedProfile && !!primaryProfile;
 
   return (
     <div className="inv-page">
@@ -540,37 +697,59 @@ function LiteracyDetailContent() {
           </div>
           <p className="inv-sub">
             {[vendor, category].filter(Boolean).join(' · ')}
-            {activeProfiles.length > 0 && ` · ${activeProfiles.filter(p => p.coverage_pct >= 80 && p.headcount > 0).length}/${activeProfiles.length} profili conformi`}
+            {profiles.length > 0 && ` · ${profiles.filter(p => p.coverage_pct >= 80 && p.headcount > 0).length}/${profiles.length} profili conformi`}
           </p>
+        </div>
+      </div>
+
+      {/* Report Art. 4 section */}
+      <div style={{ marginBottom: 24, padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 5 }}>📄 Report Art. 4 — Evidenze AI Literacy</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 500 }}>
+            Questo documento è <strong>fondamentale in caso di ispezione</strong> da parte delle autorità competenti (Art. 4 EU AI Act).
+            Verrà salvato nel <strong>Document Vault</strong> e sarà disponibile per il download e la condivisione con gli ispettori.
+          </div>
         </div>
         <button
           onClick={handleGenerateReport}
           disabled={generatingPdf}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: generatingPdf ? 'var(--surface)' : '#0f172a', color: generatingPdf ? 'var(--muted)' : '#fff', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: generatingPdf ? 'default' : 'pointer', flexShrink: 0 }}>
-          {generatingPdf ? <><span className="spin" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generazione…</> : '📄 Genera Report Art. 4'}
+          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: generatingPdf ? 'var(--surface)' : '#0f172a', color: generatingPdf ? 'var(--muted)' : '#fff', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: generatingPdf ? 'default' : 'pointer' }}>
+          {generatingPdf
+            ? <><span className="spin" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvataggio…</>
+            : '📄 Salva in Document Vault'}
         </button>
       </div>
 
       {/* Profile cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, marginBottom: 28 }}>
-        {profiles.map(p => (
-          <ProfileCard
-            key={p.profile_id}
-            profile={p}
-            systemId={systemId}
-            allProfiles={profiles}
-            onRefresh={load}
-          />
-        ))}
+        {inPMIMode
+          ? <UnifiedProfileCard
+              primaryProfile={primaryProfile!}
+              secondaryProfile={mergedProfile!}
+              systemId={systemId}
+              onRefresh={load}
+            />
+          : profiles.map(p => (
+              <ProfileCard
+                key={p.profile_id}
+                profile={p}
+                systemId={systemId}
+                allProfiles={profiles}
+                onRefresh={load}
+              />
+            ))
+        }
       </div>
 
       {/* Suggestions */}
       {profiles.length > 0 && (
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Certificazioni consigliate per profilo</div>
-          {profiles.filter(p => !p.merged_with).map(p => (
-            <SuggestionsPanel key={p.profile_id} systemId={systemId} profile={p} />
-          ))}
+          {inPMIMode && primaryProfile
+            ? <SuggestionsPanel key={primaryProfile.profile_id} systemId={systemId} profile={primaryProfile} />
+            : profiles.map(p => <SuggestionsPanel key={p.profile_id} systemId={systemId} profile={p} />)
+          }
         </div>
       )}
     </div>
