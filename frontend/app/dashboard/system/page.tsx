@@ -8,6 +8,114 @@ import type { ComplianceCheck, ComplianceGap, ComplianceResult, ChecklistEntry, 
 import { normalizeEntry } from '@/lib/types';
 import { SanctionOverview } from '@/components/SanctionOverview';
 
+// ─── Article Sidebar ──────────────────────────────────────────────────────────
+
+function parseArticleNum(article: string): number | null {
+  const m = article.match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+function formatArticleText(text: string): React.ReactNode {
+  return text.split(/\n\n+/).map((para, i) => (
+    <p key={i} style={{ margin: '0 0 1.1em 0', lineHeight: 1.8, color: 'var(--text2)', fontSize: 13 }}>
+      {para.split('\n').map((line, j, arr) => (
+        <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
+      ))}
+    </p>
+  ));
+}
+
+function ArticleSidebar({ articleNum, onClose }: { articleNum: number; onClose: () => void }) {
+  const [text, setText]       = useState('');
+  const [title, setTitle]     = useState('');
+  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    // trigger slide-in on next frame
+    const raf = requestAnimationFrame(() => setVisible(true));
+    setLoading(true);
+    setText('');
+    setTitle('');
+    api.articles.get(articleNum)
+      .then((d: { text: string; article_title: string }) => { setText(d.text); setTitle(d.article_title); })
+      .catch(() => setText(''))
+      .finally(() => setLoading(false));
+    return () => cancelAnimationFrame(raf);
+  }, [articleNum]);
+
+  function handleClose() {
+    setVisible(false);
+    setTimeout(onClose, 280);
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div onClick={handleClose} style={{
+        position: 'fixed', inset: 0, zIndex: 400,
+        background: 'rgba(0,0,0,0.45)',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.28s ease',
+        cursor: 'pointer',
+      }} />
+
+      {/* Panel */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 460,
+        background: 'var(--surface)', borderLeft: '1px solid var(--border)',
+        zIndex: 401, display: 'flex', flexDirection: 'column',
+        transform: visible ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: '-12px 0 48px rgba(0,0,0,0.6)',
+      }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.4, color: 'var(--green)', marginBottom: 6 }}>
+                Reg. UE 2024/1689 — Testo ufficiale
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)', letterSpacing: -0.4, lineHeight: 1.2 }}>
+                Art. {articleNum}
+                {title && <span style={{ color: 'var(--text2)', fontWeight: 600, fontSize: 15 }}> — {title}</span>}
+              </div>
+            </div>
+            <button onClick={handleClose} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', fontSize: 16, cursor: 'pointer', padding: '5px 9px', borderRadius: 7, lineHeight: 1, transition: 'all .15s', flexShrink: 0 }}>
+              ✕
+            </button>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <a
+              href={`/dashboard/ai-act?article=${articleNum}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--green)', textDecoration: 'none', padding: '5px 12px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 7 }}>
+              ⚖️ Apri nel Testo AI Act →
+            </a>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 40px' }}>
+          {loading && (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 48 }}>
+              <div className="spin" style={{ width: 32, height: 32, borderWidth: 2, margin: 0 }} />
+            </div>
+          )}
+          {!loading && !text && (
+            <div style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: 13 }}>
+              Testo non disponibile per questo articolo.
+            </div>
+          )}
+          {!loading && text && formatArticleText(text)}
+        </div>
+      </div>
+    </>
+  );
+}
+
 const AUTO_LABELS: Record<string, string> = {
   document_generation: 'Generazione Documento',
   policy_template:     'Policy Template',
@@ -309,10 +417,26 @@ function ComplianceChecklist({
   onCloseGap:         (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
 }) {
   const [previewDoc, setPreviewDoc] = useState<ActifyDocument | null>(null);
+  const [articleSidebar, setArticleSidebar] = useState<number | null>(null);
   // Local note drafts — synced to parent on blur (prevents a save on every keystroke)
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
   const getStatus = (article: string) => normalizeEntry(checklist[article]).status;
+
+  const ArticleBtn = ({ article }: { article: string }) => {
+    const num = parseArticleNum(article);
+    if (!num) return null;
+    return (
+      <button
+        onClick={() => setArticleSidebar(num)}
+        title="Leggi l'articolo completo del Regolamento UE 2024/1689"
+        style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 9px', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, transition: 'all .15s', whiteSpace: 'nowrap' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--green)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(34,197,94,0.4)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}>
+        ⚖️ Vedi articolo
+      </button>
+    );
+  };
 
   const llmCompliant   = gaps.filter(g => g.status === 'compliant' && !checklist[g.article]);
   const userPresent    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'present');
@@ -417,6 +541,7 @@ function ComplianceChecklist({
                   <span className="cl-art">{gap.article}</span>
                   <span className="cl-req">{gap.requirement}</span>
                   <span className="cl-status-user">Già implementato</span>
+                  <ArticleBtn article={gap.article} />
                 </div>
                 {entry.addressed_at && (
                   <div className="cl-addressed-date">📅 Addressato il {entry.addressed_at}</div>
@@ -447,6 +572,7 @@ function ComplianceChecklist({
                   <span className="cl-art">{gap.article}</span>
                   <span className="cl-req">{gap.requirement}</span>
                   <span className="cl-status-partial">In lavorazione</span>
+                  <ArticleBtn article={gap.article} />
                 </div>
                 {entry.evidence_note && (
                   <div className="cl-evidence-note">📎 {entry.evidence_note}</div>
@@ -468,6 +594,7 @@ function ComplianceChecklist({
               <span className="cl-art">{gap.article}</span>
               <span className="cl-req">{gap.requirement}</span>
               <span className="cl-status-ok">Conforme</span>
+              <ArticleBtn article={gap.article} />
             </div>
           ))}
         </div>
@@ -483,6 +610,7 @@ function ComplianceChecklist({
                 <span className="cl-art">{gap.article}</span>
                 <span className="cl-req">{gap.requirement}</span>
                 <span className="cl-status-hybrid">Parzialmente risolto</span>
+                <ArticleBtn article={gap.article} />
               </div>
               <p className="cl-desc">{gap.description}</p>
               <HybridActionPanel
@@ -512,6 +640,7 @@ function ComplianceChecklist({
                     ⚠ Da verificare
                   </span>
                 )}
+                <ArticleBtn article={gap.article} />
               </div>
               <p className="cl-desc">{gap.description}</p>
               <GapActions gap={gap} />
@@ -560,6 +689,13 @@ function ComplianceChecklist({
             await onFinalize(previewDoc.document_id);
             setPreviewDoc(null);
           }}
+        />
+      )}
+
+      {articleSidebar !== null && (
+        <ArticleSidebar
+          articleNum={articleSidebar}
+          onClose={() => setArticleSidebar(null)}
         />
       )}
     </div>
