@@ -135,6 +135,112 @@ const PLAN_LABELS: Record<string, string> = {
   trial: 'Trial', base: 'Starter', premium: 'Professional', enterprise: 'Enterprise',
 };
 
+// ── AI Act milestones ───────────────────────────────────────────────────────
+
+const ACT_MILESTONES = [
+  { date: 'AGO 2024', label: 'Entrata in vigore del Regolamento',     ts: new Date('2024-08-01') },
+  { date: 'FEB 2025', label: 'Art. 4-5 — AI Literacy + divieti',      ts: new Date('2025-02-02') },
+  { date: 'AGO 2025', label: 'GPAI e Ufficio AI operativi',            ts: new Date('2025-08-02') },
+  { date: 'AGO 2026', label: 'Sistemi alto rischio (Allegato III)',    ts: new Date('2026-08-02') },
+  { date: 'AGO 2027', label: 'Sistemi legacy alto rischio',            ts: new Date('2027-08-02') },
+  { date: 'DIC 2030', label: 'Allegato I — settori regolamentati',     ts: new Date('2030-12-31') },
+];
+
+// ── Dynamic rotating widget ──────────────────────────────────────────────────
+
+function DynamicWidget({ systems }: { systems: AISystem[] }) {
+  const [slide, setSlide]   = useState(0);
+  const [fading, setFading] = useState(false);
+  const SLIDES = 2;
+  const now = new Date();
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setFading(true);
+      setTimeout(() => { setSlide(s => (s + 1) % SLIDES); setFading(false); }, 350);
+    }, 5500);
+    return () => clearInterval(t);
+  }, []);
+
+  const totalMin   = systems.reduce((sum, s) => sum + computeEffectiveExposure(s).min, 0);
+  const totalMax   = systems.reduce((sum, s) => sum + computeEffectiveExposure(s).max, 0);
+  const gapSystems = systems.filter(s => effectiveStatus(s) === 'gap_found').length;
+
+  return (
+    <div className="inv-kpi-card" style={{ display: 'flex', flexDirection: 'column', minHeight: 220 }}>
+      {/* Slide content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', opacity: fading ? 0 : 1, transform: fading ? 'translateY(8px)' : 'translateY(0)', transition: 'opacity 0.35s ease, transform 0.35s ease' }}>
+
+        {/* ── Slide 0: AI Act timeline ── */}
+        {slide === 0 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 14 }}>
+              Scadenze chiave — AI Act
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {ACT_MILESTONES.map((m, i) => {
+                const past    = m.ts < now;
+                const current = !past && i > 0 && ACT_MILESTONES[i - 1].ts < now;
+                const dotColor = past ? '#22C55E' : current ? '#F97316' : '#252532';
+                const dotBorder = current ? '2px solid #F97316' : past ? 'none' : '1px solid #3A3A4A';
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, paddingTop: 3 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, border: dotBorder, flexShrink: 0 }}/>
+                      {i < ACT_MILESTONES.length - 1 && (
+                        <div style={{ width: 1, height: 11, background: past ? 'rgba(34,197,94,.22)' : 'rgba(255,255,255,.06)', margin: '2px 0' }}/>
+                      )}
+                    </div>
+                    <div style={{ paddingBottom: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: .8, marginRight: 6, color: past ? '#22C55E' : current ? '#F97316' : 'var(--dim)' }}>{m.date}</span>
+                      <span style={{ fontSize: 12, color: past ? 'var(--muted)' : current ? 'var(--text)' : 'var(--dim)', fontWeight: current ? 700 : 400 }}>{m.label}</span>
+                      {current && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, color: '#F97316', background: 'rgba(249,115,22,.1)', border: '1px solid rgba(249,115,22,.25)', padding: '1px 5px', borderRadius: 3, letterSpacing: .5 }}>ORA</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Slide 1: FBE summary ── */}
+        {slide === 1 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 14 }}>
+              Esposizione sanzionatoria totale
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, textAlign: 'center' }}>
+              <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: -2, lineHeight: 1, color: totalMax > 0 ? '#EF4444' : '#22C55E' }}>
+                {totalMax > 0 ? fmtExposure(totalMax) : '€0'}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--dim)' }}>esposizione massima stimata</div>
+              {totalMin > 0 && totalMin !== totalMax && (
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                  Min <span style={{ color: 'var(--text2)', fontWeight: 700 }}>{fmtExposure(totalMin)}</span>
+                  <span style={{ color: 'var(--dim)', margin: '0 6px' }}>—</span>
+                  Max <span style={{ color: '#EF4444', fontWeight: 700 }}>{fmtExposure(totalMax)}</span>
+                </div>
+              )}
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--dim)' }}>
+                {gapSystems > 0
+                  ? <><span style={{ color: '#EF4444', fontWeight: 700 }}>{gapSystems} sistem{gapSystems !== 1 ? 'i' : 'a'}</span> con gap aperti</>
+                  : <span style={{ color: '#22C55E' }}>✓ Nessun gap aperto</span>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Apple-style pill dots */}
+      <div style={{ display: 'flex', gap: 5, justifyContent: 'center', paddingTop: 14 }}>
+        {Array.from({ length: SLIDES }).map((_, i) => (
+          <div key={i} style={{ height: 5, width: i === slide ? 18 : 5, borderRadius: 3, background: i === slide ? '#22C55E' : 'rgba(255,255,255,.18)', transition: 'all .45s cubic-bezier(.4,0,.2,1)' }}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Donut chart ─────────────────────────────────────────────────────────────
 
 function DonutChart({ compliant, gapFound, checking, unchecked, total }: {
@@ -388,7 +494,7 @@ export default function InventoryPage() {
               <div className="inv-kpi-sub">
                 {gapFound === 0
                   ? <span style={{ color: '#22C55E' }}>✓ Nessun gap</span>
-                  : <><span style={{ color: '#EF4444' }}>● {gapCritical} critico{gapCritical !== 1 ? 'i' : ''}</span>{gapMedium > 0 && <> · <span style={{ color: '#F97316' }}>{gapMedium} medio{gapMedium !== 1 ? '' : ''}</span></>}</>
+                  : <><span style={{ color: '#EF4444' }}>● {gapCritical} critic{gapCritical !== 1 ? 'i' : 'o'}</span>{gapMedium > 0 && <> · <span style={{ color: '#F97316' }}>{gapMedium} medi{gapMedium !== 1 ? '' : 'o'}</span></>}</>
                 }
               </div>
             </div>
@@ -441,16 +547,7 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            {/* Decisioni automatiche */}
-            <div className="inv-kpi-card">
-              <div className="inv-kpi-num" style={{ color: riskAuto > 0 ? '#F97316' : 'var(--dim)' }}>{riskAuto}</div>
-              <div className="inv-kpi-label">Decisioni automatiche</div>
-              <div className="inv-kpi-sub">
-                {riskAuto === 0
-                  ? <span style={{ color: '#22C55E' }}>✓ Nessuna rilevata</span>
-                  : <span style={{ color: '#F97316' }}>⚠ Richiede supervisione</span>}
-              </div>
-            </div>
+            <DynamicWidget systems={systems} />
           </div>
           </div>{/* end inv-stats-content */}
         </div>
