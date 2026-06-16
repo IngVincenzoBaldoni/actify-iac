@@ -96,6 +96,13 @@ function effectiveStatus(sys: AISystem): AISystem['compliance_status'] {
   return max === 0 ? 'compliant' : 'gap_found';
 }
 
+function fmtExposure(amount: number): string {
+  if (amount <= 0) return '';
+  if (amount >= 1_000_000) return `€${(amount / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (amount >= 1_000) return `€${Math.round(amount / 1_000)}K`;
+  return `€${amount}`;
+}
+
 // ── Static label maps ───────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
@@ -405,6 +412,8 @@ export default function InventoryPage() {
             const annexCount = (sys.annex_iii_domains ?? []).length;
             const users      = sys.target_users ?? [];
             const dataTypes  = sys.data_types ?? [];
+            const { max: exposureAmt } = computeEffectiveExposure(sys);
+            const exposureStr = fmtExposure(exposureAmt);
 
             return (
               <div key={sys.system_id} className="sys-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -551,10 +560,17 @@ export default function InventoryPage() {
                       {effSt === 'checking' && <span className="pulse-dot" />}
                       {STATUS_LABEL[effSt]}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>
-                      {sys.last_check_at
-                        ? `Check: ${new Date(sys.last_check_at).toLocaleDateString('it-IT')}`
-                        : <em>Mai analizzato</em>}
+                    <div style={{ textAlign: 'right' }}>
+                      {exposureStr && (
+                        <div style={{ fontSize: 15, fontWeight: 900, color: '#EF4444', letterSpacing: 0.3, lineHeight: 1.2 }}>
+                          ⚠ {exposureStr}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: exposureStr ? 2 : 0 }}>
+                        {sys.last_check_at
+                          ? `Check: ${new Date(sys.last_check_at).toLocaleDateString('it-IT')}`
+                          : <em>Mai analizzato</em>}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -574,6 +590,14 @@ export default function InventoryPage() {
                   {sys.compliance_status === 'checking' && (
                     <button className="sys-check-btn" style={{ flex: 1, fontSize: 12 }} disabled>⟳ In analisi…</button>
                   )}
+                  <button
+                    className="sys-detail-btn"
+                    style={{ flex: 1, fontSize: 12, padding: '8px 0', fontWeight: 700 }}
+                    onClick={() => router.push(`/dashboard/system?id=${sys.system_id}&view=fines`)}
+                    title="Vedi esposizione sanzionatoria in FBE"
+                  >
+                    📈 FBE
+                  </button>
                   <button
                     className="sys-detail-btn sys-detail-btn-full"
                     style={{ flex: 2, fontSize: 14, fontWeight: 900, padding: '10px 0', letterSpacing: 0.2 }}
