@@ -404,35 +404,35 @@ export default function InventoryPage() {
                 {/* Tipologia */}
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 5 }}>Tipologia di tool</div>
-                  <div style={{ display: 'flex', gap: 14, fontSize: 12 }}>
+                  <div style={{ display: 'flex', gap: 18, fontSize: 16, alignItems: 'baseline' }}>
                     <span>
-                      <span style={{ fontWeight: 900, color: '#A5B4FC' }}>{providerCount}</span>
-                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Provider</span>
+                      <span style={{ fontWeight: 900, color: '#A5B4FC', fontSize: 22 }}>{providerCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 5 }}>Provider</span>
                     </span>
-                    <span style={{ color: 'var(--dim)' }}>·</span>
+                    <span style={{ color: 'var(--dim)', fontSize: 14 }}>·</span>
                     <span>
-                      <span style={{ fontWeight: 900, color: '#7DD3FC' }}>{deployerCount}</span>
-                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Deployer</span>
+                      <span style={{ fontWeight: 900, color: '#7DD3FC', fontSize: 22 }}>{deployerCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 5 }}>Deployer</span>
                     </span>
                   </div>
                 </div>
                 {/* Rischio */}
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 5 }}>Rischio riscontrato</div>
-                  <div style={{ display: 'flex', gap: 10, fontSize: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 14, fontSize: 16, flexWrap: 'wrap', alignItems: 'baseline' }}>
                     <span>
-                      <span style={{ fontWeight: 900, color: riskHighCount > 0 ? '#EF4444' : 'var(--dim)' }}>{riskHighCount}</span>
-                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Alto</span>
+                      <span style={{ fontWeight: 900, fontSize: 22, color: riskHighCount > 0 ? '#EF4444' : 'var(--dim)' }}>{riskHighCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 5 }}>Alto</span>
                     </span>
-                    <span style={{ color: 'var(--dim)' }}>·</span>
+                    <span style={{ color: 'var(--dim)', fontSize: 14 }}>·</span>
                     <span>
-                      <span style={{ fontWeight: 900, color: riskMedCount > 0 ? '#F97316' : 'var(--dim)' }}>{riskMedCount}</span>
-                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Medio</span>
+                      <span style={{ fontWeight: 900, fontSize: 22, color: riskMedCount > 0 ? '#F97316' : 'var(--dim)' }}>{riskMedCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 5 }}>Medio</span>
                     </span>
-                    <span style={{ color: 'var(--dim)' }}>·</span>
+                    <span style={{ color: 'var(--dim)', fontSize: 14 }}>·</span>
                     <span>
-                      <span style={{ fontWeight: 900, color: riskLowCount > 0 ? '#22C55E' : 'var(--dim)' }}>{riskLowCount}</span>
-                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Basso</span>
+                      <span style={{ fontWeight: 900, fontSize: 22, color: riskLowCount > 0 ? '#22C55E' : 'var(--dim)' }}>{riskLowCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 5 }}>Basso</span>
                     </span>
                   </div>
                 </div>
