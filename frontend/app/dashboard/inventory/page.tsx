@@ -150,7 +150,7 @@ function DonutChart({ compliant, gapFound, checking, unchecked, total }: {
   ];
   let cum = 0;
   return (
-    <svg viewBox="0 0 200 200" width={190} height={190} style={{ display: 'block' }}>
+    <svg viewBox="0 0 200 200" width={230} height={230} style={{ display: 'block' }}>
       <defs>
         <radialGradient id="dnt-hole" cx="50%" cy="38%" r="62%">
           <stop offset="0%" stopColor="#1C1C26"/>
@@ -342,6 +342,19 @@ export default function InventoryPage() {
       {/* Stats — donut + KPI */}
       {total > 0 && (
         <div className="inv-stats-v2">
+          {/* Header */}
+          <div className="inv-stats-header">
+            <div>
+              <div className="inv-stats-title">Panoramica Compliance</div>
+              <div className="inv-stats-sub">
+                Stato aggiornato dei tuoi sistemi AI rispetto al Reg. UE 2024/1689 — AI Act
+              </div>
+            </div>
+            <div className="inv-stats-eu-badge">EU AI Act · 2024/1689</div>
+          </div>
+
+          {/* Content row */}
+          <div className="inv-stats-content">
           {/* Donut + legend */}
           <div className="inv-donut-col">
             <DonutChart compliant={compliant} gapFound={gapFound} checking={checking} unchecked={unchecked} total={total} />
@@ -362,7 +375,7 @@ export default function InventoryPage() {
               </div>
               <div className="inv-kpi-label">Tasso conformità</div>
               <div className="inv-kpi-sub">
-                {analyzed > 0 ? `${analyzed} sistema${analyzed !== 1 ? 'i' : ''} su ${total}` : 'Nessuno analizzato'}
+                {analyzed > 0 ? `${analyzed} sistem${analyzed !== 1 ? 'i' : 'a'} su ${total}` : 'Nessuno analizzato'}
               </div>
             </div>
 
@@ -387,30 +400,41 @@ export default function InventoryPage() {
                   ? <span style={{ color: '#22C55E' }}>Tutti analizzati</span>
                   : `${analyzed} di ${total} analizzati`}
               </div>
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {/* Role split */}
-                <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
-                  <span style={{ color: '#A5B4FC' }}>
-                    <span style={{ fontWeight: 800 }}>{providerCount}</span>
-                    <span style={{ color: 'var(--dim)', marginLeft: 3 }}>Provider</span>
-                  </span>
-                  <span style={{ color: 'var(--dim)' }}>·</span>
-                  <span style={{ color: '#7DD3FC' }}>
-                    <span style={{ fontWeight: 800 }}>{deployerCount}</span>
-                    <span style={{ color: 'var(--dim)', marginLeft: 3 }}>Deployer</span>
-                  </span>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Tipologia */}
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 5 }}>Tipologia di tool</div>
+                  <div style={{ display: 'flex', gap: 14, fontSize: 12 }}>
+                    <span>
+                      <span style={{ fontWeight: 900, color: '#A5B4FC' }}>{providerCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Provider</span>
+                    </span>
+                    <span style={{ color: 'var(--dim)' }}>·</span>
+                    <span>
+                      <span style={{ fontWeight: 900, color: '#7DD3FC' }}>{deployerCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Deployer</span>
+                    </span>
+                  </div>
                 </div>
-                {/* Risk split */}
-                <div style={{ display: 'flex', gap: 10, fontSize: 11, flexWrap: 'wrap' }}>
-                  {riskHighCount > 0 && (
-                    <span><span style={{ color: '#EF4444', fontWeight: 800 }}>{riskHighCount}</span><span style={{ color: 'var(--dim)', marginLeft: 3 }}>Alto</span></span>
-                  )}
-                  {riskMedCount > 0 && (
-                    <span><span style={{ color: '#F97316', fontWeight: 800 }}>{riskMedCount}</span><span style={{ color: 'var(--dim)', marginLeft: 3 }}>Medio</span></span>
-                  )}
-                  {riskLowCount > 0 && (
-                    <span><span style={{ color: '#22C55E', fontWeight: 800 }}>{riskLowCount}</span><span style={{ color: 'var(--dim)', marginLeft: 3 }}>Basso</span></span>
-                  )}
+                {/* Rischio */}
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 5 }}>Rischio riscontrato</div>
+                  <div style={{ display: 'flex', gap: 10, fontSize: 12, flexWrap: 'wrap' }}>
+                    <span>
+                      <span style={{ fontWeight: 900, color: riskHighCount > 0 ? '#EF4444' : 'var(--dim)' }}>{riskHighCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Alto</span>
+                    </span>
+                    <span style={{ color: 'var(--dim)' }}>·</span>
+                    <span>
+                      <span style={{ fontWeight: 900, color: riskMedCount > 0 ? '#F97316' : 'var(--dim)' }}>{riskMedCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Medio</span>
+                    </span>
+                    <span style={{ color: 'var(--dim)' }}>·</span>
+                    <span>
+                      <span style={{ fontWeight: 900, color: riskLowCount > 0 ? '#22C55E' : 'var(--dim)' }}>{riskLowCount}</span>
+                      <span style={{ color: 'var(--muted)', marginLeft: 4 }}>Basso</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -426,6 +450,7 @@ export default function InventoryPage() {
               </div>
             </div>
           </div>
+          </div>{/* end inv-stats-content */}
         </div>
       )}
 
@@ -564,7 +589,7 @@ export default function InventoryPage() {
                 </div>
 
                 {/* ══ DATA GRID ══ */}
-                <div style={{ padding: '20px 20px 16px', flex: 1 }}>
+                <div style={{ padding: '20px 20px 16px', flex: 1, background: '#15151C' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', marginBottom: 20 }}>
 
                     {/* SUPERVISIONE */}
