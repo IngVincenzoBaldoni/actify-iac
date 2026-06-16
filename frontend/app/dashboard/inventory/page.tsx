@@ -146,12 +146,82 @@ const ACT_MILESTONES = [
   { date: 'DIC 2030', label: 'Allegato I — settori regolamentati',     ts: new Date('2030-12-31') },
 ];
 
+// ── Radar chart ─────────────────────────────────────────────────────────────
+
+function RadarChart({ axes }: { axes: { label: string; shortLabel: string; value: number }[] }) {
+  const cx = 100, cy = 105, R = 60;
+  const N  = axes.length;
+  const angle = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / N;
+  const vertex = (i: number, r: number) => ({
+    x: cx + r * Math.cos(angle(i)),
+    y: cy + r * Math.sin(angle(i)),
+  });
+  const polyStr = (r: number) => axes.map((_, i) => { const v = vertex(i, r); return `${v.x},${v.y}`; }).join(' ');
+  const valueStr = axes.map((ax, i) => { const v = vertex(i, (ax.value / 100) * R); return `${v.x},${v.y}`; }).join(' ');
+  const avg = Math.round(axes.reduce((s, a) => s + a.value, 0) / N);
+  const avgColor = avg >= 70 ? '#22C55E' : avg >= 40 ? '#F97316' : '#EF4444';
+
+  return (
+    <svg viewBox="-28 -12 256 232" style={{ width: '100%', display: 'block' }}>
+      {/* Grid rings */}
+      {[0.25, 0.5, 0.75, 1].map(f => (
+        <polygon key={f} points={polyStr(R * f)} fill="none"
+          stroke={f === 1 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.04)'} strokeWidth={f === 1 ? 1.2 : 1}/>
+      ))}
+      {/* Spoke lines */}
+      {axes.map((_, i) => {
+        const v = vertex(i, R);
+        return <line key={i} x1={cx} y1={cy} x2={v.x} y2={v.y} stroke="rgba(255,255,255,.06)" strokeWidth="1"/>;
+      })}
+      {/* Value fill */}
+      <polygon points={valueStr} fill="rgba(34,197,94,.13)" stroke="#22C55E" strokeWidth="1.8"/>
+      {/* Value dots */}
+      {axes.map((ax, i) => {
+        const v = vertex(i, (ax.value / 100) * R);
+        return <circle key={i} cx={v.x} cy={v.y} r={4} fill="#22C55E" stroke="#0D0D12" strokeWidth="1.5"/>;
+      })}
+      {/* Center score */}
+      <text x={cx} y={cy - 5} textAnchor="middle" fill={avgColor} fontSize="20" fontWeight="900" fontFamily="inherit">{avg}%</text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fill="#475569" fontSize="8" fontWeight="700" fontFamily="inherit" letterSpacing="1">SCORE</text>
+      {/* Axis labels */}
+      {axes.map((ax, i) => {
+        const a   = angle(i);
+        const lx  = cx + (R + 18) * Math.cos(a);
+        const ly  = cy + (R + 18) * Math.sin(a);
+        const anchor = Math.cos(a) > 0.15 ? 'start' : Math.cos(a) < -0.15 ? 'end' : 'middle';
+        const dy     = Math.sin(a) > 0.1 ? '0.9em' : Math.sin(a) < -0.1 ? '0em' : '0.4em';
+        return (
+          <text key={i} x={lx} y={ly} dy={dy} textAnchor={anchor}
+            fill="#94A3B8" fontSize="8.5" fontWeight="700" fontFamily="inherit" letterSpacing="0.4">
+            {ax.shortLabel.toUpperCase()}
+          </text>
+        );
+      })}
+      {/* Value % near each dot */}
+      {axes.map((ax, i) => {
+        const a  = angle(i);
+        const vr = (ax.value / 100) * R;
+        const vx = cx + vr * Math.cos(a);
+        const vy = cy + vr * Math.sin(a);
+        const nudgeX = Math.cos(a) * 10;
+        const nudgeY = Math.sin(a) * 10;
+        return (
+          <text key={i} x={vx + nudgeX} y={vy + nudgeY} textAnchor="middle" dominantBaseline="middle"
+            fill="#CBD5E1" fontSize="7.5" fontWeight="800" fontFamily="inherit">
+            {ax.value}%
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
 // ── Dynamic rotating widget ──────────────────────────────────────────────────
 
 function DynamicWidget({ systems }: { systems: AISystem[] }) {
   const [slide, setSlide]   = useState(0);
   const [fading, setFading] = useState(false);
-  const SLIDES = 2;
+  const SLIDES = 3;
   const now = new Date();
 
   useEffect(() => {
@@ -165,6 +235,34 @@ function DynamicWidget({ systems }: { systems: AISystem[] }) {
   const totalMin   = systems.reduce((sum, s) => sum + computeEffectiveExposure(s).min, 0);
   const totalMax   = systems.reduce((sum, s) => sum + computeEffectiveExposure(s).max, 0);
   const gapSystems = systems.filter(s => effectiveStatus(s) === 'gap_found').length;
+
+  const total    = systems.length;
+  const compliant  = systems.filter(s => effectiveStatus(s) === 'compliant').length;
+  const analyzed   = compliant + gapSystems;
+  const riskHigh   = systems.filter(s => riskLevel(s).label === 'ALTO').length;
+
+  const radarAxes = [
+    {
+      label: 'Trasparenza', shortLabel: 'Trasparenza',
+      value: analyzed > 0 ? Math.round((compliant / analyzed) * 100) : 0,
+    },
+    {
+      label: 'Supervisione', shortLabel: 'Supervis.',
+      value: total > 0 ? Math.round(systems.filter(s => ['always', 'sometimes'].includes(s.human_oversight_level)).length / total * 100) : 0,
+    },
+    {
+      label: 'Dati', shortLabel: 'Dati',
+      value: total > 0 ? Math.round(systems.filter(s => (s.data_types ?? []).length > 0).length / total * 100) : 0,
+    },
+    {
+      label: 'Documentazione', shortLabel: 'Documenti',
+      value: total > 0 ? Math.round((analyzed / total) * 100) : 0,
+    },
+    {
+      label: 'Rischio', shortLabel: 'Rischio',
+      value: total > 0 ? Math.round(((total - riskHigh) / total) * 100) : 100,
+    },
+  ];
 
   return (
     <div className="inv-kpi-card" style={{ display: 'flex', flexDirection: 'column', minHeight: 220 }}>
@@ -227,6 +325,16 @@ function DynamicWidget({ systems }: { systems: AISystem[] }) {
                   : <span style={{ color: '#22C55E' }}>✓ Nessun gap aperto</span>}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Slide 2: Radar compliance ── */}
+        {slide === 2 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+              Radar Compliance
+            </div>
+            <RadarChart axes={radarAxes} />
           </div>
         )}
       </div>
