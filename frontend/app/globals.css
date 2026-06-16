@@ -207,7 +207,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .db-loading{display:flex;align-items:center;justify-content:center;min-height:100vh}
 
 /* ═══ INVENTORY PAGE ═══ */
-.inv-page{max-width:960px;margin:0 auto;padding:40px 32px}
+.inv-page{max-width:1400px;margin:0 auto;padding:40px 32px}
 .inv-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px;gap:20px}
 .inv-title{font-size:28px;font-weight:800;letter-spacing:-.5px}
 .inv-sub{font-size:14px;color:var(--muted);margin-top:4px}
@@ -254,7 +254,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .sbl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .sbl-green{background:var(--green)}.sbl-red{background:var(--red)}.sbl-check{background:var(--orange)}.sbl-dim{background:var(--border2)}
 
-.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.inv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .inv-empty{text-align:center;padding:80px 24px;color:var(--muted)}
 .empty-icon{font-size:48px;margin-bottom:16px;opacity:.4}
 .inv-empty h3{font-size:18px;font-weight:700;color:var(--text2);margin-bottom:8px}
