@@ -140,18 +140,38 @@ const PLAN_LABELS: Record<string, string> = {
 function DonutChart({ compliant, gapFound, checking, unchecked, total }: {
   compliant: number; gapFound: number; checking: number; unchecked: number; total: number;
 }) {
-  const r = 68, cx = 100, cy = 100, sw = 26;
+  const r = 66, cx = 100, cy = 100, sw = 28;
   const circ = 2 * Math.PI * r;
   const segs = [
-    { n: compliant, color: '#22C55E' },
-    { n: gapFound,  color: '#EF4444' },
-    { n: checking,  color: '#F97316' },
-    { n: unchecked, color: '#2E2E36' },
+    { n: compliant, color: '#22C55E', glow: 'rgba(34,197,94,0.7)'  },
+    { n: gapFound,  color: '#EF4444', glow: 'rgba(239,68,68,0.7)'  },
+    { n: checking,  color: '#F97316', glow: 'rgba(249,115,22,0.7)' },
+    { n: unchecked, color: '#252530', glow: null                   },
   ];
   let cum = 0;
   return (
-    <svg viewBox="0 0 200 200" width={180} height={180} style={{ display: 'block' }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1A1A22" strokeWidth={sw} />
+    <svg viewBox="0 0 200 200" width={190} height={190} style={{ display: 'block' }}>
+      <defs>
+        <radialGradient id="dnt-hole" cx="50%" cy="38%" r="62%">
+          <stop offset="0%" stopColor="#1C1C26"/>
+          <stop offset="100%" stopColor="#0D0D12"/>
+        </radialGradient>
+        {/* Per-segment glow filters */}
+        {segs.map((s, i) => s.glow && (
+          <filter key={i} id={`glow-${i}`} x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        ))}
+      </defs>
+
+      {/* Deep shadow ring — gives 3D depth */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.65)" strokeWidth={sw + 10}/>
+
+      {/* Track ring */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#17171F" strokeWidth={sw}/>
+
+      {/* Colored segments */}
       {segs.map((s, i) => {
         if (s.n === 0) return null;
         const dash = (s.n / total) * circ;
@@ -160,16 +180,31 @@ function DonutChart({ compliant, gapFound, checking, unchecked, total }: {
             stroke={s.color} strokeWidth={sw}
             strokeDasharray={`${Math.max(0, dash - 3)} ${circ - dash + 3}`}
             strokeDashoffset={circ - cum}
+            strokeLinecap="round"
             transform={`rotate(-90 ${cx} ${cy})`}
+            filter={s.glow ? `url(#glow-${i})` : undefined}
           />
         );
         cum += dash;
         return el;
       })}
-      <text x={cx} y={cy - 8} textAnchor="middle" fill="#F8FAFC"
+
+      {/* Sheen highlight at top (simulates light source) */}
+      <circle cx={cx} cy={cy} r={r} fill="none"
+        stroke="rgba(255,255,255,0.07)" strokeWidth={sw}
+        strokeDasharray={`${circ * 0.22} ${circ * 0.78}`}
+        strokeDashoffset={circ * 0.11}
+        transform={`rotate(-90 ${cx} ${cy})`}
+      />
+
+      {/* Inner fill with gradient for depth */}
+      <circle cx={cx} cy={cy} r={r - sw / 2 - 5} fill="url(#dnt-hole)"/>
+
+      {/* Center number */}
+      <text x={cx} y={cy - 7} textAnchor="middle" fill="#F8FAFC"
         fontSize="40" fontWeight="900" fontFamily="inherit">{total}</text>
-      <text x={cx} y={cy + 16} textAnchor="middle" fill="#94A3B8"
-        fontSize="13" fontFamily="inherit">sistemi</text>
+      <text x={cx} y={cy + 16} textAnchor="middle" fill="#64748B"
+        fontSize="11" fontWeight="600" fontFamily="inherit" letterSpacing="1.5">SISTEMI</text>
     </svg>
   );
 }
@@ -249,8 +284,13 @@ export default function InventoryPage() {
   const analyzed    = compliant + gapFound;
   const riskAuto    = systems.filter(s => s.makes_automated_decisions).length;
   const score       = analyzed > 0 ? Math.round((compliant / analyzed) * 100) : null;
-  const gapCritical = systems.filter(s => effectiveStatus(s) === 'gap_found' && riskLevel(s).label === 'ALTO').length;
-  const gapMedium   = gapFound - gapCritical;
+  const gapCritical   = systems.filter(s => effectiveStatus(s) === 'gap_found' && riskLevel(s).label === 'ALTO').length;
+  const gapMedium     = gapFound - gapCritical;
+  const providerCount = systems.filter(s => s.role === 'provider').length;
+  const deployerCount = systems.filter(s => s.role === 'deployer').length;
+  const riskHighCount = systems.filter(s => riskLevel(s).label === 'ALTO').length;
+  const riskMedCount  = systems.filter(s => riskLevel(s).label === 'MEDIO').length;
+  const riskLowCount  = systems.filter(s => riskLevel(s).label === 'BASSO').length;
 
   return (
     <div className="inv-page">
@@ -342,10 +382,36 @@ export default function InventoryPage() {
             <div className="inv-kpi-card">
               <div className="inv-kpi-num" style={{ color: 'var(--text)' }}>{total}</div>
               <div className="inv-kpi-label">Sistemi censiti</div>
-              <div className="inv-kpi-sub">
+              <div className="inv-kpi-sub" style={{ marginBottom: 10 }}>
                 {analyzed === total
                   ? <span style={{ color: '#22C55E' }}>Tutti analizzati</span>
                   : `${analyzed} di ${total} analizzati`}
+              </div>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* Role split */}
+                <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+                  <span style={{ color: '#A5B4FC' }}>
+                    <span style={{ fontWeight: 800 }}>{providerCount}</span>
+                    <span style={{ color: 'var(--dim)', marginLeft: 3 }}>Provider</span>
+                  </span>
+                  <span style={{ color: 'var(--dim)' }}>·</span>
+                  <span style={{ color: '#7DD3FC' }}>
+                    <span style={{ fontWeight: 800 }}>{deployerCount}</span>
+                    <span style={{ color: 'var(--dim)', marginLeft: 3 }}>Deployer</span>
+                  </span>
+                </div>
+                {/* Risk split */}
+                <div style={{ display: 'flex', gap: 10, fontSize: 11, flexWrap: 'wrap' }}>
+                  {riskHighCount > 0 && (
+                    <span><span style={{ color: '#EF4444', fontWeight: 800 }}>{riskHighCount}</span><span style={{ color: 'var(--dim)', marginLeft: 3 }}>Alto</span></span>
+                  )}
+                  {riskMedCount > 0 && (
+                    <span><span style={{ color: '#F97316', fontWeight: 800 }}>{riskMedCount}</span><span style={{ color: 'var(--dim)', marginLeft: 3 }}>Medio</span></span>
+                  )}
+                  {riskLowCount > 0 && (
+                    <span><span style={{ color: '#22C55E', fontWeight: 800 }}>{riskLowCount}</span><span style={{ color: 'var(--dim)', marginLeft: 3 }}>Basso</span></span>
+                  )}
+                </div>
               </div>
             </div>
 
