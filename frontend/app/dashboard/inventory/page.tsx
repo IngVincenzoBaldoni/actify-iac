@@ -135,6 +135,45 @@ const PLAN_LABELS: Record<string, string> = {
   trial: 'Trial', base: 'Starter', premium: 'Professional', enterprise: 'Enterprise',
 };
 
+// ── Donut chart ─────────────────────────────────────────────────────────────
+
+function DonutChart({ compliant, gapFound, checking, unchecked, total }: {
+  compliant: number; gapFound: number; checking: number; unchecked: number; total: number;
+}) {
+  const r = 68, cx = 100, cy = 100, sw = 26;
+  const circ = 2 * Math.PI * r;
+  const segs = [
+    { n: compliant, color: '#22C55E' },
+    { n: gapFound,  color: '#EF4444' },
+    { n: checking,  color: '#F97316' },
+    { n: unchecked, color: '#2E2E36' },
+  ];
+  let cum = 0;
+  return (
+    <svg viewBox="0 0 200 200" width={180} height={180} style={{ display: 'block' }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1A1A22" strokeWidth={sw} />
+      {segs.map((s, i) => {
+        if (s.n === 0) return null;
+        const dash = (s.n / total) * circ;
+        const el = (
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+            stroke={s.color} strokeWidth={sw}
+            strokeDasharray={`${Math.max(0, dash - 3)} ${circ - dash + 3}`}
+            strokeDashoffset={circ - cum}
+            transform={`rotate(-90 ${cx} ${cy})`}
+          />
+        );
+        cum += dash;
+        return el;
+      })}
+      <text x={cx} y={cy - 8} textAnchor="middle" fill="#F8FAFC"
+        fontSize="40" fontWeight="900" fontFamily="inherit">{total}</text>
+      <text x={cx} y={cy + 16} textAnchor="middle" fill="#94A3B8"
+        fontSize="13" fontFamily="inherit">sistemi</text>
+    </svg>
+  );
+}
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function InventoryPage() {
@@ -202,14 +241,16 @@ export default function InventoryPage() {
   const pct       = limit === Infinity ? 0 : Math.min(100, Math.round((systems.length / limit) * 100));
   const fillClass = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : '';
 
-  const total     = systems.length;
-  const compliant = systems.filter(s => effectiveStatus(s) === 'compliant').length;
-  const gapFound  = systems.filter(s => effectiveStatus(s) === 'gap_found').length;
-  const unchecked = systems.filter(s => s.compliance_status === 'unchecked').length;
-  const checking  = systems.filter(s => s.compliance_status === 'checking').length;
-  const analyzed  = compliant + gapFound;
-  const riskAuto  = systems.filter(s => s.makes_automated_decisions).length;
-  const score     = analyzed > 0 ? Math.round((compliant / analyzed) * 100) : null;
+  const total       = systems.length;
+  const compliant   = systems.filter(s => effectiveStatus(s) === 'compliant').length;
+  const gapFound    = systems.filter(s => effectiveStatus(s) === 'gap_found').length;
+  const unchecked   = systems.filter(s => s.compliance_status === 'unchecked').length;
+  const checking    = systems.filter(s => s.compliance_status === 'checking').length;
+  const analyzed    = compliant + gapFound;
+  const riskAuto    = systems.filter(s => s.makes_automated_decisions).length;
+  const score       = analyzed > 0 ? Math.round((compliant / analyzed) * 100) : null;
+  const gapCritical = systems.filter(s => effectiveStatus(s) === 'gap_found' && riskLevel(s).label === 'ALTO').length;
+  const gapMedium   = gapFound - gapCritical;
 
   return (
     <div className="inv-page">
@@ -258,79 +299,65 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats — donut + KPI */}
       {total > 0 && (
-        <div className="inv-stats">
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon stat-icon-blue">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-              </div>
-              <div className="stat-num">{total}</div>
-              <div className="stat-label">Passaporti</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon stat-icon-green">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <div className="stat-num stat-green">{compliant}</div>
-              <div className="stat-label">Conformi</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon stat-icon-red">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              </div>
-              <div className="stat-num stat-red">{gapFound}</div>
-              <div className="stat-label">Gap trovati</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon stat-icon-dim">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              </div>
-              <div className="stat-num">{unchecked}{checking > 0 && <span className="stat-checking"> +{checking}</span>}</div>
-              <div className="stat-label">Non analizzati</div>
-            </div>
-            <div className="stat-card stat-card-score">
-              <div className="stat-icon stat-icon-orange">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-              </div>
-              {score !== null ? (
-                <>
-                  <div className={`stat-num ${score >= 70 ? 'stat-green' : score >= 40 ? 'stat-orange' : 'stat-red'}`}>{score}%</div>
-                  <div className="stat-label">Tasso conformità</div>
-                </>
-              ) : (
-                <>
-                  <div className="stat-num stat-dim">—</div>
-                  <div className="stat-label">Tasso conformità</div>
-                </>
-              )}
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon stat-icon-orange">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-              </div>
-              <div className={`stat-num ${riskAuto > 0 ? 'stat-orange' : ''}`}>{riskAuto}</div>
-              <div className="stat-label">Decisioni auto.</div>
+        <div className="inv-stats-v2">
+          {/* Donut + legend */}
+          <div className="inv-donut-col">
+            <DonutChart compliant={compliant} gapFound={gapFound} checking={checking} unchecked={unchecked} total={total} />
+            <div className="inv-donut-legend">
+              {compliant > 0  && <div className="inv-leg-row"><span className="inv-leg-dot" style={{ background: '#22C55E' }}/><span>Conformi: <strong>{compliant}</strong></span></div>}
+              {gapFound  > 0  && <div className="inv-leg-row"><span className="inv-leg-dot" style={{ background: '#EF4444' }}/><span>Gap trovati: <strong>{gapFound}</strong></span></div>}
+              {checking  > 0  && <div className="inv-leg-row"><span className="inv-leg-dot" style={{ background: '#F97316' }}/><span>In analisi: <strong>{checking}</strong></span></div>}
+              {unchecked > 0  && <div className="inv-leg-row"><span className="inv-leg-dot" style={{ background: '#2E2E36', border: '1px solid #4A4A56' }}/><span>Non analizzati: <strong>{unchecked}</strong></span></div>}
             </div>
           </div>
 
-          <div className="stats-bar-wrap">
-            <div className="stats-bar-label">
-              <span>Distribuzione compliance</span>
-              <span className="stats-bar-note">{analyzed} di {total} analizzati</span>
+          {/* KPI 2×2 grid */}
+          <div className="inv-kpi-grid">
+            {/* Tasso conformità */}
+            <div className="inv-kpi-card">
+              <div className="inv-kpi-num" style={{ color: score === null ? 'var(--dim)' : score >= 70 ? '#22C55E' : score >= 40 ? '#F97316' : '#EF4444' }}>
+                {score !== null ? `${score}%` : '—'}
+              </div>
+              <div className="inv-kpi-label">Tasso conformità</div>
+              <div className="inv-kpi-sub">
+                {analyzed > 0 ? `${analyzed} sistema${analyzed !== 1 ? 'i' : ''} su ${total}` : 'Nessuno analizzato'}
+              </div>
             </div>
-            <div className="stats-bar">
-              {compliant > 0 && <div className="sbar-seg sbar-green"  style={{ width: `${(compliant / total) * 100}%` }} title={`Conformi: ${compliant}`} />}
-              {gapFound  > 0 && <div className="sbar-seg sbar-red"    style={{ width: `${(gapFound  / total) * 100}%` }} title={`Gap trovati: ${gapFound}`} />}
-              {checking  > 0 && <div className="sbar-seg sbar-check"  style={{ width: `${(checking  / total) * 100}%` }} title={`In analisi: ${checking}`} />}
-              {unchecked > 0 && <div className="sbar-seg sbar-dim"    style={{ width: `${(unchecked / total) * 100}%` }} title={`Non analizzati: ${unchecked}`} />}
+
+            {/* Gap aperti */}
+            <div className="inv-kpi-card">
+              <div className="inv-kpi-num" style={{ color: gapFound > 0 ? '#EF4444' : 'var(--dim)' }}>{gapFound}</div>
+              <div className="inv-kpi-label">Gap aperti totali</div>
+              <div className="inv-kpi-sub">
+                {gapFound === 0
+                  ? <span style={{ color: '#22C55E' }}>✓ Nessun gap</span>
+                  : <><span style={{ color: '#EF4444' }}>● {gapCritical} critico{gapCritical !== 1 ? 'i' : ''}</span>{gapMedium > 0 && <> · <span style={{ color: '#F97316' }}>{gapMedium} medio{gapMedium !== 1 ? '' : ''}</span></>}</>
+                }
+              </div>
             </div>
-            <div className="stats-bar-legend">
-              {compliant > 0 && <span className="sbl-item"><span className="sbl-dot sbl-green"/>Conformi {compliant}</span>}
-              {gapFound  > 0 && <span className="sbl-item"><span className="sbl-dot sbl-red"/>Gap trovati {gapFound}</span>}
-              {checking  > 0 && <span className="sbl-item"><span className="sbl-dot sbl-check"/>In analisi {checking}</span>}
-              {unchecked > 0 && <span className="sbl-item"><span className="sbl-dot sbl-dim"/>Non analizzati {unchecked}</span>}
+
+            {/* Sistemi censiti */}
+            <div className="inv-kpi-card">
+              <div className="inv-kpi-num" style={{ color: 'var(--text)' }}>{total}</div>
+              <div className="inv-kpi-label">Sistemi censiti</div>
+              <div className="inv-kpi-sub">
+                {analyzed === total
+                  ? <span style={{ color: '#22C55E' }}>Tutti analizzati</span>
+                  : `${analyzed} di ${total} analizzati`}
+              </div>
+            </div>
+
+            {/* Decisioni automatiche */}
+            <div className="inv-kpi-card">
+              <div className="inv-kpi-num" style={{ color: riskAuto > 0 ? '#F97316' : 'var(--dim)' }}>{riskAuto}</div>
+              <div className="inv-kpi-label">Decisioni automatiche</div>
+              <div className="inv-kpi-sub">
+                {riskAuto === 0
+                  ? <span style={{ color: '#22C55E' }}>✓ Nessuna rilevata</span>
+                  : <span style={{ color: '#F97316' }}>⚠ Richiede supervisione</span>}
+              </div>
             </div>
           </div>
         </div>
