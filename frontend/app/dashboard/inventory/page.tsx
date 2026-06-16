@@ -419,7 +419,7 @@ export default function InventoryPage() {
               <div key={sys.system_id} className="sys-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
                 {/* ══ PASSPORT HEADER ══ */}
-                <div style={{ background: 'linear-gradient(135deg, #0E0E10 0%, #181818 60%, #111113 100%)', padding: '18px 20px', display: 'flex', alignItems: 'flex-start', gap: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ background: 'linear-gradient(150deg, #06060A 0%, #131318 45%, #0A0A0E 100%)', padding: '18px 20px', display: 'flex', alignItems: 'flex-start', gap: 14, borderBottom: '1px solid rgba(255,255,255,0.14)', boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.04)' }}>
                   {/* Avatar */}
                   <div style={{ width: 52, height: 52, borderRadius: 10, background: avColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#fff', flexShrink: 0, border: '2px solid rgba(255,255,255,0.12)', letterSpacing: 0.5 }}>
                     {avInit}
@@ -562,7 +562,7 @@ export default function InventoryPage() {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       {exposureStr && (
-                        <div style={{ fontSize: 15, fontWeight: 900, color: '#EF4444', letterSpacing: 0.3, lineHeight: 1.2 }}>
+                        <div style={{ fontSize: 20, fontWeight: 900, color: '#EF4444', letterSpacing: 0.2, lineHeight: 1.1 }}>
                           ⚠ {exposureStr}
                         </div>
                       )}
