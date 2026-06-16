@@ -347,7 +347,9 @@ export default function InventoryPage() {
             <div>
               <div className="inv-stats-title">Panoramica Compliance</div>
               <div className="inv-stats-sub">
-                Stato aggiornato dei tuoi sistemi AI rispetto al Reg. UE 2024/1689 — AI Act
+                Monitora in tempo reale la conformità dei tuoi sistemi AI al Regolamento UE 2024/1689.
+                Actify analizza ogni passaporto, rileva gap normativi rispetto agli articoli dell&apos;AI Act
+                e stima l&apos;esposizione sanzionatoria massima — così sai esattamente dove intervenire.
               </div>
             </div>
             <div className="inv-stats-eu-badge">EU AI Act · 2024/1689</div>
