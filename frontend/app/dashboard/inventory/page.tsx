@@ -256,7 +256,7 @@ function DonutChart({ compliant, gapFound, checking, unchecked, total }: {
   ];
   let cum = 0;
   return (
-    <svg viewBox="0 0 200 200" width={230} height={230} style={{ display: 'block' }}>
+    <svg viewBox="0 0 200 200" width={270} height={270} style={{ display: 'block' }}>
       <defs>
         <radialGradient id="dnt-hole" cx="50%" cy="38%" r="62%">
           <stop offset="0%" stopColor="#1C1C26"/>
