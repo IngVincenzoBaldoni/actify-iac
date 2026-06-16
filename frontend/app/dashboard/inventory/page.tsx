@@ -149,70 +149,54 @@ const ACT_MILESTONES = [
 // ── Radar chart ─────────────────────────────────────────────────────────────
 
 function RadarChart({ axes }: { axes: { label: string; shortLabel: string; value: number }[] }) {
-  const cx = 100, cy = 105, R = 60;
+  const cx = 100, cy = 95, R = 55;
   const N  = axes.length;
-  const angle = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / N;
-  const vertex = (i: number, r: number) => ({
-    x: cx + r * Math.cos(angle(i)),
-    y: cy + r * Math.sin(angle(i)),
-  });
-  const polyStr = (r: number) => axes.map((_, i) => { const v = vertex(i, r); return `${v.x},${v.y}`; }).join(' ');
+  const angle  = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / N;
+  const vertex = (i: number, r: number) => ({ x: cx + r * Math.cos(angle(i)), y: cy + r * Math.sin(angle(i)) });
+  const polyStr  = (r: number) => axes.map((_, i) => { const v = vertex(i, r); return `${v.x},${v.y}`; }).join(' ');
   const valueStr = axes.map((ax, i) => { const v = vertex(i, (ax.value / 100) * R); return `${v.x},${v.y}`; }).join(' ');
-  const avg = Math.round(axes.reduce((s, a) => s + a.value, 0) / N);
+  const avg      = Math.round(axes.reduce((s, a) => s + a.value, 0) / N);
   const avgColor = avg >= 70 ? '#22C55E' : avg >= 40 ? '#F97316' : '#EF4444';
 
   return (
-    <svg viewBox="-28 -12 256 232" style={{ width: '100%', display: 'block' }}>
-      {/* Grid rings */}
-      {[0.25, 0.5, 0.75, 1].map(f => (
-        <polygon key={f} points={polyStr(R * f)} fill="none"
-          stroke={f === 1 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.04)'} strokeWidth={f === 1 ? 1.2 : 1}/>
-      ))}
-      {/* Spoke lines */}
-      {axes.map((_, i) => {
-        const v = vertex(i, R);
-        return <line key={i} x1={cx} y1={cy} x2={v.x} y2={v.y} stroke="rgba(255,255,255,.06)" strokeWidth="1"/>;
-      })}
-      {/* Value fill */}
-      <polygon points={valueStr} fill="rgba(34,197,94,.13)" stroke="#22C55E" strokeWidth="1.8"/>
-      {/* Value dots */}
-      {axes.map((ax, i) => {
-        const v = vertex(i, (ax.value / 100) * R);
-        return <circle key={i} cx={v.x} cy={v.y} r={4} fill="#22C55E" stroke="#0D0D12" strokeWidth="1.5"/>;
-      })}
-      {/* Center score */}
-      <text x={cx} y={cy - 5} textAnchor="middle" fill={avgColor} fontSize="20" fontWeight="900" fontFamily="inherit">{avg}%</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fill="#475569" fontSize="8" fontWeight="700" fontFamily="inherit" letterSpacing="1">SCORE</text>
-      {/* Axis labels */}
-      {axes.map((ax, i) => {
-        const a   = angle(i);
-        const lx  = cx + (R + 18) * Math.cos(a);
-        const ly  = cy + (R + 18) * Math.sin(a);
-        const anchor = Math.cos(a) > 0.15 ? 'start' : Math.cos(a) < -0.15 ? 'end' : 'middle';
-        const dy     = Math.sin(a) > 0.1 ? '0.9em' : Math.sin(a) < -0.1 ? '0em' : '0.4em';
-        return (
-          <text key={i} x={lx} y={ly} dy={dy} textAnchor={anchor}
-            fill="#94A3B8" fontSize="8.5" fontWeight="700" fontFamily="inherit" letterSpacing="0.4">
-            {ax.shortLabel.toUpperCase()}
-          </text>
-        );
-      })}
-      {/* Value % near each dot */}
-      {axes.map((ax, i) => {
-        const a  = angle(i);
-        const vr = (ax.value / 100) * R;
-        const vx = cx + vr * Math.cos(a);
-        const vy = cy + vr * Math.sin(a);
-        const nudgeX = Math.cos(a) * 10;
-        const nudgeY = Math.sin(a) * 10;
-        return (
-          <text key={i} x={vx + nudgeX} y={vy + nudgeY} textAnchor="middle" dominantBaseline="middle"
-            fill="#CBD5E1" fontSize="7.5" fontWeight="800" fontFamily="inherit">
-            {ax.value}%
-          </text>
-        );
-      })}
-    </svg>
+    <>
+      {/* Radar SVG — compact fixed height */}
+      <svg viewBox="-18 -6 236 202" style={{ width: '100%', height: 148, display: 'block' }}>
+        {[0.33, 0.66, 1].map(f => (
+          <polygon key={f} points={polyStr(R * f)} fill="none"
+            stroke={f === 1 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.04)'} strokeWidth="1"/>
+        ))}
+        {axes.map((_, i) => { const v = vertex(i, R); return <line key={i} x1={cx} y1={cy} x2={v.x} y2={v.y} stroke="rgba(255,255,255,.06)" strokeWidth="1"/>; })}
+        <polygon points={valueStr} fill="rgba(34,197,94,.14)" stroke="#22C55E" strokeWidth="1.8"/>
+        {axes.map((ax, i) => { const v = vertex(i, (ax.value / 100) * R); return <circle key={i} cx={v.x} cy={v.y} r={3.5} fill="#22C55E" stroke="#0D0D12" strokeWidth="1.5"/>; })}
+        {/* Center avg */}
+        <text x={cx} y={cy - 4} textAnchor="middle" fill={avgColor} fontSize="18" fontWeight="900" fontFamily="inherit">{avg}%</text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fill="#475569" fontSize="7" fontWeight="700" fontFamily="inherit" letterSpacing="1">SCORE</text>
+        {/* Axis short labels */}
+        {axes.map((ax, i) => {
+          const a = angle(i);
+          const lx = cx + (R + 16) * Math.cos(a);
+          const ly = cy + (R + 16) * Math.sin(a);
+          const anchor = Math.cos(a) > 0.15 ? 'start' : Math.cos(a) < -0.15 ? 'end' : 'middle';
+          const dy = Math.sin(a) > 0.1 ? '0.9em' : Math.sin(a) < -0.1 ? '0em' : '0.35em';
+          return <text key={i} x={lx} y={ly} dy={dy} textAnchor={anchor} fill="#64748B" fontSize="7.5" fontWeight="700" fontFamily="inherit" letterSpacing="0.3">{ax.shortLabel.toUpperCase()}</text>;
+        })}
+      </svg>
+
+      {/* Legend — 2 column grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', marginTop: 6 }}>
+        {axes.map(ax => {
+          const c = ax.value >= 70 ? '#22C55E' : ax.value >= 40 ? '#F97316' : '#EF4444';
+          return (
+            <div key={ax.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }}/>
+              <span style={{ fontSize: 10, color: 'var(--muted)', flex: 1, lineHeight: 1 }}>{ax.label}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: c }}>{ax.value}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
