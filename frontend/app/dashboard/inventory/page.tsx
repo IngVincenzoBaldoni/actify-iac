@@ -90,6 +90,31 @@ function computeEffectiveExposure(sys: AISystem): { min: number; max: number } {
   }
 }
 
+function computeAggExposure(systems: AISystem[]): { min: number; max: number } {
+  const artMap = new Map<string, { min: number; max: number }>();
+  for (const sys of systems) {
+    if (!sys.last_article_sanctions) continue;
+    try {
+      const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
+      const checklist = sys.compliance_checklist ?? {};
+      for (const [art, val] of Object.entries(sanctions)) {
+        const entry = checklist[art];
+        const st = typeof entry === 'string' ? entry : (entry as { status?: string })?.status;
+        if (st !== 'present') {
+          const ex = artMap.get(art) ?? { min: 0, max: 0 };
+          ex.min = Math.max(ex.min, val.min);
+          ex.max = Math.max(ex.max, val.max);
+          artMap.set(art, ex);
+        }
+      }
+    } catch { /* ignore */ }
+  }
+  return {
+    min: Array.from(artMap.values()).reduce((s, v) => s + v.min, 0),
+    max: Array.from(artMap.values()).reduce((s, v) => s + v.max, 0),
+  };
+}
+
 function effectiveStatus(sys: AISystem): AISystem['compliance_status'] {
   if (sys.compliance_status === 'unchecked' || sys.compliance_status === 'checking') return sys.compliance_status;
   const { max } = computeEffectiveExposure(sys);
@@ -146,57 +171,86 @@ const ACT_MILESTONES = [
   { date: 'DIC 2030', label: 'Allegato I — settori regolamentati',     ts: new Date('2030-12-31') },
 ];
 
-// ── Radar chart ─────────────────────────────────────────────────────────────
+// ── Article breach chart ─────────────────────────────────────────────────────
 
-function RadarChart({ axes }: { axes: { label: string; shortLabel: string; value: number }[] }) {
-  const cx = 100, cy = 95, R = 55;
-  const N  = axes.length;
-  const angle  = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / N;
-  const vertex = (i: number, r: number) => ({ x: cx + r * Math.cos(angle(i)), y: cy + r * Math.sin(angle(i)) });
-  const polyStr  = (r: number) => axes.map((_, i) => { const v = vertex(i, r); return `${v.x},${v.y}`; }).join(' ');
-  const valueStr = axes.map((ax, i) => { const v = vertex(i, (ax.value / 100) * R); return `${v.x},${v.y}`; }).join(' ');
-  const avg      = Math.round(axes.reduce((s, a) => s + a.value, 0) / N);
-  const avgColor = avg >= 70 ? '#22C55E' : avg >= 40 ? '#F97316' : '#EF4444';
+function ArticleBreachChart({ systems }: { systems: AISystem[] }) {
+  const articleMap = new Map<string, { totalMin: number; totalMax: number; tools: string[] }>();
+  for (const sys of systems) {
+    if (!sys.last_article_sanctions) continue;
+    try {
+      const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
+      const checklist = sys.compliance_checklist ?? {};
+      for (const [art, val] of Object.entries(sanctions)) {
+        const entry = checklist[art];
+        const st = typeof entry === 'string' ? entry : (entry as { status?: string })?.status;
+        if (st !== 'present') {
+          const existing = articleMap.get(art) ?? { totalMin: 0, totalMax: 0, tools: [] };
+          existing.totalMin = Math.max(existing.totalMin, val.min);
+          existing.totalMax = Math.max(existing.totalMax, val.max);
+          if (!existing.tools.includes(sys.tool_name)) existing.tools.push(sys.tool_name);
+          articleMap.set(art, existing);
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  const top = Array.from(articleMap.entries())
+    .map(([art, d]) => ({ art, ...d }))
+    .sort((a, b) => b.totalMax - a.totalMax)
+    .slice(0, 4);
+
+  const peak = top[0]?.totalMax ?? 1;
+  const COLORS = ['#EF4444', '#F97316', '#FBBF24', '#FB923C'];
+
+  if (top.length === 0) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <div style={{ fontSize: 22 }}>✓</div>
+        <div style={{ fontSize: 12, color: 'var(--dim)', textAlign: 'center' }}>Nessun gap normativo rilevato dalla gap analysis</div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* Radar SVG — compact fixed height */}
-      <svg viewBox="-18 -6 236 202" style={{ width: '100%', height: 148, display: 'block' }}>
-        {[0.33, 0.66, 1].map(f => (
-          <polygon key={f} points={polyStr(R * f)} fill="none"
-            stroke={f === 1 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.04)'} strokeWidth="1"/>
-        ))}
-        {axes.map((_, i) => { const v = vertex(i, R); return <line key={i} x1={cx} y1={cy} x2={v.x} y2={v.y} stroke="rgba(255,255,255,.06)" strokeWidth="1"/>; })}
-        <polygon points={valueStr} fill="rgba(34,197,94,.14)" stroke="#22C55E" strokeWidth="1.8"/>
-        {axes.map((ax, i) => { const v = vertex(i, (ax.value / 100) * R); return <circle key={i} cx={v.x} cy={v.y} r={3.5} fill="#22C55E" stroke="#0D0D12" strokeWidth="1.5"/>; })}
-        {/* Center avg */}
-        <text x={cx} y={cy - 4} textAnchor="middle" fill={avgColor} fontSize="18" fontWeight="900" fontFamily="inherit">{avg}%</text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fill="#475569" fontSize="7" fontWeight="700" fontFamily="inherit" letterSpacing="1">SCORE</text>
-        {/* Axis short labels */}
-        {axes.map((ax, i) => {
-          const a = angle(i);
-          const lx = cx + (R + 16) * Math.cos(a);
-          const ly = cy + (R + 16) * Math.sin(a);
-          const anchor = Math.cos(a) > 0.15 ? 'start' : Math.cos(a) < -0.15 ? 'end' : 'middle';
-          const dy = Math.sin(a) > 0.1 ? '0.9em' : Math.sin(a) < -0.1 ? '0em' : '0.35em';
-          return <text key={i} x={lx} y={ly} dy={dy} textAnchor={anchor} fill="#64748B" fontSize="7.5" fontWeight="700" fontFamily="inherit" letterSpacing="0.3">{ax.shortLabel.toUpperCase()}</text>;
-        })}
-      </svg>
-
-      {/* Legend — 2 column grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 10px', marginTop: 6 }}>
-        {axes.map(ax => {
-          const c = ax.value >= 70 ? '#22C55E' : ax.value >= 40 ? '#F97316' : '#EF4444';
-          return (
-            <div key={ax.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }}/>
-              <span style={{ fontSize: 10, color: 'var(--muted)', flex: 1, lineHeight: 1 }}>{ax.label}</span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: c }}>{ax.value}%</span>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly' }}>
+      {top.map((item, idx) => {
+        const pct = Math.round((item.totalMax / peak) * 100);
+        const col = COLORS[idx] ?? COLORS[COLORS.length - 1];
+        return (
+          <div key={item.art} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: col, minWidth: 44, letterSpacing: 0.2 }}>
+                {item.art}
+              </span>
+              <div style={{ flex: 1, height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${pct}%`, height: '100%', borderRadius: 4,
+                  background: `linear-gradient(90deg, ${col}99, ${col})`,
+                  boxShadow: `0 0 8px ${col}55`,
+                }} />
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 800, color: col, minWidth: 40, textAlign: 'right' }}>
+                {fmtExposure(item.totalMax)}
+              </span>
             </div>
-          );
-        })}
-      </div>
-    </>
+            <div style={{ display: 'flex', gap: 4, paddingLeft: 51 }}>
+              {item.tools.slice(0, 3).map(t => (
+                <span key={t} style={{
+                  fontSize: 9, fontWeight: 600, color: 'rgba(148,163,184,0.8)',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 3, padding: '1px 5px',
+                }}>
+                  {t.length > 13 ? t.slice(0, 13) + '…' : t}
+                </span>
+              ))}
+              {item.tools.length > 3 && (
+                <span style={{ fontSize: 9, color: 'var(--dim)', alignSelf: 'center' }}>+{item.tools.length - 3}</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -216,37 +270,8 @@ function DynamicWidget({ systems }: { systems: AISystem[] }) {
     return () => clearInterval(t);
   }, []);
 
-  const totalMin   = systems.reduce((sum, s) => sum + computeEffectiveExposure(s).min, 0);
-  const totalMax   = systems.reduce((sum, s) => sum + computeEffectiveExposure(s).max, 0);
+  const { min: totalMin, max: totalMax } = computeAggExposure(systems);
   const gapSystems = systems.filter(s => effectiveStatus(s) === 'gap_found').length;
-
-  const total    = systems.length;
-  const compliant  = systems.filter(s => effectiveStatus(s) === 'compliant').length;
-  const analyzed   = compliant + gapSystems;
-  const riskHigh   = systems.filter(s => riskLevel(s).label === 'ALTO').length;
-
-  const radarAxes = [
-    {
-      label: 'Trasparenza', shortLabel: 'Trasparenza',
-      value: analyzed > 0 ? Math.round((compliant / analyzed) * 100) : 0,
-    },
-    {
-      label: 'Supervisione', shortLabel: 'Supervis.',
-      value: total > 0 ? Math.round(systems.filter(s => ['always', 'sometimes'].includes(s.human_oversight_level)).length / total * 100) : 0,
-    },
-    {
-      label: 'Dati', shortLabel: 'Dati',
-      value: total > 0 ? Math.round(systems.filter(s => (s.data_types ?? []).length > 0).length / total * 100) : 0,
-    },
-    {
-      label: 'Documentazione', shortLabel: 'Documenti',
-      value: total > 0 ? Math.round((analyzed / total) * 100) : 0,
-    },
-    {
-      label: 'Rischio', shortLabel: 'Rischio',
-      value: total > 0 ? Math.round(((total - riskHigh) / total) * 100) : 100,
-    },
-  ];
 
   return (
     <div className="inv-kpi-card" style={{ display: 'flex', flexDirection: 'column', minHeight: 220 }}>
@@ -312,13 +337,13 @@ function DynamicWidget({ systems }: { systems: AISystem[] }) {
           </div>
         )}
 
-        {/* ── Slide 2: Radar compliance ── */}
+        {/* ── Slide 2: Top articoli violati ── */}
         {slide === 2 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
-              Radar Compliance
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
+              Top articoli violati — Gap Analysis
             </div>
-            <RadarChart axes={radarAxes} />
+            <ArticleBreachChart systems={systems} />
           </div>
         )}
       </div>

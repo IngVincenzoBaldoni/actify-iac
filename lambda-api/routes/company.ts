@@ -48,7 +48,7 @@ const setupSchema = z.object({
     has_incident_procedure: z.boolean(),
     has_ai_policy:          z.boolean(),
     has_training:           z.boolean(),
-  }),
+  }).optional(),
 });
 
 export async function getCompany(event: APIGatewayProxyEventV2WithJWTAuthorizer) {

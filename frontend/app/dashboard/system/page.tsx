@@ -430,10 +430,12 @@ function ComplianceChecklist({
       <button
         onClick={() => setArticleSidebar(num)}
         title="Leggi l'articolo completo del Regolamento UE 2024/1689"
-        style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 9px', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, transition: 'all .15s', whiteSpace: 'nowrap' }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--green)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(34,197,94,0.4)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}>
-        ⚖️ Vedi articolo
+        className="so-bar-read-cta"
+        style={{ marginLeft: 'auto', cursor: 'pointer' }}
+      >
+        <span>⚖️</span>
+        <span>Vedi articolo completo</span>
+        <span style={{ opacity: 0.5 }}>→</span>
       </button>
     );
   };
@@ -644,7 +646,20 @@ function ComplianceChecklist({
               </div>
               <p className="cl-desc">{gap.description}</p>
               <GapActions gap={gap} />
-              {gap.can_actify_automate && gap.automation_type ? (
+              {/^Art\.?\s*4$/i.test(gap.article) ? (
+                <div className="cl-manual-card">
+                  <div className="cl-manual-header">
+                    <span className="cl-manual-icon">🎓</span>
+                    <strong>Alfabetizzazione AI — Art. 4</strong>
+                  </div>
+                  <p className="cl-manual-steps">Traccia e documenta la formazione del personale sull&apos;AI nell&apos;apposita feature dedicata.</p>
+                  <a href="/dashboard/literacy" className="so-bar-read-cta" style={{ marginTop: 4 }}>
+                    <span>🎓</span>
+                    <span>Vai ad AI Literacy Tracker</span>
+                    <span style={{ opacity: 0.5 }}>→</span>
+                  </a>
+                </div>
+              ) : gap.can_actify_automate && gap.automation_type ? (
                 <GapGenerateBlock
                   gap={gap}
                   doc={documents[gap.gap_id]}
@@ -666,13 +681,6 @@ function ComplianceChecklist({
                   <p className="cl-manual-steps">{gap.what_to_do}</p>
                   {gap.deadline && (
                     <div className="cl-deadline">📅 Scadenza: <strong>{gap.deadline}</strong></div>
-                  )}
-                  {/^Art\.?\s*4$/i.test(gap.article) && (
-                    <a
-                      href="/dashboard/literacy"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '7px 14px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, color: '#6366F1', fontSize: 13, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
-                      🎓 Gestisci in AI Literacy →
-                    </a>
                   )}
                 </div>
               )}
@@ -1052,11 +1060,13 @@ function SystemDetailContent() {
           <h1 className="inv-title">{system.tool_name as string}</h1>
           <p className="inv-sub">{system.vendor as string} · {system.category as string} · {system.role as string}</p>
         </div>
-        <button className="sys-check-btn lg"
-          disabled={check?.status === 'running' || triggering}
-          onClick={handleTrigger}>
-          {check?.status === 'running' || triggering ? '⟳ Analisi in corso…' : '▶ Avvia Compliance Check'}
-        </button>
+        {(check?.status === 'running' || triggering) ? (
+          <div className="sys-running-pill"><span className="spin-sm" /> Analisi in corso…</div>
+        ) : check ? (
+          <button className="sys-rerun-btn" onClick={handleTrigger}>↻ Rianalizza</button>
+        ) : (
+          <button className="sys-check-btn lg" onClick={handleTrigger}>▶ Avvia Compliance Check</button>
+        )}
       </div>
 
       {check?.status === 'running' && (
