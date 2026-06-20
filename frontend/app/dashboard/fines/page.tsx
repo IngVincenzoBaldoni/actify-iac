@@ -452,7 +452,12 @@ function Sparkline({ data, color, sysId }: { data: SanctionSnap[]; color: string
     </div>
   );
 
-  const sorted = [...data].sort((a, b) => a.at.localeCompare(b.at));
+  // Deduplicate by calendar day — keep last snapshot per day (same as aggregate chart)
+  const rawSorted = [...data].sort((a, b) => a.at.localeCompare(b.at));
+  const byDay = new Map<string, SanctionSnap>();
+  for (const snap of rawSorted) byDay.set(snap.at.slice(0, 10), snap);
+  const sorted = Array.from(byDay.values());
+
   const allTs  = sorted.map(p => new Date(p.at).getTime());
   let minTs = Math.min(...allTs), maxTs = Math.max(...allTs);
   const sp = maxTs - minTs || 86_400_000;
@@ -463,16 +468,15 @@ function Sparkline({ data, color, sysId }: { data: SanctionSnap[]; color: string
   const sy = (v: number)  => MT + PH - Math.min(v / yMax, 1) * PH;
   const f  = (n: number)  => n.toFixed(1);
 
-  // Step path for sparkline
-  function stepD(vals: number[]): string {
+  function lineD(vals: number[]): string {
     let d = `M ${f(sx(allTs[0]))} ${f(sy(vals[0]))}`;
     for (let i = 1; i < sorted.length; i++) {
-      d += ` H ${f(sx(allTs[i]))} V ${f(sy(vals[i]))}`;
+      d += ` L ${f(sx(allTs[i]))} ${f(sy(vals[i]))}`;
     }
     return d;
   }
 
-  const maxD = stepD(sorted.map(p => p.max));
+  const maxD = lineD(sorted.map(p => p.max));
   const botY = f(MT + PH);
   const areaD = maxD + ` V ${botY} H ${f(sx(allTs[0]))} Z`;
   const gradId = `sp-${sysId.replace(/[^a-z0-9]/gi, '').slice(-8)}`;
