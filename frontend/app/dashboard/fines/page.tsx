@@ -499,6 +499,67 @@ function Sparkline({ data, color, sysId }: { data: SanctionSnap[]; color: string
   );
 }
 
+// ── Rotating Reduction card ───────────────────────────────────────────────────
+
+function RotatingReductionCard({ reduction, saved, firstCheck }: {
+  reduction: number;
+  saved: number;
+  firstCheck: { min: number; max: number };
+}) {
+  const [slide, setSlide] = useState(0);
+  const [fading, setFading] = useState(false);
+  const SLIDES = 2;
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setFading(true);
+      setTimeout(() => { setSlide(s => (s + 1) % SLIDES); setFading(false); }, 350);
+    }, 5500);
+    return () => clearInterval(t);
+  }, []);
+
+  const anim = { opacity: fading ? 0 : 1, transform: fading ? 'translateY(6px)' : 'translateY(0)', transition: 'opacity .35s ease, transform .35s ease' };
+  const lbl  = { fontSize: 10, fontWeight: 700 as const, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase' as const, marginBottom: 8 };
+
+  return (
+    <div className="inv-kpi-card" style={{ position: 'relative', overflow: 'hidden', paddingBottom: 28 }}>
+      <div style={anim}>
+        {slide === 0 && (
+          <>
+            <div style={lbl}>Riduzione</div>
+            <div style={{ fontSize: 32, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5, color: reduction > 0 ? '#22C55E' : 'var(--dim)' }}>
+              {reduction > 0 ? `-${reduction}%` : '—'}
+            </div>
+            {saved > 0
+              ? <div style={{ fontSize: 11, color: '#22C55E', marginTop: 8, fontWeight: 600 }}>{fmtEur(saved)} salvati</div>
+              : <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 8 }}>nessuna riduzione ancora</div>
+            }
+          </>
+        )}
+        {slide === 1 && (
+          <>
+            <div style={lbl}>Picco massimo stimato</div>
+            <div style={{ fontSize: firstCheck.max >= 1_000_000 ? 26 : 32, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5, color: firstCheck.max > 0 ? '#EF4444' : 'var(--dim)' }}>
+              {firstCheck.max > 0 ? fmtEur(firstCheck.max) : '—'}
+            </div>
+            {firstCheck.min > 0 && firstCheck.min !== firstCheck.max && (
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>min {fmtEur(firstCheck.min)}</div>
+            )}
+            {firstCheck.max > 0 && (
+              <div style={{ fontSize: 10, color: 'var(--dim)', marginTop: 6, letterSpacing: 0.3 }}>al primo compliance check</div>
+            )}
+          </>
+        )}
+      </div>
+      <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
+        {Array.from({ length: SLIDES }, (_, i) => (
+          <div key={i} style={{ width: i === slide ? 16 : 5, height: 5, borderRadius: 3, background: i === slide ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.13)', transition: 'all .3s' }}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Rotating KPI card (like AIPI DynamicWidget) ───────────────────────────────
 
 function RotatingFBECard({ firstCheck, systems, systemsForCards }: {
@@ -714,7 +775,7 @@ function FineBoardContent() {
 
             {/* Chart column */}
             {aggTimeline.length > 0 && (
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,.09)', borderTop: '1px solid rgba(255,255,255,.14)', borderRadius: 16, padding: '18px 22px', boxShadow: '0 0 0 1px rgba(255,255,255,.02) inset, 0 4px 16px rgba(0,0,0,.3)' }}>
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,.09)', borderTop: '1px solid rgba(255,255,255,.14)', borderRadius: 16, padding: '18px 22px', boxShadow: '0 0 0 1px rgba(255,255,255,.02) inset, 0 4px 16px rgba(0,0,0,.3)', position: 'relative', zIndex: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)', letterSpacing: -0.5 }}>Andamento aggregato — portafoglio AI</div>
@@ -772,17 +833,8 @@ function FineBoardContent() {
                 <div style={{ fontSize: 9, color: 'var(--dim)', marginTop: 6, letterSpacing: 0.3 }}>Art. 99–101 AI Act</div>
               </div>
 
-              {/* Card 2: Riduzione ottenuta */}
-              <div className="inv-kpi-card">
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>Riduzione</div>
-                <div style={{ fontSize: 32, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5, color: reduction > 0 ? '#22C55E' : 'var(--dim)' }}>
-                  {reduction > 0 ? `-${reduction}%` : '—'}
-                </div>
-                {saved > 0
-                  ? <div style={{ fontSize: 11, color: '#22C55E', marginTop: 8, fontWeight: 600 }}>{fmtEur(saved)} salvati</div>
-                  : <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 8 }}>nessuna riduzione ancora</div>
-                }
-              </div>
+              {/* Card 2: Riduzione + picco massimo (rotating) */}
+              <RotatingReductionCard reduction={reduction} saved={saved} firstCheck={firstCheck}/>
 
               {/* Card 3: Articoli violati */}
               <div className="inv-kpi-card">
