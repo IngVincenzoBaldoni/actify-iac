@@ -98,37 +98,35 @@ function computeAggExposure(systems: SysWithTimeline[]): { min: number; max: num
 }
 
 function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
-  // Group by calendar day (UTC YYYY-MM-DD) — prevents multiple overlapping points same day
-  const allDays = new Set<string>();
+  // Each unique ISO timestamp across all systems becomes its own aggregate point.
+  // This preserves every individual gap-resolution event, even multiple on the same day.
+  const allTimestamps = new Set<string>();
   for (const sys of systems) {
     for (const snap of sys.sanction_timeline ?? []) {
-      allDays.add(snap.at.slice(0, 10));
+      allTimestamps.add(snap.at);
     }
   }
-  const sortedDays = Array.from(allDays).sort();
+  const sortedTs = Array.from(allTimestamps).sort();
 
-  const raw = sortedDays.map(day => {
+  const raw = sortedTs.map(isoTs => {
     const artMap = new Map<string, { min: number; max: number }>();
     const toolsChanged: string[] = [];
     let dominantSource: AggPoint['dominantSource'] = 'initial';
 
     for (const sys of systems) {
       const tl = [...(sys.sanction_timeline ?? [])].sort((a, b) => a.at.localeCompare(b.at));
-      // Latest snap on or before this day
+      // Latest snap at or before this exact timestamp (ISO string compare is chronologically correct)
       let last: SanctionSnap | null = null;
       for (const snap of tl) {
-        if (snap.at.slice(0, 10) <= day) last = snap;
+        if (snap.at <= isoTs) last = snap;
       }
       if (!last) continue;
 
-      if (last.at.slice(0, 10) === day) {
+      if (last.at === isoTs) {
         toolsChanged.push(sys.tool_name);
         dominantSource = last.source as AggPoint['dominantSource'];
       }
 
-      // Use the snapshot's articles_in_gap if stored (new snapshots).
-      // Fall back for old snapshots: filter article_sanctions by checklist items addressed ON OR BEFORE
-      // this day (addressed_at field), so each historical point reflects the state at that exact time.
       const articlesAtPoint: Record<string, { min: number; max: number }> = last.articles_in_gap
         ? last.articles_in_gap
         : (() => {
@@ -141,8 +139,8 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
                 if (!entry || typeof entry === 'string') return true;
                 const e = entry as { status?: string; addressed_at?: string };
                 if (e.status !== 'present') return true;
-                if (!e.addressed_at) return false; // unknown date → assume already resolved
-                return e.addressed_at > day; // resolved AFTER this day → still a gap at this day
+                if (!e.addressed_at) return false;
+                return e.addressed_at > isoTs; // resolved AFTER this event → still a gap here
               }));
             } catch { return {}; }
           })();
@@ -158,8 +156,7 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
     const vals = Array.from(artMap.values());
     const sumMax = vals.reduce((s, v) => s + v.max, 0);
     const sumMin = vals.reduce((s, v) => s + v.min, 0);
-    // UTC noon → always displays as the correct date in IT timezone
-    const ts = new Date(day + 'T12:00:00Z').getTime();
+    const ts = new Date(isoTs).getTime();
     return { ts, sumMax, sumMin, deltaMax: 0, toolsChanged, dominantSource };
   });
 
@@ -251,18 +248,17 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
   const TW = 240;
 
   function getDeduplicatedArtsAt(ts: number): Array<{ art: string; min: number; max: number; tools: string[] }> {
-    const dayStr = new Date(ts).toISOString().slice(0, 10);
+    const isoStr = new Date(ts).toISOString();
     const artMap = new Map<string, { min: number; max: number; tools: string[] }>();
     for (const sys of systems) {
       const tl = [...(sys.sanction_timeline ?? [])].sort((a, b) => a.at.localeCompare(b.at));
-      // Latest snapshot on or before this day
+      // Latest snapshot at or before this exact timestamp
       let last: SanctionSnap | null = null;
       for (const snap of tl) {
-        if (snap.at.slice(0, 10) <= dayStr) last = snap;
+        if (snap.at <= isoStr) last = snap;
       }
       if (!last) continue;
 
-      // Use historical articles_in_gap if stored; fall back to addressed_at for old snapshots.
       const articlesAtPoint: Record<string, { min: number; max: number }> = last.articles_in_gap
         ? last.articles_in_gap
         : (() => {
@@ -276,7 +272,7 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
                 const e = entry as { status?: string; addressed_at?: string };
                 if (e.status !== 'present') return true;
                 if (!e.addressed_at) return false;
-                return e.addressed_at > dayStr;
+                return e.addressed_at > isoStr;
               }));
             } catch { return {}; }
           })();
