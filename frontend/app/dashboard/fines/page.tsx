@@ -139,8 +139,10 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
                 if (!entry || typeof entry === 'string') return true;
                 const e = entry as { status?: string; addressed_at?: string };
                 if (e.status !== 'present') return true;
-                if (!e.addressed_at) return false;
-                return e.addressed_at > isoTs; // resolved AFTER this event → still a gap here
+                if (!e.addressed_at) return true; // no date → conservatively treat as gap
+                // legacy "YYYY-MM-DD" vs full ISO: compare at appropriate granularity
+                const isDateOnly = e.addressed_at.length <= 10;
+                return isDateOnly ? e.addressed_at > isoTs.slice(0, 10) : e.addressed_at > isoTs;
               }));
             } catch { return {}; }
           })();
@@ -273,8 +275,9 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
                 if (!entry || typeof entry === 'string') return true;
                 const e = entry as { status?: string; addressed_at?: string };
                 if (e.status !== 'present') return true;
-                if (!e.addressed_at) return false;
-                return e.addressed_at > isoStr;
+                if (!e.addressed_at) return true; // no date → conservatively treat as gap
+                const isDateOnly = e.addressed_at.length <= 10;
+                return isDateOnly ? e.addressed_at > isoStr.slice(0, 10) : e.addressed_at > isoStr;
               }));
             } catch { return {}; }
           })();

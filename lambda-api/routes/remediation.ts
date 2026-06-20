@@ -232,7 +232,7 @@ export async function closeGap(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
     ...existingChecklist,
     [article]: {
       status:       'present',
-      addressed_at: now.split('T')[0],
+      addressed_at: now,
       evidence_note: proofNote,
       ...(proofS3Key ? { proof_s3_key: proofS3Key } : {}),
       source: proofS3Key ? 'proof_upload' : 'self_declared',
