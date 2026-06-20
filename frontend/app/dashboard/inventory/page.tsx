@@ -166,9 +166,10 @@ const ACT_MILESTONES = [
   { date: 'AGO 2024', label: 'Entrata in vigore del Regolamento',     ts: new Date('2024-08-01') },
   { date: 'FEB 2025', label: 'Art. 4-5 — AI Literacy + divieti',      ts: new Date('2025-02-02') },
   { date: 'AGO 2025', label: 'GPAI e Ufficio AI operativi',            ts: new Date('2025-08-02') },
-  { date: 'AGO 2026', label: 'Sistemi alto rischio (Allegato III)',    ts: new Date('2026-08-02') },
-  { date: 'AGO 2027', label: 'Sistemi legacy alto rischio',            ts: new Date('2027-08-02') },
-  { date: 'DIC 2030', label: 'Allegato I — settori regolamentati',     ts: new Date('2030-12-31') },
+  { date: 'DIC 2026', label: 'Art. 50 — sistemi pre-esistenti *',      ts: new Date('2026-12-02') },
+  { date: 'DIC 2027', label: 'Sistemi alto rischio Annex III *',       ts: new Date('2027-12-02') },
+  { date: 'AGO 2028', label: 'Sistemi alto rischio Annex I *',         ts: new Date('2028-08-02') },
+  { date: 'AGO 2030', label: 'Sistemi legacy (senza modifiche)',        ts: new Date('2030-08-02') },
 ];
 
 // ── Article breach chart ─────────────────────────────────────────────────────

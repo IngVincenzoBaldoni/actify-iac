@@ -58,32 +58,34 @@ OVERLAP_TOKENS = 80
 ARTICLE_META: dict[int, dict] = {
     5:  {"applies_to": ["provider", "deployer", "both"], "risk_category": ["prohibited"],
          "enforcement_date": "2025-02-02", "keywords": ["pratiche vietate", "proibito", "divieto"]},
+    # Digital Omnibus (7 maggio 2026): Annex III standalone → 2027-12-02 (ex 2026-08-02)
     6:  {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["classificazione", "alto rischio", "annex III"]},
+         "enforcement_date": "2027-12-02", "keywords": ["classificazione", "alto rischio", "annex III"]},
     7:  {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["aggiornamento allegato III", "atti delegati"]},
+         "enforcement_date": "2027-12-02", "keywords": ["aggiornamento allegato III", "atti delegati"]},
     8:  {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["requisiti", "conformità"]},
+         "enforcement_date": "2027-12-02", "keywords": ["requisiti", "conformità"]},
     9:  {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["gestione rischio", "risk management"]},
+         "enforcement_date": "2027-12-02", "keywords": ["gestione rischio", "risk management"]},
     10: {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["dati", "governance dati", "addestramento"]},
+         "enforcement_date": "2027-12-02", "keywords": ["dati", "governance dati", "addestramento"]},
     11: {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["documentazione tecnica"]},
+         "enforcement_date": "2027-12-02", "keywords": ["documentazione tecnica"]},
     12: {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["registri", "log", "logging"]},
+         "enforcement_date": "2027-12-02", "keywords": ["registri", "log", "logging"]},
     13: {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["trasparenza", "istruzioni uso", "deployer"]},
+         "enforcement_date": "2027-12-02", "keywords": ["trasparenza", "istruzioni uso", "deployer"]},
     14: {"applies_to": ["provider", "deployer", "both"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["supervisione umana", "human oversight"]},
+         "enforcement_date": "2027-12-02", "keywords": ["supervisione umana", "human oversight"]},
     15: {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["accuratezza", "robustezza", "sicurezza informatica"]},
+         "enforcement_date": "2027-12-02", "keywords": ["accuratezza", "robustezza", "sicurezza informatica"]},
     26: {"applies_to": ["deployer"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["obblighi deployer", "utilizzatore", "supervisione"]},
+         "enforcement_date": "2027-12-02", "keywords": ["obblighi deployer", "utilizzatore", "supervisione"]},
     27: {"applies_to": ["deployer"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["FRIA", "valutazione impatto diritti fondamentali"]},
+         "enforcement_date": "2027-12-02", "keywords": ["FRIA", "valutazione impatto diritti fondamentali"]},
+    # Digital Omnibus: Art. 50 per sistemi pre-esistenti (immessi prima del 2/8/2026) → 2026-12-02
     50: {"applies_to": ["provider", "deployer", "both"], "risk_category": ["limited"],
-         "enforcement_date": "2026-08-02",
+         "enforcement_date": "2026-12-02",
          "keywords": ["trasparenza utenti", "chatbot", "AI disclosure", "interazione"]},
     53: {"applies_to": ["provider"], "risk_category": ["gpai"],
          "enforcement_date": "2025-08-02", "keywords": ["modelli GPAI", "obblighi GPAI", "documentazione GPAI"]},
@@ -93,10 +95,10 @@ ARTICLE_META: dict[int, dict] = {
          "enforcement_date": "2025-08-02",
          "keywords": ["rischio sistemico", "GPAI rischio sistemico", "red teaming"]},
     72: {"applies_to": ["provider"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02",
+         "enforcement_date": "2027-12-02",
          "keywords": ["monitoraggio post-commercializzazione", "post-market monitoring"]},
     73: {"applies_to": ["provider", "deployer", "both"], "risk_category": ["high_risk"],
-         "enforcement_date": "2026-08-02", "keywords": ["incidenti gravi", "segnalazione incidenti"]},
+         "enforcement_date": "2027-12-02", "keywords": ["incidenti gravi", "segnalazione incidenti"]},
     99: {"applies_to": ["provider", "deployer", "both"],
          "risk_category": ["prohibited", "high_risk", "limited"],
          "enforcement_date": "2025-02-02",
@@ -105,21 +107,22 @@ ARTICLE_META: dict[int, dict] = {
          "enforcement_date": "2025-02-02", "keywords": ["definizioni"]},
 }
 
+# Digital Omnibus (7 maggio 2026): Annex I → 2028-08-02 (ex 2027-08-02); Annex III → 2027-12-02 (ex 2026-08-02)
 ANNEX_META: dict[str, dict] = {
     "I":   {"applies_to": ["provider"], "risk_category": ["high_risk"],
-            "enforcement_date": "2027-08-02",
+            "enforcement_date": "2028-08-02",
             "keywords": ["legislazione armonizzazione", "prodotti sicurezza", "Annex I"]},
     "III": {"applies_to": ["provider", "deployer", "both"], "risk_category": ["high_risk"],
-            "enforcement_date": "2026-08-02",
+            "enforcement_date": "2027-12-02",
             "keywords": ["sistemi alto rischio", "Annex III", "categorie rischio"]},
     "IV":  {"applies_to": ["provider"], "risk_category": ["high_risk"],
-            "enforcement_date": "2026-08-02",
+            "enforcement_date": "2027-12-02",
             "keywords": ["documentazione tecnica", "Annex IV"]},
     "VI":  {"applies_to": ["provider"], "risk_category": ["high_risk"],
-            "enforcement_date": "2026-08-02",
+            "enforcement_date": "2027-12-02",
             "keywords": ["conformità", "self-assessment", "Annex VI"]},
     "VII": {"applies_to": ["provider"], "risk_category": ["high_risk"],
-            "enforcement_date": "2026-08-02",
+            "enforcement_date": "2027-12-02",
             "keywords": ["sistema gestione qualità", "QMS", "Annex VII"]},
 }
 
@@ -337,7 +340,7 @@ def make_chunk(
 
     applies_to    = meta.get("applies_to", [])
     risk_category = meta.get("risk_category", [])
-    enforcement   = meta.get("enforcement_date", "2026-08-02")
+    enforcement   = meta.get("enforcement_date", "2027-12-02")  # Digital Omnibus default (ex 2026-08-02)
     keywords      = meta.get("keywords", [])
     decision_domains = infer_decision_domains(text)
     annex_ref = [unit.annex_id] if unit.annex_id else []

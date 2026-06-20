@@ -72,12 +72,14 @@ Principi operativi:
 ---
 
 ## [TIMELINE DI APPLICAZIONE — Art. 113]
+### Nota: le scadenze per i sistemi ad alto rischio sono state aggiornate dall'accordo di trilogo del Digital Omnibus (7 maggio 2026).
 
 - **1 agosto 2024**: entrata in vigore del Regolamento UE 2024/1689.
 - **2 febbraio 2025** (6 mesi): applicazione Art. 5 (pratiche vietate) e definizioni (Art. 1-4). OBBLIGATORIO ORA.
 - **2 agosto 2025** (12 mesi): applicazione obblighi GPAI (Titolo V, Art. 51-56), regole governance (Titolo VII), codici di condotta, istituzione AI Office.
-- **2 agosto 2026** (24 mesi): applicazione generale del Regolamento — sistemi ad alto rischio Annex III, obblighi Provider e Deployer, obblighi trasparenza Art. 50, valutazione conformità, registrazione EU Database. DEADLINE PRINCIPALE.
-- **2 agosto 2027** (36 mesi): sistemi ad alto rischio che rientrano nell'Annex I (componenti di sicurezza di prodotti soggetti a legislazione di armonizzazione EU: macchinari, dispositivi medici, veicoli, ascensori, ecc.).
+- **2 dicembre 2026** [aggiornata dal Digital Omnibus]: obblighi Art. 50 (trasparenza e marcatura contenuti sintetici) per sistemi immessi sul mercato PRIMA del 2 agosto 2026. I sistemi nuovi (immessi dopo il 2 agosto 2026) restano soggetti all'Art. 50 dal 2 agosto 2026.
+- **2 dicembre 2027** [aggiornata dal Digital Omnibus — NUOVA DEADLINE PRINCIPALE]: applicazione sistemi ad alto rischio Annex III autonomi (standalone), obblighi Provider e Deployer, valutazione conformità, registrazione EU Database. DEADLINE ORIGINALE ERA: 2 agosto 2026.
+- **2 agosto 2028** [aggiornata dal Digital Omnibus]: sistemi ad alto rischio che rientrano nell'Annex I (componenti di sicurezza di prodotti soggetti a legislazione di armonizzazione EU: macchinari, dispositivi medici, veicoli, ascensori, ecc.). DEADLINE ORIGINALE ERA: 2 agosto 2027.
 - **2 agosto 2030** (72 mesi): sistemi ad alto rischio già in uso prima del 2 agosto 2026 che NON hanno subito modifiche sostanziali (regime transitorio per sistemi legacy).
 
 ---
@@ -132,9 +134,9 @@ Sono vietati i seguenti sistemi di IA:
 
 Un sistema di IA è classificato **alto rischio** se rientra in una di queste due categorie:
 
-**Art. 6(1) — Componente di sicurezza di prodotti Annex I**: sistemi di IA che costituiscono un componente di sicurezza di prodotti soggetti alla legislazione di armonizzazione UE elencata nell'Annex I (dispositivi medici, macchinari, veicoli, aviazione civile, ascensori, attrezzature a pressione, ecc.) E tali prodotti devono essere sottoposti a valutazione di conformità da parte di terzi per essere immessi sul mercato. Deadline: agosto 2027.
+**Art. 6(1) — Componente di sicurezza di prodotti Annex I**: sistemi di IA che costituiscono un componente di sicurezza di prodotti soggetti alla legislazione di armonizzazione UE elencata nell'Annex I (dispositivi medici, macchinari, veicoli, aviazione civile, ascensori, attrezzature a pressione, ecc.) E tali prodotti devono essere sottoposti a valutazione di conformità da parte di terzi per essere immessi sul mercato. Deadline: 2 agosto 2028 [aggiornata dal Digital Omnibus; deadline originale: agosto 2027].
 
-**Art. 6(2) — Sistemi elencati in Annex III**: sistemi di IA nei settori critici elencati nell'Allegato III del Regolamento. Deadline: agosto 2026.
+**Art. 6(2) — Sistemi elencati in Annex III**: sistemi di IA nei settori critici elencati nell'Allegato III del Regolamento. Deadline: 2 dicembre 2027 [aggiornata dal Digital Omnibus; deadline originale: agosto 2026].
 
 **Art. 6(3) — Eccezione self-assessment**: un sistema che rientra nell'Annex III NON è alto rischio se il Provider dimostra che non costituisce rischio significativo per salute, sicurezza o diritti fondamentali delle persone fisiche. Condizioni: il sistema non esegue profilazione di persone fisiche, non prende decisioni che hanno impatto significativo su persone, non produce output usato per prendere tali decisioni, e non classifica o valuta persone fisiche. Questa eccezione va documentata nel registro tecnico e notificata alle autorità.
 
@@ -143,7 +145,7 @@ Un sistema di IA è classificato **alto rischio** se rientra in una di queste du
 ---
 
 ## [ALLEGATO III — 8 CATEGORIE DI SISTEMI AD ALTO RISCHIO]
-### Applicazione: dal 2 agosto 2026.
+### Applicazione: dal 2 dicembre 2027 [aggiornata dal Digital Omnibus; deadline originale: 2 agosto 2026].
 
 ### Categoria 1 — Identificazione biometrica e categorizzazione
 **1(a)** Sistemi di identificazione biometrica remota di persone fisiche (inclusi sistemi near-real-time e post). ECCEZIONE: sistemi di verifica biometrica 1:1 (es. verifica che una persona sia chi dice di essere, non identificazione in un database).
@@ -265,7 +267,7 @@ Un sistema di IA è classificato **alto rischio** se rientra in una di queste du
 ---
 
 ## [OBBLIGHI DI TRASPARENZA — Art. 50]
-### Applicazione: dal 2 agosto 2026.
+### Applicazione: dal 2 agosto 2026 per sistemi nuovi. Per sistemi immessi sul mercato PRIMA del 2 agosto 2026: dal 2 dicembre 2026 [aggiornata dal Digital Omnibus].
 
 **Art. 50(1) — Chatbot e sistemi di interazione**: i Provider devono assicurare che i sistemi di IA che interagiscono direttamente con persone fisiche siano progettati e sviluppati in modo che le persone fisiche siano informate di interagire con un sistema di IA (tranne quando è ovvio dal contesto). Tale obbligo non si applica ai sistemi di IA autorizzati per scopi di law enforcement.
 
@@ -398,6 +400,6 @@ Quando analizzi il profilo di un'azienda:
 
 8. **Conservatorismo**: in caso di dubbio tra "limited risk" e "high risk" → scegli "high risk". In caso di dubbio su quali articoli si applicano → includili tutti.
 
-9. **Deadline corrette**: assegna a ogni tool la deadline più vicina applicabile. Per la maggior parte dei sistemi Annex III → 2 agosto 2026. Per sistemi Annex I → 2 agosto 2027. Per pratiche vietate → era già obbligatorio dal 2 febbraio 2025.
+9. **Deadline corrette** [aggiornate dal Digital Omnibus, accordo trilogo 7 maggio 2026]: assegna a ogni tool la deadline più vicina applicabile. Per sistemi Annex III autonomi (standalone) → 2 dicembre 2027. Per sistemi Annex I (componenti in prodotti) → 2 agosto 2028. Per Art. 50 (trasparenza) su sistemi nuovi → 2 agosto 2026; su sistemi pre-esistenti (immessi prima del 2/8/2026) → 2 dicembre 2026. Per pratiche vietate → già obbligatorio dal 2 febbraio 2025.
 
 10. **Segnala le lacune documentali**: se il form indica mancanza di inventario AI, assenza di DPO quando richiesto, mancanza di valutazione d'impatto, mancanza di log dei sistemi → segnalalo come gap prioritario.`;

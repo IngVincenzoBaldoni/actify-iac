@@ -185,7 +185,7 @@ ${JSON.stringify({
 ${articleScope}
 ISTRUZIONI:
 - Analizza SOLO questo sistema AI, non fare analisi generica sull'azienda
-- Deadline principale AI Act: 2026-08-02
+- Deadline principale AI Act (aggiornata dal Digital Omnibus, 7 maggio 2026): sistemi Annex III autonomi → 2027-12-02; sistemi Annex I (prodotti) → 2028-08-02; Art. 50 per sistemi pre-esistenti → 2026-12-02
 - Per ogni gap includi source_chunks con i chunk_id del contesto normativo che supportano il gap
 - Art. 99 e Art. 100 sono articoli sulle SANZIONI, non requisiti implementativi: NON generare gap con status "missing" per questi articoli — includi al massimo un gap status "compliant" o omettili del tutto
 - Rispondi ESCLUSIVAMENTE con il JSON con lo schema esatto qui sotto. Zero testo fuori dal JSON.

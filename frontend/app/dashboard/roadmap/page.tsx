@@ -49,20 +49,20 @@ const MILESTONES: Milestone[] = [
   },
   {
     id: 'aug2026',
-    date: new Date('2026-08-02'),
-    label: 'Agosto 2026',
-    sublabel: 'Sistemi ad Alto Rischio',
+    date: new Date('2027-12-02'),
+    label: 'Dicembre 2027 *',
+    sublabel: 'Sistemi ad Alto Rischio (Annex III)',
     badge: 'Art. 8-27',
-    description: 'Requisiti completi per i sistemi AI ad alto rischio: documentazione tecnica, gestione rischi, supervisione umana, governance dati, trasparenza, registrazione nel DB UE.',
+    description: 'Requisiti completi per i sistemi AI ad alto rischio autonomi (Annex III): documentazione tecnica, gestione rischi, supervisione umana, governance dati, trasparenza, registrazione nel DB UE. Scadenza aggiornata dal Digital Omnibus (ex agosto 2026).',
     isMain: true,
   },
   {
     id: 'aug2027',
-    date: new Date('2027-08-02'),
-    label: 'Agosto 2027',
+    date: new Date('2028-08-02'),
+    label: 'Agosto 2028 *',
     sublabel: 'Annex I — Prodotti',
     badge: 'Art. 6',
-    description: 'Sistemi AI come componenti di sicurezza in prodotti coperti da legislazione di armonizzazione UE (macchinari, dispositivi medici, aviazione, automotive).',
+    description: 'Sistemi AI come componenti di sicurezza in prodotti coperti da legislazione di armonizzazione UE (macchinari, dispositivi medici, aviazione, automotive). Scadenza aggiornata dal Digital Omnibus (ex agosto 2027).',
     isAnnex: true,
   },
 ];
@@ -177,8 +177,8 @@ export default function RoadmapPage() {
               ? 'Esegui un compliance check sui tuoi sistemi per sbloccare la roadmap.'
               : `${systems.length} sistem${systems.length !== 1 ? 'i' : 'a'} analizzat${systems.length !== 1 ? 'i' : 'o'} · ${
                   totalGapsMain > 0
-                    ? `${totalGapsMain} gap aperti entro agosto 2026`
-                    : 'nessun gap critico per agosto 2026 ✓'
+                    ? `${totalGapsMain} gap aperti entro dicembre 2027`
+                    : 'nessun gap critico per dicembre 2027 ✓'
                 }`}
           </p>
         </div>
@@ -192,7 +192,7 @@ export default function RoadmapPage() {
         {hasChecks && daysMain <= 0 && (
           <div className="rd-countdown rd-expired">
             <span className="rd-days" style={{ fontSize: 28 }}>Scaduta</span>
-            <span className="rd-days-lbl">agosto 2026 passata</span>
+            <span className="rd-days-lbl">dicembre 2027 passata</span>
           </div>
         )}
       </div>

@@ -94,7 +94,7 @@ function renderIntroSection(output: BedrockReportOutput, payload: IntakePayload,
       ? `L'analisi ha classificato il profilo complessivo come <strong>Rischio Limitato</strong>: i sistemi AI dichiarati sono soggetti principalmente agli obblighi di trasparenza verso gli utenti e i dipendenti (Art. 50 e Art. 26). Gli adempimenti richiesti sono proporzionali, ma richiedono comunque un'azione strutturata e documentata.`
       : `L'analisi ha classificato il profilo complessivo come <strong>Rischio Minimo</strong>: i sistemi AI dichiarati non rientrano nelle categorie ad alto rischio né sono soggetti a obblighi specifici di trasparenza obbligatoria. Rimangono tuttavia applicabili le disposizioni generali in materia di governance interna e formazione del personale (Art. 4 e Art. 17).`;
 
-  const para1 = `Il Regolamento (UE) 2024/1689 sull'Intelligenza Artificiale — comunemente noto come <strong>AI Act</strong> — costituisce il primo quadro normativo organico al mondo dedicato ai sistemi di intelligenza artificiale. Entrato in vigore il 1° agosto 2024, il Regolamento introduce un sistema di classificazione per livello di rischio che impone obblighi differenziati e proporzionali ai soggetti che sviluppano, importano, distribuiscono o fanno uso di sistemi AI nell'ambito dell'Unione Europea. Le disposizioni si applicano progressivamente: le norme relative ai sistemi AI vietati sono vigenti dal 2 febbraio 2025; le prescrizioni per i modelli di intelligenza artificiale per uso generale (GPAI) lo saranno dall'agosto 2025; gli obblighi completi per i sistemi ad alto rischio entreranno pienamente in vigore nell'agosto 2026. Nessuna organizzazione che adotta sistemi AI — indipendentemente dalla propria dimensione — è esclusa dall'ambito di applicazione del Regolamento.`;
+  const para1 = `Il Regolamento (UE) 2024/1689 sull'Intelligenza Artificiale — comunemente noto come <strong>AI Act</strong> — costituisce il primo quadro normativo organico al mondo dedicato ai sistemi di intelligenza artificiale. Entrato in vigore il 1° agosto 2024, il Regolamento introduce un sistema di classificazione per livello di rischio che impone obblighi differenziati e proporzionali ai soggetti che sviluppano, importano, distribuiscono o fanno uso di sistemi AI nell'ambito dell'Unione Europea. Le disposizioni si applicano progressivamente: le norme relative ai sistemi AI vietati sono vigenti dal 2 febbraio 2025; le prescrizioni per i modelli di intelligenza artificiale per uso generale (GPAI) dall'agosto 2025; gli obblighi completi per i sistemi ad alto rischio autonomi (Annex III) entreranno in vigore il <strong>2 dicembre 2027</strong> e per i sistemi integrati in prodotti (Annex I) il <strong>2 agosto 2028</strong> — scadenze aggiornate dall'accordo di trilogo del <strong>Digital Omnibus</strong> del 7 maggio 2026, che ha prorogato le deadline originali di 16 mesi. Nessuna organizzazione che adotta sistemi AI — indipendentemente dalla propria dimensione — è esclusa dall'ambito di applicazione del Regolamento.`;
 
   const para2 = `L'adeguamento normativo non è un adempimento di secondo piano: il Reg. UE 2024/1689 prevede un regime sanzionatorio tra i più severi del diritto europeo, con sanzioni che possono raggiungere i <strong>35 milioni di euro o il 7% del fatturato mondiale annuo</strong> per le violazioni più gravi, e fino a 15 milioni di euro o il 3% per le violazioni di portata minore. È tuttavia opportuno rilevare che le autorità nazionali di vigilanza — e la neonata AI Office europea — tengono conto, in sede di irrogazione della sanzione, del grado di collaborazione dell'organizzazione, della tempestività e qualità delle misure correttive adottate, nonché della completezza della documentazione prodotta. Questo principio di proporzionalità attenuata implica che un approccio proattivo, strutturato e tracciabile alla compliance può incidere in misura determinante sull'esito di eventuali procedimenti sanzionatori.`;
 
@@ -202,8 +202,8 @@ function renderTimeline(
   const rows: Array<{ label: string; date: string; items: string[]; phaseKey: keyof PhaseRelevance; isPast: boolean }> = [
     { label: "Già in vigore", date: "Dal 2 febbraio 2025", items: timeline.already_in_force, phaseKey: "already_in_force", isPast: true },
     { label: "Agosto 2025", date: "2 agosto 2025", items: timeline.aug_2025, phaseKey: "aug_2025", isPast: false },
-    { label: "Agosto 2026", date: "2 agosto 2026", items: timeline.aug_2026, phaseKey: "aug_2026", isPast: false },
-    { label: "Agosto 2027", date: "2 agosto 2027", items: timeline.aug_2027, phaseKey: "aug_2027", isPast: false },
+    { label: "Dicembre 2026 *", date: "2 dicembre 2026 *", items: timeline.aug_2026, phaseKey: "aug_2026", isPast: false },
+    { label: "Dicembre 2027 *", date: "2 dicembre 2027 *", items: timeline.aug_2027, phaseKey: "aug_2027", isPast: false },
   ];
 
   const rowsHtml = rows.map(({ label, date, items, phaseKey, isPast }) => {
@@ -227,6 +227,9 @@ function renderTimeline(
 
   return `
 ${sectionHeader(5, "Cronoprogramma Obblighi AI Act", "Scadenze del Reg. UE 2024/1689 rilevanti per il profilo aziendale, con indicazione del livello di applicabilità per fase.")}
+<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#1D4ED8;line-height:1.6;">
+  <strong>* Scadenze aggiornate dal Digital Omnibus</strong> — L'accordo di trilogo del 7 maggio 2026 ha prorogato le deadline originali dell'AI Act: sistemi Annex III autonomi: <strong>2 dicembre 2027</strong> (ex 2 agosto 2026); sistemi Annex I integrati in prodotti: <strong>2 agosto 2028</strong> (ex 2 agosto 2027); Art. 50 (trasparenza) per sistemi pre-esistenti: <strong>2 dicembre 2026</strong>.
+</div>
 <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
   <thead>
     <tr>
