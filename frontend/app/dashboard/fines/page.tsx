@@ -205,21 +205,19 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
   const primVals = mode === 'max' ? maxVals : minVals;
   const secVals  = mode === 'max' ? minVals : maxVals;
 
-  // Step-chart path: stays flat (H) until the next event, then drops/rises vertically (V).
-  // This is the correct visualization for compliance data where values are constant between events.
-  function stepPath(vals: number[]): string {
+  function linePath(vals: number[]): string {
     if (vals.length === 0) return '';
     let d = `M ${f(sx(aggPts[0].ts))} ${f(sy(vals[0]))}`;
     for (let i = 1; i < aggPts.length; i++) {
-      d += ` H ${f(sx(aggPts[i].ts))} V ${f(sy(vals[i]))}`;
+      d += ` L ${f(sx(aggPts[i].ts))} ${f(sy(vals[i]))}`;
     }
     // extend flat to today
     d += ` H ${f(sx(nowTs))}`;
     return d;
   }
 
-  const primD = stepPath(primVals);
-  const secD  = stepPath(secVals);
+  const primD = linePath(primVals);
+  const secD  = linePath(secVals);
 
   const firstX = f(sx(aggPts[0].ts));
   const botY   = f(MT + PH);
@@ -227,23 +225,18 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
   // Close the primary area down to bottom-left
   const areaD = primD + ` V ${botY} H ${firstX} Z`;
 
-  // Band polygon using step-chart for both max and min edges
   function buildBandPoly(): string {
     const pts: string[] = [];
-    // Top edge (max): step chart left→right
-    pts.push(`${f(sx(aggPts[0].ts))},${f(sy(maxVals[0]))}`);
-    for (let i = 1; i < aggPts.length; i++) {
-      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i - 1]))}`); // flat
-      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i]))}`);     // drop
+    // Top edge (max): left→right
+    for (let i = 0; i < aggPts.length; i++) {
+      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i]))}`);
     }
     pts.push(`${f(sx(nowTs))},${f(sy(maxVals[maxVals.length - 1]))}`);
-    // Bottom edge (min): step chart right→left
+    // Bottom edge (min): right→left
     pts.push(`${f(sx(nowTs))},${f(sy(minVals[minVals.length - 1]))}`);
-    for (let i = aggPts.length - 1; i >= 1; i--) {
+    for (let i = aggPts.length - 1; i >= 0; i--) {
       pts.push(`${f(sx(aggPts[i].ts))},${f(sy(minVals[i]))}`);
-      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(minVals[i - 1]))}`);
     }
-    pts.push(`${f(sx(aggPts[0].ts))},${f(sy(minVals[0]))}`);
     return pts.join(' ');
   }
 
