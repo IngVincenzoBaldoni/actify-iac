@@ -211,8 +211,8 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
     for (let i = 1; i < aggPts.length; i++) {
       d += ` L ${f(sx(aggPts[i].ts))} ${f(sy(vals[i]))}`;
     }
-    // extend flat to today
-    d += ` H ${f(sx(nowTs))}`;
+    // extend flat to right edge of chart (avoids backwards H when nowTs < last point's noon-UTC ts)
+    d += ` H ${ML + PW}`;
     return d;
   }
 
@@ -226,14 +226,15 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
   const areaD = primD + ` V ${botY} H ${firstX} Z`;
 
   function buildBandPoly(): string {
+    const re = ML + PW; // right edge of chart
     const pts: string[] = [];
     // Top edge (max): left→right
     for (let i = 0; i < aggPts.length; i++) {
       pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i]))}`);
     }
-    pts.push(`${f(sx(nowTs))},${f(sy(maxVals[maxVals.length - 1]))}`);
+    pts.push(`${re},${f(sy(maxVals[maxVals.length - 1]))}`);
     // Bottom edge (min): right→left
-    pts.push(`${f(sx(nowTs))},${f(sy(minVals[minVals.length - 1]))}`);
+    pts.push(`${re},${f(sy(minVals[minVals.length - 1]))}`);
     for (let i = aggPts.length - 1; i >= 0; i--) {
       pts.push(`${f(sx(aggPts[i].ts))},${f(sy(minVals[i]))}`);
     }
