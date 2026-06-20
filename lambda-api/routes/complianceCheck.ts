@@ -166,11 +166,19 @@ export async function executeCheckAsync(payload: {
       updated_at:              completedAt,
     });
 
+    const existingChecklist = (typedSystem.compliance_checklist ?? {}) as Record<string, { status?: string } | string>;
+    const articlesInGap: Record<string, { min: number; max: number }> = {};
+    for (const [art, val] of Object.entries(result.article_sanctions ?? {} as Record<string, { min: number; max: number }>)) {
+      const entry = existingChecklist[art];
+      const st = typeof entry === 'string' ? entry : entry?.status;
+      if (st !== 'present') articlesInGap[art] = val as { min: number; max: number };
+    }
     await dynamo.appendSanctionSnapshot(companyId, systemId, {
       at: completedAt,
       min: result.total_exposure_estimate?.min ?? 0,
       max: result.total_exposure_estimate?.max ?? 0,
       source: 'check',
+      articles_in_gap: articlesInGap,
     });
 
     await logEvent(companyId, 'compliance_check_completed', {

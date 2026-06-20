@@ -11,6 +11,7 @@ interface SanctionSnap {
   min: number;
   max: number;
   source: 'check' | 'document' | 'checklist';
+  articles_in_gap?: Record<string, { min: number; max: number }>;
 }
 
 interface SysWithTimeline {
@@ -118,26 +119,36 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
       for (const snap of tl) {
         if (snap.at.slice(0, 10) <= day) last = snap;
       }
-      if (!last || !sys.last_article_sanctions) continue;
+      if (!last) continue;
 
       if (last.at.slice(0, 10) === day) {
         toolsChanged.push(sys.tool_name);
         dominantSource = last.source as AggPoint['dominantSource'];
       }
-      try {
-        const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
-        const checklist = sys.compliance_checklist ?? {};
-        for (const [art, val] of Object.entries(sanctions)) {
-          const entry = checklist[art];
-          const st = typeof entry === 'string' ? entry : (entry as { status?: string })?.status;
-          if (st !== 'present') {
-            const ex = artMap.get(art) ?? { min: 0, max: 0 };
-            ex.min = Math.max(ex.min, val.min);
-            ex.max = Math.max(ex.max, val.max);
-            artMap.set(art, ex);
-          }
-        }
-      } catch { /* ignore */ }
+
+      // Use the snapshot's articles_in_gap if stored (new snapshots).
+      // Fall back to current last_article_sanctions + compliance_checklist for old snapshots without it.
+      const articlesAtPoint: Record<string, { min: number; max: number }> = last.articles_in_gap
+        ? last.articles_in_gap
+        : (() => {
+            if (!sys.last_article_sanctions) return {};
+            try {
+              const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
+              const checklist = sys.compliance_checklist ?? {};
+              return Object.fromEntries(Object.entries(sanctions).filter(([art]) => {
+                const entry = (checklist as Record<string, { status?: string } | string>)[art];
+                const st = typeof entry === 'string' ? entry : entry?.status;
+                return st !== 'present';
+              }));
+            } catch { return {}; }
+          })();
+
+      for (const [art, val] of Object.entries(articlesAtPoint)) {
+        const ex = artMap.get(art) ?? { min: 0, max: 0 };
+        ex.min = Math.max(ex.min, val.min);
+        ex.max = Math.max(ex.max, val.max);
+        artMap.set(art, ex);
+      }
     }
 
     const vals = Array.from(artMap.values());
@@ -233,26 +244,39 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
   const TW = 240;
 
   function getDeduplicatedArtsAt(ts: number): Array<{ art: string; min: number; max: number; tools: string[] }> {
-    const dayStr = new Date(ts).toISOString().slice(0, 10); // UTC date of this point
+    const dayStr = new Date(ts).toISOString().slice(0, 10);
     const artMap = new Map<string, { min: number; max: number; tools: string[] }>();
     for (const sys of systems) {
-      const tl = sys.sanction_timeline ?? [];
-      if (!tl.some(snap => snap.at.slice(0, 10) <= dayStr)) continue;
-      if (!sys.last_article_sanctions) continue;
-      try {
-        const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
-        const checklist = sys.compliance_checklist ?? {};
-        for (const [art, val] of Object.entries(sanctions)) {
-          const entry = checklist[art];
-          const st = typeof entry === 'string' ? entry : (entry as { status?: string })?.status;
-          if (st !== 'present') {
-            const ex = artMap.get(art) ?? { min: 0, max: 0, tools: [] };
-            if (val.max > ex.max) { ex.min = val.min; ex.max = val.max; }
-            if (!ex.tools.includes(sys.tool_name)) ex.tools.push(sys.tool_name);
-            artMap.set(art, ex);
-          }
-        }
-      } catch { /* ignore */ }
+      const tl = [...(sys.sanction_timeline ?? [])].sort((a, b) => a.at.localeCompare(b.at));
+      // Latest snapshot on or before this day
+      let last: SanctionSnap | null = null;
+      for (const snap of tl) {
+        if (snap.at.slice(0, 10) <= dayStr) last = snap;
+      }
+      if (!last) continue;
+
+      // Use historical articles_in_gap if stored; fall back to current state for old snapshots.
+      const articlesAtPoint: Record<string, { min: number; max: number }> = last.articles_in_gap
+        ? last.articles_in_gap
+        : (() => {
+            if (!sys.last_article_sanctions) return {};
+            try {
+              const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
+              const checklist = sys.compliance_checklist ?? {};
+              return Object.fromEntries(Object.entries(sanctions).filter(([art]) => {
+                const entry = (checklist as Record<string, { status?: string } | string>)[art];
+                const st = typeof entry === 'string' ? entry : entry?.status;
+                return st !== 'present';
+              }));
+            } catch { return {}; }
+          })();
+
+      for (const [art, val] of Object.entries(articlesAtPoint)) {
+        const ex = artMap.get(art) ?? { min: 0, max: 0, tools: [] };
+        if (val.max > ex.max) { ex.min = val.min; ex.max = val.max; }
+        if (!ex.tools.includes(sys.tool_name)) ex.tools.push(sys.tool_name);
+        artMap.set(art, ex);
+      }
     }
     return Array.from(artMap.entries())
       .map(([art, d]) => ({ art, ...d }))

@@ -142,7 +142,7 @@ export async function deleteSystem(companyId: string, systemId: string) {
 export async function appendSanctionSnapshot(
   companyId: string,
   systemId: string,
-  snapshot: { at: string; min: number; max: number; source: string },
+  snapshot: { at: string; min: number; max: number; source: string; articles_in_gap?: Record<string, { min: number; max: number }> },
 ) {
   await client.send(new UpdateCommand({
     TableName: TABLES.systems,

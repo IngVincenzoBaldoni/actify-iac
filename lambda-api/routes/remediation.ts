@@ -280,6 +280,22 @@ export async function closeGap(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
       compliance_checklist:    updatedChecklist,
       updated_at:              now,
     });
+    // Append timeline snapshot so the fines chart reflects the resolved gap
+    const remediatedArticlesInGap: Record<string, { min: number; max: number }> = {};
+    for (const [art, val] of Object.entries(recomputed.article_sanctions ?? {} as Record<string, { min: number; max: number }>)) {
+      const entry = updatedChecklist[art] as { status?: string } | string | undefined;
+      const st = typeof entry === 'string' ? entry : entry?.status;
+      if (st !== 'present' && (val as { max: number }).max > 0) {
+        remediatedArticlesInGap[art] = val as { min: number; max: number };
+      }
+    }
+    await dynamo.appendSanctionSnapshot(auth.companyId, systemId, {
+      at: now,
+      min: totalMin,
+      max: totalMax,
+      source: 'checklist',
+      articles_in_gap: remediatedArticlesInGap,
+    });
   } else {
     // No compliance check yet: just update the checklist
     await dynamo.updateSystem(auth.companyId, systemId, {
