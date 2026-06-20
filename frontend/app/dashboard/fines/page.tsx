@@ -127,7 +127,8 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
       }
 
       // Use the snapshot's articles_in_gap if stored (new snapshots).
-      // Fall back to current last_article_sanctions + compliance_checklist for old snapshots without it.
+      // Fall back for old snapshots: filter article_sanctions by checklist items addressed ON OR BEFORE
+      // this day (addressed_at field), so each historical point reflects the state at that exact time.
       const articlesAtPoint: Record<string, { min: number; max: number }> = last.articles_in_gap
         ? last.articles_in_gap
         : (() => {
@@ -136,9 +137,12 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
               const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
               const checklist = sys.compliance_checklist ?? {};
               return Object.fromEntries(Object.entries(sanctions).filter(([art]) => {
-                const entry = (checklist as Record<string, { status?: string } | string>)[art];
-                const st = typeof entry === 'string' ? entry : entry?.status;
-                return st !== 'present';
+                const entry = (checklist as Record<string, { status?: string; addressed_at?: string } | string>)[art];
+                if (!entry || typeof entry === 'string') return true;
+                const e = entry as { status?: string; addressed_at?: string };
+                if (e.status !== 'present') return true;
+                if (!e.addressed_at) return false; // unknown date → assume already resolved
+                return e.addressed_at > day; // resolved AFTER this day → still a gap at this day
               }));
             } catch { return {}; }
           })();
@@ -201,36 +205,45 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
   const primVals = mode === 'max' ? maxVals : minVals;
   const secVals  = mode === 'max' ? minVals : maxVals;
 
-  // Straight-line path connecting all event points, then extends flat to today
-  function linePath(vals: number[]): string {
+  // Step-chart path: stays flat (H) until the next event, then drops/rises vertically (V).
+  // This is the correct visualization for compliance data where values are constant between events.
+  function stepPath(vals: number[]): string {
     if (vals.length === 0) return '';
     let d = `M ${f(sx(aggPts[0].ts))} ${f(sy(vals[0]))}`;
     for (let i = 1; i < aggPts.length; i++) {
-      d += ` L ${f(sx(aggPts[i].ts))} ${f(sy(vals[i]))}`;
+      d += ` H ${f(sx(aggPts[i].ts))} V ${f(sy(vals[i]))}`;
     }
     // extend flat to today
-    d += ` L ${f(sx(nowTs))} ${f(sy(vals[vals.length - 1]))}`;
+    d += ` H ${f(sx(nowTs))}`;
     return d;
   }
 
-  const primD = linePath(primVals);
-  const secD  = linePath(secVals);
+  const primD = stepPath(primVals);
+  const secD  = stepPath(secVals);
 
   const firstX = f(sx(aggPts[0].ts));
   const botY   = f(MT + PH);
 
-  // Close the primary area down to zero
+  // Close the primary area down to bottom-left
   const areaD = primD + ` V ${botY} H ${firstX} Z`;
 
-  // Band polygon (straight lines, extended to today)
+  // Band polygon using step-chart for both max and min edges
   function buildBandPoly(): string {
     const pts: string[] = [];
-    for (let i = 0; i < aggPts.length; i++)
-      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i]))}`);
+    // Top edge (max): step chart left→right
+    pts.push(`${f(sx(aggPts[0].ts))},${f(sy(maxVals[0]))}`);
+    for (let i = 1; i < aggPts.length; i++) {
+      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i - 1]))}`); // flat
+      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i]))}`);     // drop
+    }
     pts.push(`${f(sx(nowTs))},${f(sy(maxVals[maxVals.length - 1]))}`);
+    // Bottom edge (min): step chart right→left
     pts.push(`${f(sx(nowTs))},${f(sy(minVals[minVals.length - 1]))}`);
-    for (let i = aggPts.length - 1; i >= 0; i--)
+    for (let i = aggPts.length - 1; i >= 1; i--) {
       pts.push(`${f(sx(aggPts[i].ts))},${f(sy(minVals[i]))}`);
+      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(minVals[i - 1]))}`);
+    }
+    pts.push(`${f(sx(aggPts[0].ts))},${f(sy(minVals[0]))}`);
     return pts.join(' ');
   }
 
@@ -255,7 +268,7 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
       }
       if (!last) continue;
 
-      // Use historical articles_in_gap if stored; fall back to current state for old snapshots.
+      // Use historical articles_in_gap if stored; fall back to addressed_at for old snapshots.
       const articlesAtPoint: Record<string, { min: number; max: number }> = last.articles_in_gap
         ? last.articles_in_gap
         : (() => {
@@ -264,9 +277,12 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
               const sanctions: Record<string, { min: number; max: number }> = JSON.parse(sys.last_article_sanctions);
               const checklist = sys.compliance_checklist ?? {};
               return Object.fromEntries(Object.entries(sanctions).filter(([art]) => {
-                const entry = (checklist as Record<string, { status?: string } | string>)[art];
-                const st = typeof entry === 'string' ? entry : entry?.status;
-                return st !== 'present';
+                const entry = (checklist as Record<string, { status?: string; addressed_at?: string } | string>)[art];
+                if (!entry || typeof entry === 'string') return true;
+                const e = entry as { status?: string; addressed_at?: string };
+                if (e.status !== 'present') return true;
+                if (!e.addressed_at) return false;
+                return e.addressed_at > dayStr;
               }));
             } catch { return {}; }
           })();
