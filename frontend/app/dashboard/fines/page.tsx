@@ -186,64 +186,66 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
   const yTicks = niceYTicks(absMax);
   const yMax   = (yTicks[yTicks.length - 1] ?? absMax) * 1.0;
 
-  const nowTs  = Date.now();
-  const rawMin = aggPts[0].ts;
-  const rawMax = Math.max(nowTs, aggPts[aggPts.length - 1].ts);
-  const span   = rawMax - rawMin || 86_400_000 * 7;
-  const minTs  = rawMin - span * 0.05;
-  const maxTs  = rawMax + span * 0.03;
+  const sy  = (v: number) => MT + PH - Math.min(v / yMax, 1) * PH;
+  const f   = (n: number) => n.toFixed(1);
 
-  const sx  = (ts: number) => ML + ((ts - minTs) / (maxTs - minTs)) * PW;
-  const sy  = (v: number)  => MT + PH - Math.min(v / yMax, 1) * PH;
-  const f   = (n: number)  => n.toFixed(1);
+  // Index-based x: each event gets its own evenly-spaced slot regardless of wall-clock distance.
+  // This guarantees every dot is visible even if 5 events happened within 10 seconds.
+  const N = aggPts.length;
+  const xi = (i: number) => N <= 1 ? ML + PW / 2 : ML + (i / (N - 1)) * PW;
 
-  const maxVals = aggPts.map(p => p.sumMax);
-  const minVals = aggPts.map(p => p.sumMin);
+  const maxVals  = aggPts.map(p => p.sumMax);
+  const minVals  = aggPts.map(p => p.sumMin);
   const primVals = mode === 'max' ? maxVals : minVals;
   const secVals  = mode === 'max' ? minVals : maxVals;
 
   function linePath(vals: number[]): string {
     if (vals.length === 0) return '';
-    let d = `M ${f(sx(aggPts[0].ts))} ${f(sy(vals[0]))}`;
-    for (let i = 1; i < aggPts.length; i++) {
-      d += ` L ${f(sx(aggPts[i].ts))} ${f(sy(vals[i]))}`;
+    let d = `M ${f(xi(0))} ${f(sy(vals[0]))}`;
+    for (let i = 1; i < N; i++) {
+      d += ` L ${f(xi(i))} ${f(sy(vals[i]))}`;
     }
-    // extend flat to right edge of chart (avoids backwards H when nowTs < last point's noon-UTC ts)
     d += ` H ${ML + PW}`;
     return d;
   }
 
   const primD = linePath(primVals);
   const secD  = linePath(secVals);
-
-  const firstX = f(sx(aggPts[0].ts));
-  const botY   = f(MT + PH);
-
-  // Close the primary area down to bottom-left
-  const areaD = primD + ` V ${botY} H ${firstX} Z`;
+  const botY  = f(MT + PH);
+  const areaD = primD + ` V ${botY} H ${f(ML)} Z`;
 
   function buildBandPoly(): string {
-    const re = ML + PW; // right edge of chart
+    const re = ML + PW;
     const pts: string[] = [];
-    // Top edge (max): left→right
-    for (let i = 0; i < aggPts.length; i++) {
-      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(maxVals[i]))}`);
-    }
-    pts.push(`${re},${f(sy(maxVals[maxVals.length - 1]))}`);
-    // Bottom edge (min): right→left
-    pts.push(`${re},${f(sy(minVals[minVals.length - 1]))}`);
-    for (let i = aggPts.length - 1; i >= 0; i--) {
-      pts.push(`${f(sx(aggPts[i].ts))},${f(sy(minVals[i]))}`);
-    }
+    for (let i = 0; i < N; i++) pts.push(`${f(xi(i))},${f(sy(maxVals[i]))}`);
+    pts.push(`${re},${f(sy(maxVals[N - 1]))}`);
+    pts.push(`${re},${f(sy(minVals[N - 1]))}`);
+    for (let i = N - 1; i >= 0; i--) pts.push(`${f(xi(i))},${f(sy(minVals[i]))}`);
     return pts.join(' ');
   }
 
   const lineColor = mode === 'max' ? '#EF4444' : '#22C55E';
 
-  const xTickCount = Math.min(8, aggPts.length + 2);
-  const xTicks = Array.from({ length: xTickCount }, (_, i) =>
-    minTs + (i / (xTickCount - 1)) * (maxTs - minTs)
-  );
+  // X-axis: show date label at each event slot, skip if label would overlap previous
+  const xLabels: Array<{ i: number; label: string }> = [];
+  {
+    let lastX = -Infinity;
+    // count events per day to decide whether to include time
+    const dayCount = new Map<string, number>();
+    for (const pt of aggPts) {
+      const d = new Date(pt.ts).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+      dayCount.set(d, (dayCount.get(d) ?? 0) + 1);
+    }
+    for (let i = 0; i < N; i++) {
+      const x = xi(i);
+      const dt = new Date(aggPts[i].ts);
+      const dayStr = dt.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+      const label = (dayCount.get(dayStr) ?? 1) > 1
+        ? `${dayStr} ${dt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+        : dayStr;
+      if (x - lastX > 54) { xLabels.push({ i, label }); lastX = x; }
+    }
+  }
 
   const TW = 240;
 
@@ -291,7 +293,7 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
 
   function renderTooltip(idx: number) {
     const pt        = aggPts[idx];
-    const px        = sx(pt.ts);
+    const px        = xi(idx);
     const py        = sy(primVals[idx]);
     const arts      = getDeduplicatedArtsAt(pt.ts);
     const totalMax  = arts.reduce((s, a) => s + a.max, 0);
@@ -380,11 +382,11 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
           {fmtEur(t)}
         </text>
       ))}
-      {/* X labels */}
-      {xTicks.map((ts, i) => (
-        <text key={i} x={f(sx(ts))} y={MT + PH + 18} textAnchor="middle"
-          fill="rgba(255,255,255,0.26)" fontSize="10" fontFamily="sans-serif">
-          {new Date(ts).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}
+      {/* X labels — one per event slot, with time when multiple events on same day */}
+      {xLabels.map(({ i, label }) => (
+        <text key={i} x={f(xi(i))} y={MT + PH + 18} textAnchor="middle"
+          fill="rgba(255,255,255,0.26)" fontSize="9" fontFamily="sans-serif">
+          {label}
         </text>
       ))}
 
@@ -407,7 +409,7 @@ function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' |
       </g>
 
       {aggPts.map((pt, i) => {
-        const x     = sx(pt.ts);
+        const x     = xi(i);
         const yVal  = sy(primVals[i]);
         const isHov = hoveredIdx === i;
         return (
