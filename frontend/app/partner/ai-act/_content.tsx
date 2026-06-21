@@ -95,15 +95,10 @@ const ALL_ARTICLES = CHAPTERS.flatMap(c => c.articles);
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatText(text: string): React.ReactNode {
-  // Split by double-newline for paragraphs; single newline for line breaks
+  // Double-newline = paragraph break; single newline = soft wrap from source, replace with space
   return text.split(/\n\n+/).map((para, i) => (
-    <p key={i} style={{ margin: '0 0 1em 0', lineHeight: 1.75, color: 'var(--text2)', textAlign: 'justify' }}>
-      {para.split('\n').map((line, j, arr) => (
-        <span key={j}>
-          {line}
-          {j < arr.length - 1 && <br />}
-        </span>
-      ))}
+    <p key={i} style={{ margin: '0 0 1em 0', lineHeight: 1.75, color: 'var(--text2)' }}>
+      {para.replace(/\n/g, ' ')}
     </p>
   ));
 }
@@ -172,11 +167,11 @@ export default function AiActReader() {
   const activeEntry = ALL_ARTICLES.find(a => a.num === activeNum);
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 0px)', overflow: 'hidden', background: 'var(--bg)' }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 0px)', overflow: 'hidden', background: 'var(--bg)', width: '100%' }}>
 
       {/* ── Left sidebar ── */}
       <aside style={{
-        width: 300, flexShrink: 0, borderRight: '1px solid var(--border)',
+        width: 240, flexShrink: 0, borderRight: '1px solid var(--border)',
         overflowY: 'auto', background: 'var(--surface)',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -234,21 +229,108 @@ export default function AiActReader() {
       </aside>
 
       {/* ── Content area ── */}
-      <div ref={contentRef} style={{ flex: 1, overflowY: 'auto', padding: '40px 56px 60px', maxWidth: 860 }}>
+      <div ref={contentRef} style={{ flex: 1, overflowY: 'auto', padding: '32px 28px 60px' }}>
         {!activeNum && (
-          <div style={{ maxWidth: 560, margin: '60px auto', textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⚖️</div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
-              Testo ufficiale AI Act
-            </h2>
-            <p style={{ color: 'var(--muted)', lineHeight: 1.7, fontSize: 14 }}>
-              Seleziona un articolo dalla sidebar per leggere il testo completo del Regolamento UE 2024/1689.
-              Puoi navigare tra tutti i capitoli e articoli principali dell&apos;AI Act direttamente dalla knowledge base di Actify.
-            </p>
-            <div style={{ marginTop: 32, padding: '16px 20px', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', textAlign: 'left' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--muted)', marginBottom: 10 }}>Articoli più rilevanti per la compliance</div>
+          <div>
+            {/* Hero */}
+            <div style={{ marginBottom: 36 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: 'var(--muted)', marginBottom: 8 }}>
+                Regolamento (UE) 2024/1689 · In vigore dal 1° agosto 2024
+              </div>
+              <h1 style={{ fontSize: 30, fontWeight: 800, color: 'var(--text)', margin: '0 0 14px', lineHeight: 1.2 }}>
+                AI Act — Il primo framework normativo globale sull&apos;intelligenza artificiale
+              </h1>
+              <p style={{ fontSize: 14.5, color: 'var(--text2)', lineHeight: 1.75, margin: 0 }}>
+                Il Regolamento UE 2024/1689 stabilisce un quadro uniforme per lo sviluppo, l&apos;immissione sul mercato
+                e l&apos;utilizzo di sistemi di intelligenza artificiale nell&apos;Unione Europea. Adotta un approccio
+                basato sul rischio: più alto il rischio, più stringenti gli obblighi. Seleziona un articolo dalla
+                sidebar per leggere il testo completo dalla knowledge base normativa di Actify.
+              </p>
+            </div>
+
+            {/* KPI cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+              {([
+                { icon: '📋', value: '113',      label: 'Articoli',         sub: '+ 13 Allegati tecnici' },
+                { icon: '📅', value: 'Dic 2027', label: 'Alto rischio Annex III', sub: '↑ Digital Omnibus (ex Ago 2026)' },
+                { icon: '⚖️', value: '€35M',     label: 'Sanzione massima', sub: 'o 7% del fatturato globale' },
+                { icon: '🌍', value: '27',        label: 'Paesi UE',         sub: 'Applicazione diretta, no recepimento' },
+              ] as { icon: string; value: string; label: string; sub: string }[]).map(kpi => (
+                <div key={kpi.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 18px' }}>
+                  <div style={{ fontSize: 20, marginBottom: 8 }}>{kpi.icon}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{kpi.value}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginTop: 5 }}>{kpi.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{kpi.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Two-col: risk tiers + timeline */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
+              {/* Risk tiers */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 22px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--muted)', marginBottom: 14 }}>Approccio basato sul rischio</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {([
+                    { icon: '🚫', title: 'Pratiche vietate (Art. 5)', desc: 'Scoring sociale, manipolazione subliminale, sfruttamento di vulnerabilità. Vietati in ogni contesto.' },
+                    { icon: '🔴', title: 'Alto rischio (Art. 6–27)', desc: 'Sanità, istruzione, occupazione, infrastrutture critiche. Obblighi rigorosi: documentazione, gestione rischi, supervisione umana.' },
+                    { icon: '🟡', title: 'Rischio limitato (Art. 50)', desc: 'Chatbot, deepfake e contenuti sintetici devono identificarsi come AI. Obblighi di trasparenza.' },
+                    { icon: '⚪', title: 'Rischio minimo', desc: 'Filtri antispam, AI nei videogiochi, strumenti di produttività. Nessun obbligo aggiuntivo.' },
+                  ] as { icon: string; title: string; desc: string }[]).map(item => (
+                    <div key={item.title} style={{ display: 'flex', gap: 10, padding: '10px 12px', background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{item.title}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.55 }}>{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 22px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--muted)', marginBottom: 14 }}>Timeline di applicazione</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {([
+                    { date: 'Ago 2024', label: 'Entrata in vigore',              desc: 'Pubblicazione in Gazzetta Ufficiale UE. Il Regolamento diventa legge.',                                 done: true  },
+                    { date: 'Feb 2025', label: 'Art. 4-5 — Literacy + divieti', desc: 'AI Literacy obbligatoria (Art. 4) e pratiche vietate operative (Art. 5): scoring sociale, manipolazione.', done: true  },
+                    { date: 'Ago 2025', label: 'GPAI e Ufficio AI operativi',   desc: 'Obblighi per modelli AI per finalità generali (Art. 51–56). Ufficio AI UE pienamente operativo.',           done: true  },
+                    { date: 'Dic 2026', label: 'Art. 50 — sistemi pre-esistenti', desc: 'Obblighi di trasparenza per chatbot e sistemi già sul mercato. (Digital Omnibus 2025)',                    done: false },
+                    { date: 'Dic 2027', label: 'Sistemi alto rischio Annex III', desc: 'Piena applicazione per tutti i sistemi ad alto rischio Allegato III. Posticipato dal Digital Omnibus.',      done: false },
+                  ] as { date: string; label: string; desc: string; done: boolean }[]).map((step, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ width: 64, flexShrink: 0, textAlign: 'right', paddingTop: 1 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: step.done ? '#22c55e' : 'var(--muted)' }}>{step.date}</span>
+                      </div>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: step.done ? '#22c55e' : 'rgba(255,255,255,0.15)', border: step.done ? 'none' : '1px solid var(--border)', flexShrink: 0, marginTop: 4 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{step.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>{step.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Relevant articles */}
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 22px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--muted)', marginBottom: 14 }}>Articoli più rilevanti per la compliance — clicca per leggere</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {[4, 5, 6, 9, 10, 13, 14, 26, 50, 99, 100].map(n => {
+                {([
+                  { n: 4,   icon: '🎓', desc: 'Alfabetizzazione AI' },
+                  { n: 5,   icon: '🚫', desc: 'Pratiche vietate' },
+                  { n: 6,   icon: '🏷️', desc: 'Classificazione rischio' },
+                  { n: 9,   icon: '⚠️', desc: 'Gestione rischi' },
+                  { n: 10,  icon: '📊', desc: 'Governance dati' },
+                  { n: 13,  icon: '📢', desc: 'Trasparenza' },
+                  { n: 14,  icon: '👁️', desc: 'Supervisione umana' },
+                  { n: 26,  icon: '🏢', desc: 'Obblighi deployer' },
+                  { n: 50,  icon: '💬', desc: 'Obblighi chatbot' },
+                  { n: 99,  icon: '⚖️', desc: 'Sanzioni' },
+                  { n: 100, icon: '🏭', desc: 'Sanzioni PMI' },
+                ] as { n: number; icon: string; desc: string }[]).map(({ n, icon, desc }) => {
                   const entry = ALL_ARTICLES.find(a => a.num === n);
                   if (!entry) return null;
                   return (
@@ -256,12 +338,15 @@ export default function AiActReader() {
                       key={n}
                       onClick={() => loadArticle(n)}
                       style={{
-                        background: 'rgba(108,71,255,.1)', border: '1px solid rgba(108,71,255,.25)',
-                        borderRadius: 6, color: '#a78bfa', cursor: 'pointer', fontSize: 12,
-                        padding: '4px 10px', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', gap: 7,
+                        background: 'rgba(108,71,255,.08)', border: '1px solid rgba(108,71,255,.22)',
+                        borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                        padding: '7px 14px', transition: 'background .12s',
                       }}
                     >
-                      Art. {n} — {entry.title}
+                      <span style={{ fontSize: 14 }}>{icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#c4b5fd' }}>Art. {n}</span>
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>— {desc}</span>
                     </button>
                   );
                 })}

@@ -1,6 +1,75 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 import type { ComplianceResult } from '@/lib/types';
+
+// ── Article sidebar ───────────────────────────────────────────────────────────
+
+function parseArticleNum(article: string): number | null {
+  const m = article.match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+function formatArticleText(text: string): React.ReactNode {
+  return text.split(/\n\n+/).map((para, i) => (
+    <p key={i} style={{ margin: '0 0 1.1em 0', lineHeight: 1.8, color: 'var(--text2)', fontSize: 13 }}>
+      {para.split('\n').map((line, j, arr) => (
+        <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
+      ))}
+    </p>
+  ));
+}
+
+function ArticleSidebar({ articleNum, onClose }: { articleNum: number; onClose: () => void }) {
+  const [text, setText]       = useState('');
+  const [title, setTitle]     = useState('');
+  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setVisible(true));
+    setLoading(true); setText(''); setTitle('');
+    api.articles.get(articleNum)
+      .then((d: { text: string; article_title: string }) => { setText(d.text); setTitle(d.article_title); })
+      .catch(() => setText(''))
+      .finally(() => setLoading(false));
+    return () => cancelAnimationFrame(raf);
+  }, [articleNum]);
+
+  function handleClose() { setVisible(false); setTimeout(onClose, 280); }
+
+  return (
+    <>
+      <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.45)', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease', cursor: 'pointer' }} />
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 460, background: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 401, display: 'flex', flexDirection: 'column', transform: visible ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)', boxShadow: '-12px 0 48px rgba(0,0,0,0.6)' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.4, color: 'var(--green)', marginBottom: 6 }}>Reg. UE 2024/1689 — Testo ufficiale</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)', letterSpacing: -0.4, lineHeight: 1.2 }}>
+                Art. {articleNum}
+                {title && <span style={{ color: 'var(--text2)', fontWeight: 600, fontSize: 15 }}> — {title}</span>}
+              </div>
+            </div>
+            <button onClick={handleClose} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', fontSize: 16, cursor: 'pointer', padding: '5px 9px', borderRadius: 7, lineHeight: 1, transition: 'all .15s', flexShrink: 0 }}>✕</button>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <a href={`/dashboard/ai-act?article=${articleNum}`} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--green)', textDecoration: 'none', padding: '5px 12px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 7 }}>
+              ⚖️ Apri nel Testo AI Act →
+            </a>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 40px' }}>
+          {loading && <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 48 }}><div className="spin" style={{ width: 32, height: 32, borderWidth: 2, margin: 0 }} /></div>}
+          {!loading && !text && <div style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: 13 }}>Testo non disponibile per questo articolo.</div>}
+          {!loading && text && formatArticleText(text)}
+        </div>
+      </div>
+    </>
+  );
+}
 
 function fmtEur(n: number): string {
   if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1).replace('.0', '')}M`;
@@ -28,6 +97,7 @@ const ARTICLE_SUMMARY: Record<string, { title: string; summary: string }> = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SanctionOverview({ result, compact = false }: { result: ComplianceResult; compact?: boolean }) {
+  const [articleSidebar, setArticleSidebar] = useState<number | null>(null);
   const exposure = result.total_exposure_estimate;
   if (!exposure) return null;
 
@@ -123,14 +193,14 @@ export function SanctionOverview({ result, compact = false }: { result: Complian
                     <p className="so-bar-summary">
                       {info?.summary ?? 'Per questo articolo si applicano i requisiti generali del Regolamento UE 2024/1689 sull\'Intelligenza Artificiale.'}
                     </p>
-                    <a
-                      href={`/dashboard/ai-act?article=${artSlug}`}
+                    <button
+                      onClick={() => { const n = parseArticleNum(g.article); if (n) setArticleSidebar(n); }}
                       className="so-bar-read-cta"
                     >
                       <span>📖</span>
                       <span>Leggi {g.article} completo</span>
                       <span style={{ opacity: 0.5 }}>→</span>
-                    </a>
+                    </button>
                   </div>
 
                   {/* Divider */}
@@ -188,6 +258,9 @@ export function SanctionOverview({ result, compact = false }: { result: Complian
       )}
 
       <div className="so-disclaimer">{exposure.disclaimer}</div>
+      {articleSidebar !== null && (
+        <ArticleSidebar articleNum={articleSidebar} onClose={() => setArticleSidebar(null)}/>
+      )}
     </div>
   );
 }

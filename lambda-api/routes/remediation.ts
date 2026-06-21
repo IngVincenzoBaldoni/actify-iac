@@ -243,11 +243,14 @@ export async function closeGap(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   if (latestCheck?.result && latestCheck.status === 'completed') {
     const { computeSanctions } = await import('../services/sanctions');
     const result = latestCheck.result as Record<string, unknown>;
-    const updatedGaps = (result.compliance_gaps as Record<string, unknown>[]).map(g =>
+    const rawGaps = result.compliance_gaps as Record<string, unknown>[];
+    console.log('[closeGap DIAG] gapId:', gapId, 'total gaps:', rawGaps?.length, 'first gap_id:', rawGaps?.[0]?.gap_id, 'types:', typeof gapId, typeof rawGaps?.[0]?.gap_id);
+    const updatedGaps = (rawGaps ?? []).map(g =>
       g.gap_id === gapId
         ? { ...g, status: 'compliant', estimated_sanction_min: 0, estimated_sanction_max: 0, tier_info: undefined }
         : g,
     );
+    console.log('[closeGap DIAG] compliant after map:', updatedGaps.filter(g => g.status === 'compliant').length);
     // Also apply other checklist overrides
     const finalGaps = updatedGaps.map(g => {
       const entry = (updatedChecklist[g.article as string] as Record<string, unknown> | undefined);

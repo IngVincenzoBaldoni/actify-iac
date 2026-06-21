@@ -572,13 +572,27 @@ export async function putAuditEvent(item: Record<string, unknown>) {
   await client.send(new PutCommand({ TableName: TABLES.audit, Item: item }));
 }
 
-export async function listAuditEvents(companyId: string, limit = 500) {
+export async function listAuditEvents(
+  companyId: string,
+  opts: { limit?: number; fromDate?: string; toDate?: string } = {},
+) {
+  const { limit = 500, fromDate, toDate } = opts;
+  const hasRange = fromDate && toDate;
+
   const r = await client.send(new QueryCommand({
     TableName: TABLES.audit,
-    KeyConditionExpression: 'company_id = :cid',
-    ExpressionAttributeValues: { ':cid': companyId },
+    KeyConditionExpression: hasRange
+      ? 'company_id = :cid AND event_id BETWEEN :from AND :to'
+      : 'company_id = :cid',
+    ExpressionAttributeValues: {
+      ':cid': companyId,
+      ...(hasRange ? {
+        ':from': fromDate,
+        ':to':   toDate + '~',  // ~ (ASCII 126) sorts after uuid hex chars
+      } : {}),
+    },
     ScanIndexForward: false,
-    Limit: limit,
+    ...(hasRange ? {} : { Limit: limit }),
   }));
   return r.Items ?? [];
 }

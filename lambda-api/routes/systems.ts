@@ -62,6 +62,18 @@ export async function listSystems(event: APIGatewayProxyEventV2WithJWTAuthorizer
 export async function createSystem(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth = extractAuth(event);
   const body = parseBody(event.body, aiSystemSchema);
+
+  // Reject duplicate tool names within the same company (case-insensitive)
+  const existing = await dynamo.getSystemsByCompany(auth.companyId) as Record<string, unknown>[];
+  const nameLower = body.tool_name.trim().toLowerCase();
+  const duplicate = existing.find(s => String(s.tool_name ?? '').trim().toLowerCase() === nameLower);
+  if (duplicate) {
+    return {
+      statusCode: 409,
+      body: JSON.stringify({ error: 'duplicate_tool_name', message: `Un sistema AI con il nome "${body.tool_name}" è già presente nell'inventario.` }),
+    };
+  }
+
   const now = new Date().toISOString();
   const systemId = uuidv4();
 
@@ -158,6 +170,10 @@ export async function deleteSystem(event: APIGatewayProxyEventV2WithJWTAuthorize
   const systemId = event.pathParameters?.systemId;
   if (!systemId) return { statusCode: 400, body: JSON.stringify({ error: 'systemId required' }) };
 
+  // Load system name before deleting so the audit log can reference it
+  const system = await dynamo.getSystem(auth.companyId, systemId);
+  const systemName = (system as Record<string, unknown>)?.tool_name as string | undefined;
+
   // Load all documents before deleting so we can clean up S3
   const docs = await dynamo.listDocumentsBySystem(systemId);
 
@@ -171,7 +187,8 @@ export async function deleteSystem(event: APIGatewayProxyEventV2WithJWTAuthorize
   ]);
 
   await logEvent(auth.companyId, 'system_deleted', {
-    system_id: systemId,
+    system_id:         systemId,
+    system_name:       systemName ?? systemId,
     deleted_documents: docs.length,
   }, auth.email);
   return { statusCode: 200, body: JSON.stringify({ message: 'Sistema eliminato.', deleted_documents: docs.length }) };

@@ -531,105 +531,135 @@ function ComplianceChecklist({
         )}
       </div>
 
-      {/* User-declared present */}
-      {userPresent.length > 0 && (
-        <div className="cl-section">
-          <div className="cl-section-title cl-user-title">☑ Già implementati (dichiarato da te)</div>
-          {userPresent.map(gap => {
-            const entry = normalizeEntry(checklist[gap.article]);
-            return (
-              <div key={gap.gap_id} className="cl-item cl-item-user">
-                <div className="cl-item-head">
-                  <span className="cl-art">{gap.article}</span>
-                  <span className="cl-req">{gap.requirement}</span>
-                  <span className="cl-status-user">Già implementato</span>
-                  <ArticleBtn article={gap.article} />
-                </div>
-                {entry.addressed_at && (
-                  <div className="cl-addressed-date">📅 Addressato il {entry.addressed_at}</div>
-                )}
-                {entry.evidence_note && (
-                  <div className="cl-evidence-note">📎 {entry.evidence_note}</div>
-                )}
-                <EvidenceInput gap={gap} />
-                <div className="cl-user-row">
-                  <span className="cl-user-note">Escluso dal calcolo sanzionatorio</span>
-                  <button className="cl-undo-btn" onClick={() => handleUnmark(gap.article)}>Annulla</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* User-partial */}
-      {userPartial.length > 0 && (
-        <div className="cl-section">
-          <div className="cl-section-title cl-partial-title">⟳ In lavorazione</div>
-          {userPartial.map(gap => {
-            const entry = normalizeEntry(checklist[gap.article]);
-            return (
-              <div key={gap.gap_id} className="cl-item cl-item-partial">
-                <div className="cl-item-head">
-                  <span className="cl-art">{gap.article}</span>
-                  <span className="cl-req">{gap.requirement}</span>
-                  <span className="cl-status-partial">In lavorazione</span>
-                  <ArticleBtn article={gap.article} />
-                </div>
-                {entry.evidence_note && (
-                  <div className="cl-evidence-note">📎 {entry.evidence_note}</div>
-                )}
-                <EvidenceInput gap={gap} />
-                <GapActions gap={gap} />
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* LLM-compliant */}
-      {llmCompliant.length > 0 && (
-        <div className="cl-section">
-          <div className="cl-section-title cl-ok-title">✓ Già presenti (analisi AI)</div>
-          {llmCompliant.map(gap => (
-            <div key={gap.gap_id} className="cl-item cl-item-ok">
-              <span className="cl-art">{gap.article}</span>
-              <span className="cl-req">{gap.requirement}</span>
-              <span className="cl-status-ok">Conforme</span>
-              <ArticleBtn article={gap.article} />
+      {/* ── MACRO BLOCCO 1: CONFORMI ─────────────────────────────────────── */}
+      {(llmCompliant.length > 0 || userPresent.length > 0) && (
+        <div className="cl-macro cl-macro-ok">
+          <div className="cl-macro-header">
+            <span className="cl-macro-icon">✅</span>
+            <div>
+              <div className="cl-macro-label">Requisiti conformi</div>
+              <div className="cl-macro-sublabel">Già implementati o verificati dall&apos;analisi AI</div>
             </div>
-          ))}
-        </div>
-      )}
+            <span className="cl-macro-count">{llmCompliant.length + userPresent.length} su {gaps.length}</span>
+          </div>
+          <div className="cl-macro-body">
 
-      {/* HYBRID — document in Vault, operational action pending */}
-      {documentReady.length > 0 && (
-        <div className="cl-section">
-          <div className="cl-section-title cl-hybrid-title">⚡ Azione richiesta (documento pronto)</div>
-          {documentReady.map(gap => (
-            <div key={gap.gap_id} className="cl-item cl-item-hybrid">
-              <div className="cl-item-head">
-                <span className="cl-art">{gap.article}</span>
-                <span className="cl-req">{gap.requirement}</span>
-                <span className="cl-status-hybrid">Parzialmente risolto</span>
-                <ArticleBtn article={gap.article} />
+            {/* LLM-compliant */}
+            {llmCompliant.length > 0 && (
+              <div className="cl-section">
+                <div className="cl-section-title cl-ok-title">Analisi AI — già presenti</div>
+                {llmCompliant.map(gap => (
+                  <div key={gap.gap_id} className="cl-item cl-item-ok">
+                    <span className="cl-art">{gap.article}</span>
+                    <span className="cl-req">{gap.requirement}</span>
+                    <span className="cl-status-ok">Conforme</span>
+                    <ArticleBtn article={gap.article} />
+                  </div>
+                ))}
               </div>
-              <p className="cl-desc">{gap.description}</p>
-              <HybridActionPanel
-                gap={gap}
-                doc={documents[gap.gap_id]}
-                onCloseGap={onCloseGap}
-              />
-            </div>
-          ))}
+            )}
+
+            {/* User-declared present */}
+            {userPresent.length > 0 && (
+              <div className="cl-section">
+                <div className="cl-section-title cl-user-title">Dichiarati da te</div>
+                {userPresent.map(gap => {
+                  const entry = normalizeEntry(checklist[gap.article]);
+                  return (
+                    <div key={gap.gap_id} className="cl-item cl-item-user">
+                      <div className="cl-item-head">
+                        <span className="cl-art">{gap.article}</span>
+                        <span className="cl-req">{gap.requirement}</span>
+                        <span className="cl-status-user">Già implementato</span>
+                        <ArticleBtn article={gap.article} />
+                      </div>
+                      {entry.addressed_at && (
+                        <div className="cl-addressed-date">📅 Addressato il {entry.addressed_at}</div>
+                      )}
+                      {entry.evidence_note && (
+                        <div className="cl-evidence-note">📎 {entry.evidence_note}</div>
+                      )}
+                      <EvidenceInput gap={gap} />
+                      <div className="cl-user-row">
+                        <span className="cl-user-note">Escluso dal calcolo sanzionatorio</span>
+                        <button className="cl-undo-btn" onClick={() => handleUnmark(gap.article)}>Annulla</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 
-      {/* Still missing */}
-      {stillMissing.length > 0 && (
-        <div className="cl-section">
-          <div className="cl-section-title cl-miss-title">✗ Da completare</div>
-          {stillMissing.map(gap => (
+      {/* ── MACRO BLOCCO 2: APERTI ───────────────────────────────────────── */}
+      {(userPartial.length > 0 || documentReady.length > 0 || stillMissing.length > 0) && (
+        <div className="cl-macro cl-macro-open">
+          <div className="cl-macro-header">
+            <span className="cl-macro-icon">🔴</span>
+            <div>
+              <div className="cl-macro-label">Gap aperti</div>
+              <div className="cl-macro-sublabel">Requisiti ancora da completare o in lavorazione</div>
+            </div>
+            <span className="cl-macro-count">{userPartial.length + documentReady.length + stillMissing.length} gap</span>
+          </div>
+          <div className="cl-macro-body">
+
+            {/* User-partial */}
+            {userPartial.length > 0 && (
+              <div className="cl-section">
+                <div className="cl-section-title cl-partial-title">In lavorazione</div>
+                {userPartial.map(gap => {
+                  const entry = normalizeEntry(checklist[gap.article]);
+                  return (
+                    <div key={gap.gap_id} className="cl-item cl-item-partial">
+                      <div className="cl-item-head">
+                        <span className="cl-art">{gap.article}</span>
+                        <span className="cl-req">{gap.requirement}</span>
+                        <span className="cl-status-partial">In lavorazione</span>
+                        <ArticleBtn article={gap.article} />
+                      </div>
+                      {entry.evidence_note && (
+                        <div className="cl-evidence-note">📎 {entry.evidence_note}</div>
+                      )}
+                      <EvidenceInput gap={gap} />
+                      <GapActions gap={gap} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* HYBRID — document in Vault, operational action pending */}
+            {documentReady.length > 0 && (
+              <div className="cl-section">
+                <div className="cl-section-title cl-hybrid-title">Azione richiesta — documento pronto</div>
+                {documentReady.map(gap => (
+                  <div key={gap.gap_id} className="cl-item cl-item-hybrid">
+                    <div className="cl-item-head">
+                      <span className="cl-art">{gap.article}</span>
+                      <span className="cl-req">{gap.requirement}</span>
+                      <span className="cl-status-hybrid">Parzialmente risolto</span>
+                      <ArticleBtn article={gap.article} />
+                    </div>
+                    <p className="cl-desc">{gap.description}</p>
+                    <HybridActionPanel
+                      gap={gap}
+                      doc={documents[gap.gap_id]}
+                      onCloseGap={onCloseGap}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Still missing */}
+            {stillMissing.length > 0 && (
+              <div className="cl-section">
+                <div className="cl-section-title cl-miss-title">Da completare</div>
+                {stillMissing.map(gap => (
             <div key={gap.gap_id} className="cl-item cl-item-miss">
               <div className="cl-item-head">
                 <span className="cl-art">{gap.article}</span>
@@ -686,6 +716,10 @@ function ComplianceChecklist({
               )}
             </div>
           ))}
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { configureAmplify } from '@/lib/amplify';
 import { api } from '@/lib/api';
 import type { AuditEvent } from '@/lib/types';
@@ -72,7 +72,7 @@ function EventRow({ event, isLast }: { event: AuditEvent; isLast: boolean }) {
   const cfg = getConfig(event.event_type);
   const details = event.details ?? {};
 
-  const primaryDetail = (details.tool_name ?? details.name ?? details.certification_name ?? details.company_name) as string | undefined;
+  const primaryDetail = (details.system_name ?? details.tool_name ?? details.name ?? details.certification_name ?? details.company_name) as string | undefined;
   const riskLevel = details.risk_level as string | undefined;
   const status = details.status as string | undefined;
 
@@ -183,24 +183,157 @@ function EventRow({ event, isLast }: { event: AuditEvent; isLast: boolean }) {
   );
 }
 
-export default function AuditTrailPage() {
-  const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('Tutti');
-  const [search, setSearch] = useState('');
-  const [exporting, setExporting] = useState(false);
+function MultiSysSelect({
+  selected, onChange, activeSysNames, deletedSysNames, allSystemNames, compact = false,
+}: {
+  selected: string[];
+  onChange: (v: string[]) => void;
+  activeSysNames: string[];
+  deletedSysNames: string[];
+  allSystemNames: string[];
+  compact?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.auditTrail.list()
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  function toggle(name: string) {
+    onChange(selected.includes(name) ? selected.filter(n => n !== name) : [...selected, name]);
+  }
+
+  const label = selected.length === 0
+    ? 'Tutti i sistemi'
+    : selected.length === 1 ? selected[0] : `${selected.length} sistemi`;
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          padding: compact ? '6px 10px' : '9px 12px',
+          background: 'var(--bg)',
+          border: `1px solid ${selected.length > 0 ? '#6C47FF' : 'var(--border)'}`,
+          borderRadius: compact ? 7 : 8,
+          fontSize: compact ? 12 : 13,
+          color: 'var(--text)',
+          cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 6,
+          width: compact ? undefined : '100%',
+          justifyContent: 'space-between',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: compact ? 160 : 280 }}>{label}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          {selected.length > 0 && (
+            <span style={{ background: '#6C47FF', color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 6px' }}>
+              {selected.length}
+            </span>
+          )}
+          <span style={{ color: 'var(--muted)', fontSize: 9 }}>▼</span>
+        </span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 200,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: 10, minWidth: 220, maxWidth: 320,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+          maxHeight: 320, overflowY: 'auto',
+        }}>
+          {/* Quick actions */}
+          <div style={{ display: 'flex', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+            <button onClick={() => onChange(allSystemNames)} style={{ fontSize: 11, color: '#6C47FF', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>Tutti</button>
+            <span style={{ color: 'var(--muted)' }}>·</span>
+            <button onClick={() => onChange([])} style={{ fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Nessuno</button>
+          </div>
+
+          {activeSysNames.length > 0 && (
+            <>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.7, padding: '8px 12px 4px' }}>Attivi</div>
+              {activeSysNames.map(name => (
+                <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', cursor: 'pointer', fontSize: 12, color: 'var(--text)' }}>
+                  <input type="checkbox" checked={selected.includes(name)} onChange={() => toggle(name)} style={{ accentColor: '#6C47FF', flexShrink: 0 }} />
+                  {name}
+                </label>
+              ))}
+            </>
+          )}
+
+          {deletedSysNames.length > 0 && (
+            <>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: 0.7, padding: '8px 12px 4px', borderTop: activeSysNames.length > 0 ? '1px solid var(--border)' : undefined }}>
+                ⛔ Eliminati
+              </div>
+              {deletedSysNames.map(name => (
+                <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', cursor: 'pointer', fontSize: 12, color: '#ef4444' }}>
+                  <input type="checkbox" checked={selected.includes(name)} onChange={() => toggle(name)} style={{ accentColor: '#ef4444', flexShrink: 0 }} />
+                  🔴 {name}
+                </label>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AuditTrailPage() {
+  const [events, setEvents]         = useState<AuditEvent[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [filter, setFilter]         = useState('Tutti');
+  const [search, setSearch]         = useState('');
+  const [fromDate, setFromDate]     = useState('');
+  const [toDate, setToDate]         = useState('');
+  const [systemFilter, setSystemFilter] = useState<string[]>([]);
+  const [activeSystemNames, setActiveSystemNames] = useState<Set<string>>(new Set());
+
+  // Export modal state
+  const [showModal, setShowModal]       = useState(false);
+  const [modalFrom, setModalFrom]       = useState('');
+  const [modalTo, setModalTo]           = useState('');
+  const [modalSystems, setModalSystems] = useState<string[]>([]);
+  const [exporting, setExporting]       = useState(false);
+
+  function loadEvents(from?: string, to?: string) {
+    setLoading(true);
+    api.auditTrail.list({ from: from || undefined, to: to || undefined })
       .then(data => setEvents(Array.isArray(data) ? data : []))
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadEvents();
+    api.systems.list()
+      .then((systems: unknown[]) => {
+        const names = new Set(
+          systems
+            .map(s => String((s as Record<string, unknown>).tool_name ?? ''))
+            .filter(n => n.length > 0)
+        );
+        setActiveSystemNames(names);
+      })
+      .catch(() => { /* ignore */ });
   }, []);
 
   async function handleExport() {
     setExporting(true);
     try {
-      const res = await api.auditTrail.export();
+      const res = await api.auditTrail.export({
+        from:        modalFrom                    || undefined,
+        to:          modalTo                      || undefined,
+        systemNames: modalSystems.length > 0 ? modalSystems : undefined,
+      });
       const bytes = Uint8Array.from(atob(res.pdfBase64), c => c.charCodeAt(0));
       const blob  = new Blob([bytes], { type: 'application/pdf' });
       const url   = URL.createObjectURL(blob);
@@ -209,6 +342,7 @@ export default function AuditTrailPage() {
       a.download  = res.filename;
       a.click();
       URL.revokeObjectURL(url);
+      setShowModal(false);
     } catch {
       alert('Errore durante la generazione del PDF. Riprova.');
     } finally {
@@ -216,13 +350,32 @@ export default function AuditTrailPage() {
     }
   }
 
+  function handleApplyFilters() {
+    loadEvents(fromDate || undefined, toDate || undefined);
+  }
+
+  // All unique system names from audit events
+  const allSystemNames = Array.from(
+    new Set(
+      events
+        .map(e => String(e.details?.system_name ?? e.details?.tool_name ?? ''))
+        .filter(n => n.length > 0)
+    )
+  ).sort();
+
+  const activeLoaded = activeSystemNames.size > 0;
+  const activeSysNames  = activeLoaded ? allSystemNames.filter(n =>  activeSystemNames.has(n)) : allSystemNames;
+  const deletedSysNames = activeLoaded ? allSystemNames.filter(n => !activeSystemNames.has(n)) : [];
+
   const filtered = events.filter(e => {
     const cfg = getConfig(e.event_type);
-    const matchCat = filter === 'Tutti' || cfg.category === filter;
+    const matchCat    = filter === 'Tutti' || cfg.category === filter;
     const matchSearch = !search || e.event_label.toLowerCase().includes(search.toLowerCase()) ||
       (e.actor_email ?? '').toLowerCase().includes(search.toLowerCase()) ||
       JSON.stringify(e.details).toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
+    const evName = String(e.details?.system_name ?? e.details?.tool_name ?? '');
+    const matchSystem = systemFilter.length === 0 || systemFilter.includes(evName);
+    return matchCat && matchSearch && matchSystem;
   });
 
   // Group by date
@@ -237,7 +390,7 @@ export default function AuditTrailPage() {
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 0 60px' }}>
+    <div style={{ padding: '0 28px 60px' }}>
 
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
@@ -263,22 +416,16 @@ export default function AuditTrailPage() {
             </div>
             {!loading && events.length > 0 && (
               <button
-                onClick={handleExport}
-                disabled={exporting}
+                onClick={() => setShowModal(true)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  background: exporting ? 'var(--surface)' : '#6C47FF',
-                  color: exporting ? 'var(--muted)' : '#fff',
-                  border: '1.5px solid #6C47FF',
-                  borderRadius: 8, padding: '6px 14px',
-                  fontSize: 13, fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer',
-                  transition: 'opacity .15s',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: '#6C47FF', color: '#fff',
+                  border: 'none', borderRadius: 10, padding: '10px 20px',
+                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(108,71,255,.35)',
                 }}
               >
-                {exporting
-                  ? <><span className="plan-cta-spin" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generazione PDF…</>
-                  : <>📄 Scarica Report PDF</>
-                }
+                📄 Genera Report PDF
               </button>
             )}
           </div>
@@ -298,19 +445,23 @@ export default function AuditTrailPage() {
               Perché l&apos;Audit Trail vale oro in caso di ispezione
             </div>
             <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.75, margin: '0 0 10px' }}>
-              Il valore reale di questo registro non è nell&apos;uso quotidiano — è nel momento in cui arriva
-              un&apos;ispezione da parte dell&apos;Autorità Nazionale o una contestazione formale.
-              Puoi dimostrare <strong style={{ color: 'var(--text)' }}>che ti sei attivata</strong>,{' '}
-              <strong style={{ color: 'var(--text)' }}>quando hai fatto gli assessment</strong>,{' '}
-              <strong style={{ color: 'var(--text)' }}>che hai preso provvedimenti concreti</strong> e{' '}
-              <strong style={{ color: 'var(--text)' }}>in quale data</strong>.
+              Il valore strategico dell&apos;Audit Trail non risiede nell&apos;utilizzo ordinario, ma si manifesta
+              nel momento in cui l&apos;impresa è soggetta a un&apos;ispezione da parte dell&apos;Autorità Nazionale
+              competente o a una contestazione formale da parte delle autorità di vigilanza. In tale contesto, il
+              registro costituisce evidenza documentale che l&apos;organizzazione ha{' '}
+              <strong style={{ color: 'var(--text)' }}>adottato le misure previste dalla normativa</strong>,
+              ha <strong style={{ color: 'var(--text)' }}>condotto le valutazioni di conformità nei tempi stabiliti</strong>{' '}
+              e ha <strong style={{ color: 'var(--text)' }}>implementato i provvedimenti tecnici e organizzativi richiesti</strong>,
+              con indicazione precisa delle date.
             </p>
             <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.75, margin: 0 }}>
-              In diritto amministrativo e penale, la <strong style={{ color: '#6C47FF' }}>buona fede</strong> e la{' '}
-              <strong style={{ color: '#6C47FF' }}>diligenza dimostrata</strong> riducono significativamente
-              le sanzioni applicabili. L&apos;Audit Trail è la prova documentale di quella diligenza:{' '}
+              Nel diritto amministrativo e penale, la <strong style={{ color: '#6C47FF' }}>buona fede</strong> e la{' '}
+              <strong style={{ color: '#6C47FF' }}>diligenza dimostrata</strong> costituiscono fattori attenuanti
+              di rilievo nell&apos;applicazione delle sanzioni. L&apos;Audit Trail fornisce la prova documentale
+              di tale diligenza:{' '}
               <strong style={{ color: 'var(--text)' }}>
-                può fare la differenza tra la sanzione massima (35 milioni €) e quella minima.
+                la disponibilità di un registro immutabile e certificato può determinare la differenza sostanziale
+                tra l&apos;applicazione della sanzione massima (Art. 99 — fino a 35 milioni €) e quella minima.
               </strong>
             </p>
           </div>
@@ -356,7 +507,152 @@ export default function AuditTrailPage() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Period + system filters */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.8, flexShrink: 0 }}>Filtri</div>
+        <input
+          type="date"
+          value={fromDate}
+          onChange={e => setFromDate(e.target.value)}
+          style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, color: 'var(--text)', cursor: 'pointer' }}
+        />
+        <span style={{ fontSize: 11, color: 'var(--muted)' }}>→</span>
+        <input
+          type="date"
+          value={toDate}
+          onChange={e => setToDate(e.target.value)}
+          style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, color: 'var(--text)', cursor: 'pointer' }}
+        />
+        {allSystemNames.length > 0 && (
+          <MultiSysSelect
+            selected={systemFilter}
+            onChange={setSystemFilter}
+            activeSysNames={activeSysNames}
+            deletedSysNames={deletedSysNames}
+            allSystemNames={allSystemNames}
+            compact
+          />
+        )}
+        <button
+          onClick={handleApplyFilters}
+          style={{ padding: '6px 14px', background: '#6C47FF', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Applica
+        </button>
+        {(fromDate || toDate || systemFilter.length > 0) && (
+          <button
+            onClick={() => { setFromDate(''); setToDate(''); setSystemFilter([]); loadEvents(); }}
+            style={{ padding: '6px 10px', background: 'none', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}
+          >
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* ── Export PDF modal ── */}
+      {showModal && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16,
+            width: '100%', maxWidth: 520, padding: '32px 32px 28px', position: 'relative',
+          }}>
+            {/* Close */}
+            <button
+              onClick={() => setShowModal(false)}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--muted)', lineHeight: 1 }}
+            >×</button>
+
+            {/* Title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(108,71,255,.12)', border: '1.5px solid rgba(108,71,255,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>📄</div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>Genera Report PDF</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Documento ufficiale con valore legale</div>
+              </div>
+            </div>
+
+            {/* What the PDF contains */}
+            <div style={{ background: 'rgba(108,71,255,.06)', border: '1px solid rgba(108,71,255,.18)', borderRadius: 10, padding: '12px 14px', marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Il PDF include</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {[
+                  '📋 Panoramica sistemi AI con stato compliance ed esposizione',
+                  '⚖️ Disclaimer legale Art. 99 AI Act',
+                  '📅 Registro completo degli eventi filtrati con timestamp CET',
+                  '🔒 Hash SHA-256 per verificare l\'immutabilità del documento',
+                ].map(t => (
+                  <div key={t} style={{ fontSize: 12, color: 'var(--text2)' }}>{t}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 28 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.8, display: 'block', marginBottom: 6 }}>Periodo</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="date"
+                    value={modalFrom}
+                    onChange={e => setModalFrom(e.target.value)}
+                    style={{ flex: 1, padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text)' }}
+                  />
+                  <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>
+                  <input
+                    type="date"
+                    value={modalTo}
+                    onChange={e => setModalTo(e.target.value)}
+                    style={{ flex: 1, padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text)' }}
+                  />
+                </div>
+                {!modalFrom && !modalTo && (
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Nessun filtro = tutti gli eventi disponibili</div>
+                )}
+              </div>
+
+              {allSystemNames.length > 0 && (
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.8, display: 'block', marginBottom: 6 }}>
+                    Sistemi AI (opzionale)
+                  </label>
+                  <MultiSysSelect
+                    selected={modalSystems}
+                    onChange={setModalSystems}
+                    activeSysNames={activeSysNames}
+                    deletedSysNames={deletedSysNames}
+                    allSystemNames={allSystemNames}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* CTA */}
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 10, border: 'none',
+                background: exporting ? 'var(--border)' : '#6C47FF', color: '#fff',
+                fontSize: 15, fontWeight: 800, cursor: exporting ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              {exporting
+                ? <><span className="plan-cta-spin" style={{ width: 16, height: 16, borderWidth: 2 }} /> Generazione in corso…</>
+                : '📄 Genera e Scarica PDF'
+              }
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Category filters + search */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           type="text"

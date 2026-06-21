@@ -22,7 +22,7 @@ async function request<T>(
 
   if (!res.ok) {
     const json = await res.json().catch(() => ({ error: res.statusText }));
-    throw Object.assign(new Error(json.error ?? json.message ?? res.statusText), { statusCode: res.status });
+    throw Object.assign(new Error(json.message ?? json.error ?? res.statusText), { statusCode: res.status });
   }
 
   if (res.status === 204) return undefined as T;
@@ -220,7 +220,11 @@ export const api = {
 
   // ─── Audit Trail ─────────────────────────────────────────────────────────────
   auditTrail: {
-    list:   () => request<import('./types').AuditEvent[]>('GET', '/api/audit-trail'),
-    export: () => request<{ pdfBase64: string; filename: string }>('POST', '/api/audit-trail/export'),
+    list: (params?: { from?: string; to?: string }) => {
+      const qs = params ? Object.entries(params).filter(([,v]) => v).map(([k,v]) => `${k}=${encodeURIComponent(v!)}`).join('&') : '';
+      return request<import('./types').AuditEvent[]>('GET', `/api/audit-trail${qs ? '?' + qs : ''}`);
+    },
+    export: (opts?: { from?: string; to?: string; systemNames?: string[] }) =>
+      request<{ pdfBase64: string; filename: string }>('POST', '/api/audit-trail/export', opts),
   },
 };
