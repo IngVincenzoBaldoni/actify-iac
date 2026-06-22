@@ -117,13 +117,618 @@ function ArticleSidebar({ articleNum, onClose }: { articleNum: number; onClose: 
 }
 
 const AUTO_LABELS: Record<string, string> = {
-  document_generation: 'Generazione Documento',
-  policy_template:     'Policy Template',
-  transparency_notice: 'Notice Trasparenza',
-  risk_assessment:     'Risk Assessment',
-  monitoring_plan:     'Piano di Monitoraggio',
-  conformity_declaration: 'Dichiarazione di Conformità',
+  document_generation:    'Documentazione Tecnica',
+  policy_template:        'Policy AI Interna',
+  transparency_notice:    'Notice di Trasparenza',
+  risk_assessment:        'FRIA — Valutazione Impatto',
+  monitoring_plan:        'Piano di Monitoraggio',
+  conformity_declaration: 'Dichiarazione di Conformità UE',
 };
+
+// ─── Doc Scope Info ───────────────────────────────────────────────────────────
+
+interface DocScopeEntry {
+  icon:             string;
+  label:            string;
+  articles:         string;
+  scope:            string;
+  howToUse:         string[];
+  howToValidate:    string[];
+  complianceImpact: string;
+  template:         string;
+}
+
+const DOC_SCOPE_INFO: Record<string, DocScopeEntry> = {
+  monitoring_plan: {
+    icon:    '📊',
+    label:   'Piano di Monitoraggio',
+    articles:'Art. 9 · Art. 14 · Art. 72',
+    scope:   'Definisce le metriche, le soglie di allerta e le procedure di supervisione umana del sistema AI. Documenta come l\'organizzazione mantiene il controllo sulle performance nel tempo e gestisce le anomalie.',
+    howToUse: [
+      'Condividi il documento con il responsabile operativo del sistema AI',
+      'Implementa le metriche e i KPI definiti nel documento nel tuo sistema di monitoring',
+      'Esegui le review alla frequenza indicata (mensile/trimestrale)',
+      'Aggiorna il documento al cambio di versione del sistema',
+    ],
+    howToValidate: [
+      'Verifica che tutte le metriche abbiano soglie quantitative definite',
+      'Controlla che le procedure di escalation abbiano responsabili nominati',
+      'Assicurati che il registro degli interventi umani sia compilato e aggiornato',
+      'Firma del responsabile AI e del supervisore operativo',
+    ],
+    complianceImpact: 'Chiude i gap Art. 9 (Risk Management), Art. 14 (Supervisione umana) e Art. 72 (Post-market monitoring). Dimostra alle autorità che il sistema è monitorato attivamente e che esiste una catena di responsabilità documentata.',
+    template: `PIANO DI MONITORAGGIO AI
+Art. 9 / Art. 14 / Art. 72 — Reg. UE 2024/1689
+────────────────────────────────────────────────
+
+1. IDENTIFICAZIONE DEL SISTEMA AI
+   Denominazione: [Nome sistema]
+   Organizzazione: [Provider / Deployer]
+   Versione: [x.x] | Data: [GG/MM/AAAA]
+
+2. OBIETTIVI DI MONITORAGGIO
+   • Accuratezza previsioni ≥ [XX]%
+   • Latenza media < [XXX] ms
+   • Tasso di falsi positivi < [X]%
+   • [Altra metrica specifica del sistema]
+
+3. METRICHE E KPI
+   Metrica           | Soglia | Frequenza   | Responsabile
+   ──────────────────|────────|─────────────|─────────────
+   [Metrica 1]       | [val]  | Giornaliera | [Ruolo]
+   [Metrica 2]       | [val]  | Settimanale | [Ruolo]
+   [Metrica 3]       | [val]  | Mensile     | [Ruolo]
+
+4. SOGLIE DI ALLERTA ED ESCALATION
+   🟡 Warning:  deviazione > 10% dalla baseline
+      → Notifica a [Ruolo] entro 4h
+   🔴 Critico:  deviazione > 25%
+      → Escalation immediata a [CdA / DPO]
+      → Possibile sospensione del sistema
+
+5. SUPERVISIONE UMANA (Art. 14)
+   • Revisione settimanale: [Responsabile]
+   • Override manuale: procedure definite al §4
+   • Registro interventi: [sistema/tool utilizzato]
+   • Decisioni non delegabili all'AI: [elenco]
+
+6. FREQUENZA DI REVIEW
+   Review operativa:  mensile
+   Review strategica: semestrale
+   Audit interno:     annuale
+   Riesame sistema:   ad ogni aggiornamento major
+
+Firma Responsabile AI: _____________ Data: ______`,
+  },
+
+  transparency_notice: {
+    icon:    '📢',
+    label:   'Notice di Trasparenza',
+    articles:'Art. 50 · Art. 13',
+    scope:   'Informa gli utenti finali che stanno interagendo con un sistema AI, descrive le sue capacità e limitazioni, e indica come esercitare i propri diritti. È un documento rivolto al pubblico o agli utenti diretti del sistema.',
+    howToUse: [
+      'Pubblica la notice in un punto visibile prima dell\'interazione con il sistema AI',
+      'Assicurati che sia redatta in linguaggio chiaro e comprensibile al pubblico di riferimento',
+      'Includi un link alla notice nel contratto o nei termini di servizio',
+      'Aggiornala ad ogni modifica sostanziale del sistema AI',
+    ],
+    howToValidate: [
+      'Verifica che menzioni esplicitamente la natura artificiale del sistema',
+      'Controlla che le limitazioni siano descritte in modo onesto e completo',
+      'Assicurati che i diritti dell\'utente (revisione umana, spiegazione) siano chiari',
+      'Fai revisionare da un legale esperto in GDPR e AI Act',
+    ],
+    complianceImpact: 'Chiude i gap Art. 50 (Trasparenza verso utenti finali) e Art. 13 (Trasparenza verso deployer). Previene contestazioni per inganno o mancata disclosure. In caso di ispezione, dimostra che gli utenti erano informati della natura AI del sistema.',
+    template: `INFORMATIVA AI — SISTEMA [Nome]
+Art. 50 — Reg. UE 2024/1689
+────────────────────────────────────────────────
+
+⚠ NOTIFICA OBBLIGATORIA AI ACT
+
+Stai interagendo con un sistema basato su
+intelligenza artificiale.
+
+NATURA DEL SISTEMA
+Questo servizio utilizza [tipo di tecnologia AI]
+per [descrizione della finalità].
+Il sistema non sostituisce in alcun modo
+il giudizio professionale umano.
+
+COSA PUÒ FARE QUESTO SISTEMA
+  ✓ [Capacità principale 1]
+  ✓ [Capacità principale 2]
+  ✓ [Capacità principale 3]
+  ✗ Non può: [limitazione importante 1]
+  ✗ Non può: [limitazione importante 2]
+
+DATI ELABORATI
+Il sistema tratta: [categorie di dati]
+Base legale (GDPR): Art. [XX] — [descrizione]
+Periodo conservazione: [X] mesi
+
+I TUOI DIRITTI
+  • Richiedi spiegazione delle decisioni automatizzate
+  • Chiedi revisione umana in qualsiasi momento
+  • Opponi al trattamento automatizzato (Art. 22 GDPR)
+  • Contatta: [email DPO o referente AI]
+
+Provider del sistema AI: [Nome organizzazione]
+Ultimo aggiornamento notice: [GG/MM/AAAA]`,
+  },
+
+  risk_assessment: {
+    icon:    '⚠️',
+    label:   'FRIA — Valutazione Impatto Diritti Fondamentali',
+    articles:'Art. 27',
+    scope:   'La Fundamental Rights Impact Assessment valuta sistematicamente i rischi che il sistema AI pone sui diritti fondamentali delle persone coinvolte — in particolare per i gruppi vulnerabili. È obbligatoria per i deployer di sistemi ad alto rischio nel settore pubblico e privato.',
+    howToUse: [
+      'Coinvolgi i rappresentanti dei gruppi potenzialmente impattati nella redazione',
+      'Consulta il DPO e il responsabile legale per la sezione sui diritti GDPR',
+      'Aggiorna la FRIA ad ogni cambiamento sostanziale del contesto di deployment',
+      'Conserva tutte le versioni storiche — le autorità potrebbero richiederle',
+    ],
+    howToValidate: [
+      'Ogni diritto fondamentale a rischio deve avere misura di mitigazione corrispondente',
+      'I gruppi vulnerabili devono essere identificati esplicitamente',
+      'La sezione conclusiva deve essere firmata dal responsabile legale',
+      'Verifica la coerenza con la DPIA (Data Protection Impact Assessment) GDPR',
+    ],
+    complianceImpact: 'Chiude il gap Art. 27 e dimostra la due diligence sui diritti fondamentali. Senza FRIA, le autorità possono imporre la sospensione del sistema. Con FRIA ben redatta, si riduce drasticamente il rischio di sanzioni ex Art. 99.',
+    template: `FRIA — VALUTAZIONE IMPATTO DIRITTI FONDAMENTALI
+Art. 27 — Reg. UE 2024/1689
+────────────────────────────────────────────────
+
+SISTEMA AI VALUTATO
+Nome: [Nome sistema] | Categoria: Alto Rischio
+Allegato III, §[X] | Versione: [x.x]
+Data valutazione: [GG/MM/AAAA]
+
+1. DESCRIZIONE DELL'USO PREVISTO
+   Contesto di deployment: [descrizione]
+   Utenti finali: [categorie di persone coinvolte]
+   Volume stimato: [N] decisioni/[periodo]
+   Impatto per persona: [descrizione effetti]
+
+2. DIRITTI FONDAMENTALI A RISCHIO
+   Diritto             | Rischio  | Prob.  | Gravità
+   ────────────────────|──────────|────────|────────
+   Non discriminazione | [Alto]   | [Med]  | [Alta]
+   Privacy             | [Medio]  | [Alta] | [Med]
+   Ricorso effettivo   | [Basso]  | [Bass] | [Bass]
+   [Altro diritto]     | [...]    | [...]  | [...]
+
+3. GRUPPI VULNERABILI IDENTIFICATI
+   • Minori (< 18 anni): [impatto atteso e misure]
+   • Persone con disabilità: [impatto atteso e misure]
+   • [Gruppo specifico]: [impatto atteso e misure]
+
+4. MISURE DI MITIGAZIONE
+   ✓ [Misura 1] → riduce rischio [diritto X] del [X]%
+   ✓ [Misura 2] → protegge da [scenario specifico]
+   ✓ [Misura 3] → garantisce [diritto Y]
+
+5. PIANO DI MONITORAGGIO IMPATTI
+   Frequenza revisione FRIA: [annuale / ad evento]
+   Responsabile: [Ruolo/Nome]
+   KPI impatto: [metrica misurabile]
+
+6. CONCLUSIONE E FIRME
+   La FRIA attesta la conformità all'Art. 27.
+
+   Responsabile FRIA: _____________ Data: ______
+   Approvazione DPO:  _____________ Data: ______`,
+  },
+
+  policy_template: {
+    icon:    '📋',
+    label:   'Policy AI Interna',
+    articles:'Art. 17 · Art. 26',
+    scope:   'La Policy AI Interna definisce il framework di governance con cui l\'organizzazione gestisce i sistemi AI: principi, responsabilità, processi di approvazione, obblighi del personale e gestione dei fornitori. È il documento madre della governance AI aziendale.',
+    howToUse: [
+      'Fai approvare la policy dal CdA o dall\'organo di vertice competente',
+      'Distribuisci a tutto il personale che interagisce con sistemi AI',
+      'Integra nella procedura di onboarding dei nuovi dipendenti',
+      'Usa come riferimento per approvare nuovi sistemi AI e gestire i fornitori',
+    ],
+    howToValidate: [
+      'Ogni principio deve avere una procedura operativa corrispondente',
+      'I ruoli e le responsabilità devono essere nominativi, non solo funzionali',
+      'Verifica che la policy sia coerente con le politiche HR e GDPR esistenti',
+      'Data di approvazione e firma del legale rappresentante obbligatorie',
+    ],
+    complianceImpact: 'Chiude i gap Art. 17 (Quality Management System per provider) e Art. 26 (Obblighi deployer). Dimostra che l\'organizzazione ha un sistema strutturato di governance AI — uno dei fattori più valutati dalle autorità in sede di ispezione.',
+    template: `POLITICA INTERNA AI
+Art. 17 / Art. 26 — Reg. UE 2024/1689
+────────────────────────────────────────────────
+Versione 1.0 | Approvata il: [GG/MM/AAAA]
+Prossima revisione: [GG/MM/AAAA]
+
+1. PRINCIPI GUIDA
+   • Trasparenza: tutti gli usi AI sono documentati
+   • Responsabilità: ogni sistema ha un owner nominato
+   • Equità: monitoraggio attivo dei bias
+   • Sicurezza: valutazione rischi pre-deploy obbligatoria
+   • Proporzionalità: AI usata dove aggiunge valore reale
+
+2. GOVERNANCE AI
+   AI Governance Officer: [Nome/Ruolo]
+   Comitato di approvazione: [Composizione]
+   DPO (riferimento GDPR/AI): [Nome]
+   Frequenza review policy: semestrale
+
+3. CICLO DI VITA DEI SISTEMI AI
+   Proposta → Valutazione rischio (FRIA) →
+   Approvazione Comitato → Pilot →
+   Deploy controllato → Monitoraggio →
+   Review periodica → Decommissioning
+
+4. OBBLIGHI DEL PERSONALE
+   • Completare formazione Art. 4 entro [data]
+   • Segnalare anomalie AI entro 24h a [referente]
+   • Non utilizzare AI non approvata (shadow AI)
+   • Partecipare alle review periodiche del sistema
+
+5. GESTIONE FORNITORI AI
+   • Contratti con clausole AI Act obbligatorie
+   • Audit fornitori: annuale
+   • Registro fornitori AI: aggiornato e condiviso
+   • Valutazione compliance supplier: pre-onboarding
+
+6. SANZIONI INTERNE
+   Violazione policy: [procedura disciplinare applicabile]
+   Escalation: [iter gerarchico]
+
+Firma Legale Rappresentante: __________ Data: ______
+Firma AI Governance Officer: __________ Data: ______`,
+  },
+
+  document_generation: {
+    icon:    '📄',
+    label:   'Documentazione Tecnica',
+    articles:'Art. 11',
+    scope:   'La Documentazione Tecnica è il documento obbligatorio per i provider di sistemi ad alto rischio. Descrive in modo completo architettura, dataset, performance, gestione dei rischi e ciclo di vita del sistema AI. Deve essere mantenuta aggiornata per tutta la vita del sistema.',
+    howToUse: [
+      'Conserva la documentazione tecnica insieme al codice sorgente o nei sistemi di configuration management',
+      'Aggiorna obbligatoriamente ad ogni modifica sostanziale del sistema',
+      'Metti a disposizione delle autorità di vigilanza su richiesta (entro 10 giorni)',
+      'Usa come base per la Dichiarazione di Conformità (Art. 47)',
+    ],
+    howToValidate: [
+      'Verifica che la descrizione dell\'architettura corrisponda alla realtà implementativa',
+      'Controlla che le metriche di performance siano supportate da test recenti',
+      'Assicurati che i dataset siano documentati con provenienza e metodi di pulizia',
+      'Firma del responsabile tecnico e data di ultima revisione obbligatorie',
+    ],
+    complianceImpact: 'Chiude il gap Art. 11, prerequisito per la Dichiarazione di Conformità e l\'iscrizione nel database EU AI (Art. 49). Senza documentazione tecnica, il sistema non può legalmente essere immesso sul mercato EU come sistema ad alto rischio.',
+    template: `DOCUMENTAZIONE TECNICA AI
+Art. 11 — Reg. UE 2024/1689
+────────────────────────────────────────────────
+
+1. INFORMAZIONI GENERALI
+   Denominazione: [Nome sistema AI]
+   Provider: [Nome organizzazione]
+   Versione documentazione: [x.x]
+   Data ultima revisione: [GG/MM/AAAA]
+   Categoria rischio: Alto Rischio — All. III, §[X]
+
+2. DESCRIZIONE GENERALE DEL SISTEMA
+   Finalità dichiarata: [Descrizione scopo]
+   Architettura: [Tipo modello — es. LLM, CNN, RF]
+   Input accettati: [Descrizione dati in ingresso]
+   Output prodotti: [Decisioni / previsioni / classificazioni]
+   Casi d\'uso previsti: [Elenco]
+   Casi d\'uso esclusi: [Elenco]
+
+3. DATASET DI ADDESTRAMENTO E VALIDAZIONE
+   Fonte dati: [Origine / fornitore]
+   Volume training set: [N] campioni
+   Volume validation set: [N] campioni
+   Periodo copertura dati: [date]
+   Metodi di preprocessing: [descrizione]
+   Misure anti-bias applicate: [descrizione]
+
+4. PERFORMANCE E METRICHE (TEST SET INDIPENDENTE)
+   Metrica      | Valore ottenuto | Soglia minima
+   ─────────────|─────────────────|──────────────
+   Accuratezza  | [XX.X]%         | ≥ [YY]%
+   F1-Score     | [X.XX]          | ≥ [Y.YY]
+   [Metrica 3]  | [...]           | ≥ [...]
+
+5. GESTIONE DEL RISCHIO TECNICO
+   Rischi identificati: [lista con livello]
+   Misure tecniche di mitigazione: [lista]
+   Test di robustezza e adversarial: [risultati]
+   Vulnerabilità note: [descrizione e piano]
+
+6. MANUTENZIONE E AGGIORNAMENTI
+   Responsabile tecnico: [Nome/Ruolo]
+   Frequenza aggiornamenti pianificati: [ciclo]
+   Procedura di change management: [riferimento]
+   Soglia per re-training: [criterio]
+
+Firma Responsabile Tecnico: __________ Data: ______`,
+  },
+
+  conformity_declaration: {
+    icon:    '✅',
+    label:   'Dichiarazione UE di Conformità',
+    articles:'Art. 47 · Art. 49',
+    scope:   'La Dichiarazione UE di Conformità è il documento formale con cui il provider dichiara sotto la propria responsabilità che il sistema AI soddisfa i requisiti del Reg. UE 2024/1689. È il documento finale del percorso di conformità e prerequisito per l\'iscrizione nel database EU AI.',
+    howToUse: [
+      'Compila solo dopo aver completato tutti i requisiti tecnici (Art. 9-15)',
+      'Firma dal legale rappresentante o dal responsabile AI nominato',
+      'Conserva per almeno 10 anni dalla messa sul mercato del sistema',
+      'Usa per la registrazione nel database EU AI (eUID obbligatorio per sistemi All. III)',
+    ],
+    howToValidate: [
+      'Verifica che tutti gli articoli citati abbiano documentazione di supporto nel vault',
+      'Controlla che la versione del sistema dichiarata corrisponda a quella in produzione',
+      'Firma e timbro del legale rappresentante obbligatori (non delegabile)',
+      'Aggiorna la dichiarazione ad ogni modifica sostanziale del sistema',
+    ],
+    complianceImpact: 'Chiude i gap Art. 47 e Art. 49. È il documento "sigillo" che attesta la conformità complessiva al Reg. UE 2024/1689. La sua assenza costituisce violazione autonoma sanzionabile, indipendentemente dalla conformità sostanziale del sistema.',
+    template: `DICHIARAZIONE UE DI CONFORMITÀ
+Art. 47 — Reg. UE 2024/1689
+────────────────────────────────────────────────
+
+Il/La sottoscritto/a, in qualità di Legale
+Rappresentante di:
+
+   [Nome e forma giuridica dell'organizzazione]
+   [Indirizzo sede legale]
+   [P.IVA / C.F. / Registro Imprese]
+
+DICHIARA SOTTO LA PROPRIA RESPONSABILITÀ
+
+che il sistema di intelligenza artificiale:
+
+   ┌───────────────────────────────────────┐
+   │  Denominazione: [Nome sistema AI]     │
+   │  Versione:      [x.x]                │
+   │  ID interno:    [identificativo]      │
+   │  Scopo:         [finalità dichiarata] │
+   └───────────────────────────────────────┘
+
+rientra nella categoria ALTO RISCHIO
+ai sensi dell'Allegato III, §[X] del Reg. UE 2024/1689
+ed è conforme ai seguenti requisiti essenziali:
+
+   ✓ Art. 9  — Sistema di gestione del rischio
+   ✓ Art. 10 — Qualità dei dati e governance
+   ✓ Art. 11 — Documentazione tecnica
+   ✓ Art. 12 — Conservazione dei log
+   ✓ Art. 13 — Trasparenza e informazione
+   ✓ Art. 14 — Supervisione umana
+   ✓ Art. 15 — Accuratezza, robustezza, sicurezza
+
+Norme tecniche armonizzate applicate:
+   [ISO/IEC XXXXX:AAAA] — [Titolo norma]
+   [Altra norma se applicabile]
+
+Documentazione tecnica conservata presso:
+   [Luogo / sistema documentale]
+
+Luogo e data: ______________, __/__/20__
+
+___________________________________
+[Nome e Cognome]
+[Ruolo — Legale Rappresentante]
+[Timbro aziendale]`,
+  },
+};
+
+// ─── Document Scope Modal ─────────────────────────────────────────────────────
+
+function DocScopeModal({ gap, onConfirm, onClose, generating }: {
+  gap:        ComplianceGap;
+  onConfirm:  () => void;
+  onClose:    () => void;
+  generating: boolean;
+}) {
+  const info = DOC_SCOPE_INFO[gap.automation_type!];
+  if (!info) { onConfirm(); return null; }
+
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 600,
+        background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: '32px 16px 32px', overflowY: 'auto',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 860,
+          background: 'linear-gradient(145deg, rgba(24,24,36,0.99) 0%, rgba(16,16,28,1) 100%)',
+          border: '1px solid rgba(255,255,255,.12)',
+          borderTop: '2px solid rgba(99,102,241,.6)',
+          borderRadius: 20,
+          boxShadow: '0 0 0 1px rgba(255,255,255,.04) inset, 0 32px 80px rgba(0,0,0,.8)',
+          overflow: 'hidden',
+          position: 'relative',
+          flexShrink: 0,
+        }}
+      >
+        {/* ── Header */}
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+          padding: '24px 28px 20px',
+          borderBottom: '1px solid rgba(255,255,255,.08)',
+          background: 'rgba(99,102,241,.04)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+              background: 'rgba(99,102,241,.12)', border: '1.5px solid rgba(99,102,241,.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+            }}>
+              {info.icon}
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: '#818CF8',
+                  background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)',
+                  borderRadius: 6, padding: '2px 9px', letterSpacing: 0.4,
+                }}>
+                  {info.articles}
+                </span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: '#22C55E',
+                  background: 'rgba(34,197,94,.1)', border: '1px solid rgba(34,197,94,.25)',
+                  borderRadius: 6, padding: '2px 9px',
+                }}>
+                  Generato da Actify AI
+                </span>
+              </div>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)', margin: 0, letterSpacing: -0.4 }}>
+                {info.label}
+              </h2>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
+                Documento di compliance per: <strong style={{ color: 'var(--text2)' }}>{gap.requirement}</strong>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: '1px solid rgba(255,255,255,.12)', color: 'var(--muted)', fontSize: 16, cursor: 'pointer', padding: '6px 10px', borderRadius: 8, lineHeight: 1, flexShrink: 0 }}
+          >✕</button>
+        </div>
+
+        {/* ── Body: 2 colonne */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+
+          {/* Colonna sinistra — info */}
+          <div style={{ padding: '24px 24px 24px 28px', borderRight: '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Scope */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                A cosa serve
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, margin: 0 }}>
+                {info.scope}
+              </p>
+            </div>
+
+            {/* Come usarlo */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#38BDF8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Come usarlo
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {info.howToUse.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      background: 'rgba(14,165,233,.15)', border: '1px solid rgba(14,165,233,.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, fontWeight: 800, color: '#38BDF8', marginTop: 1,
+                    }}>{i + 1}</div>
+                    <span style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6 }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Come validarlo */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Come validarlo
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {info.howToValidate.map((v, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ color: '#F59E0B', flexShrink: 0, marginTop: 1, fontSize: 13 }}>✓</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Impatto compliance */}
+            <div style={{
+              background: 'rgba(34,197,94,.07)',
+              border: '1px solid rgba(34,197,94,.2)',
+              borderRadius: 10, padding: '12px 14px',
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#22C55E', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Impatto sulla compliance
+              </div>
+              <p style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.65, margin: 0 }}>
+                {info.complianceImpact}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Colonna destra — template preview */}
+          <div style={{ padding: '24px 28px 24px 24px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+              Bozza template — struttura del documento
+            </div>
+            <div style={{
+              flex: 1,
+              background: 'rgba(0,0,0,.35)',
+              border: '1px solid rgba(255,255,255,.08)',
+              borderRadius: 10,
+              padding: '16px 18px',
+              overflowY: 'auto',
+              maxHeight: 420,
+            }}>
+              <pre style={{
+                fontSize: 11.5, lineHeight: 1.7, color: 'rgba(255,255,255,.7)',
+                fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", monospace',
+                margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              }}>
+                {info.template}
+              </pre>
+            </div>
+            <div style={{ marginTop: 10, fontSize: 11, color: 'var(--dim)', lineHeight: 1.5 }}>
+              I campi tra <code style={{ color: '#818CF8', background: 'rgba(99,102,241,.12)', padding: '1px 5px', borderRadius: 3 }}>[parentesi]</code> vengono compilati automaticamente da Actify AI sulla base dei dati del tuo sistema AI.
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── Footer */}
+        <div style={{
+          padding: '18px 28px',
+          borderTop: '1px solid rgba(255,255,255,.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+          background: 'rgba(0,0,0,.2)',
+        }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+            Il documento verrà generato da Actify AI, personalizzato per il tuo sistema,
+            e <strong style={{ color: 'var(--text2)' }}>salvato automaticamente nel Document Vault</strong> come prova ispettiva.
+          </div>
+          <button
+            onClick={onConfirm}
+            disabled={generating}
+            style={{
+              flexShrink: 0,
+              background: generating ? 'rgba(99,102,241,.4)' : 'linear-gradient(135deg, #6C47FF, #818CF8)',
+              color: '#fff', border: 'none', borderRadius: 11,
+              padding: '13px 28px', fontSize: 14, fontWeight: 800,
+              cursor: generating ? 'not-allowed' : 'pointer',
+              boxShadow: generating ? 'none' : '0 4px 20px rgba(108,71,255,.5)',
+              whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}
+          >
+            {generating
+              ? <><span className="spin-sm" /> Avvio generazione…</>
+              : '⚡ Genera e Salva nel Vault →'
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Document Preview Modal ───────────────────────────────────────────────────
 
@@ -185,6 +790,7 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
   onSanctionUpdate?:  () => void;
   onCloseGap?:        (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
 }) {
+  const [showScope, setShowScope] = useState(false);
   const typeLabel = AUTO_LABELS[gap.automation_type!] ?? (gap.automation_type ?? '').replace(/_/g, ' ');
 
   // Pipeline states take priority over legacy doc states
@@ -231,15 +837,39 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
   // Legacy doc-based rendering (includes DRAFT_READY with linked doc)
   if (!doc || doc.status === 'error') {
     return (
-      <div className="gap-gen-block">
-        <div className="gap-gen-type">{typeLabel}</div>
-        {doc?.status === 'error' && (
-          <div className="gap-gen-error">⚠ Errore nella generazione: {doc.error_message ?? 'errore sconosciuto'}</div>
+      <>
+        <div className="gap-gen-block">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+            <div className="gap-gen-type">{typeLabel}</div>
+            {gap.automation_type && DOC_SCOPE_INFO[gap.automation_type] && (
+              <button
+                onClick={() => setShowScope(true)}
+                style={{ fontSize: 11, fontWeight: 600, color: '#818CF8', background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.25)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
+              >
+                ℹ Scopri il documento →
+              </button>
+            )}
+          </div>
+          {doc?.status === 'error' && (
+            <div className="gap-gen-error">⚠ Errore nella generazione: {doc.error_message ?? 'errore sconosciuto'}</div>
+          )}
+          <button
+            className="btn-generate"
+            onClick={() => gap.automation_type && DOC_SCOPE_INFO[gap.automation_type] ? setShowScope(true) : onGenerate()}
+            disabled={generating}
+          >
+            {generating ? <><span className="spin-sm" /> Avvio generazione…</> : <><span>⚡</span> Genera con Actify</>}
+          </button>
+        </div>
+        {showScope && (
+          <DocScopeModal
+            gap={gap}
+            generating={generating}
+            onConfirm={() => { setShowScope(false); onGenerate(); }}
+            onClose={() => setShowScope(false)}
+          />
         )}
-        <button className="btn-generate" onClick={onGenerate} disabled={generating}>
-          {generating ? <><span className="spin-sm" /> Avvio generazione…</> : <><span>⚡</span> Genera con Actify</>}
-        </button>
-      </div>
+      </>
     );
   }
 
@@ -258,20 +888,50 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
         <div className="gap-gen-type">{typeLabel}</div>
         <div className="gap-gen-doc-row">
           <span className="gap-gen-doc-title">📄 {doc.title}</span>
-          <span className="badge-draft">Bozza nel Vault</span>
+          <span className="badge-draft">Salvato nel Vault</span>
         </div>
         <p className="gap-gen-hint">
-          Rivedi il documento, scaricalo e modificalo se necessario.
-          Quando è pronto, segnalo come READY — solo allora potrai chiudere il gap.
+          Il documento è stato salvato nel Document Vault. Aprilo dal Vault per scaricarlo e verificarlo.
         </p>
-        <div className="gap-gen-actions">
-          <button className="btn-doc-preview" onClick={() => onOpenPreview(doc)}>👁 Anteprima</button>
-          {doc.preview_url && (
-            <a href={doc.preview_url} target="_blank" rel="noopener noreferrer" className="btn-doc-regen">⬇ Scarica</a>
-          )}
-          <button className="btn-doc-save" onClick={() => onFinalize(doc.document_id)}>✓ Segna come READY</button>
+        <div className="gap-gen-actions" style={{ marginBottom: 14 }}>
           <button className="btn-doc-regen" onClick={() => onRegenerate(doc.document_id)}>↻ Rigenera</button>
+          {onSanctionUpdate && (
+            <button className="btn-sanction-sync" onClick={onSanctionUpdate} title="Aggiorna la stima sanzionatoria">
+              ⚖️ Aggiorna stima
+            </button>
+          )}
         </div>
+        {onCloseGap && (
+          <div className="gap-gen-close-gap">
+            <div style={{
+              background: 'rgba(202,138,4,.1)',
+              border: '1px solid rgba(202,138,4,.35)',
+              borderRadius: 10,
+              padding: '12px 16px',
+              marginBottom: 14,
+              display: 'flex',
+              gap: 10,
+              alignItems: 'flex-start',
+            }}>
+              <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#FCD34D', marginBottom: 4 }}>
+                  Azione richiesta prima di dichiarare la conformità
+                </div>
+                <p style={{ fontSize: 12.5, color: 'rgba(252,211,77,.85)', lineHeight: 1.6, margin: 0 }}>
+                  Segna questo gap come conforme solo dopo aver <strong>implementato concretamente tutte le azioni necessarie</strong> per soddisfare il requisito.
+                  Il documento generato è una prova documentale, ma non sostituisce l&apos;implementazione operativa.
+                  Dichiarare la conformità senza aver agito costituisce una falsa attestazione in sede ispettiva.
+                </p>
+              </div>
+            </div>
+            <button
+              className="btn-hybrid-close"
+              onClick={() => onCloseGap(gap.gap_id)}>
+              ✓ Segna gap come conforme
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -284,9 +944,6 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
         <span className="gap-gen-doc-title">{doc.title}</span>
       </div>
       <div className="gap-gen-actions" style={{ marginBottom: 12 }}>
-        {doc.preview_url && (
-          <a href={doc.preview_url} target="_blank" rel="noopener noreferrer" className="btn-doc-open">⬇ Scarica</a>
-        )}
         <button className="btn-doc-regen" onClick={() => onRegenerate(doc.document_id)}>↻ Rigenera</button>
         {onSanctionUpdate && (
           <button className="btn-sanction-sync" onClick={onSanctionUpdate} title="Aggiorna la stima sanzionatoria">
@@ -296,9 +953,28 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
       </div>
       {onCloseGap && (
         <div className="gap-gen-close-gap">
-          <p className="gap-gen-close-gap-hint">
-            Il documento è approvato. Dichiara che il requisito è soddisfatto per chiudere il gap e aggiornare la stima sanzionatoria.
-          </p>
+          <div style={{
+            background: 'rgba(202,138,4,.1)',
+            border: '1px solid rgba(202,138,4,.35)',
+            borderRadius: 10,
+            padding: '12px 16px',
+            marginBottom: 14,
+            display: 'flex',
+            gap: 10,
+            alignItems: 'flex-start',
+          }}>
+            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#FCD34D', marginBottom: 4 }}>
+                Azione richiesta prima di dichiarare la conformità
+              </div>
+              <p style={{ fontSize: 12.5, color: 'rgba(252,211,77,.85)', lineHeight: 1.6, margin: 0 }}>
+                Segna questo gap come conforme solo dopo aver <strong>implementato concretamente tutte le azioni necessarie</strong> per soddisfare il requisito.
+                Il documento generato è una prova documentale, ma non sostituisce l&apos;implementazione operativa.
+                Dichiarare la conformità senza aver agito costituisce una falsa attestazione in sede ispettiva.
+              </p>
+            </div>
+          </div>
           <button
             className="btn-hybrid-close"
             onClick={() => onCloseGap(gap.gap_id)}>
@@ -402,6 +1078,7 @@ function ComplianceChecklist({
   onRegenerate,
   onSanctionUpdate,
   onCloseGap,
+  literacyCompliant,
 }: {
   gaps:               ComplianceGap[];
   checklist:          Record<string, ChecklistEntry>;
@@ -413,8 +1090,9 @@ function ComplianceChecklist({
   onGenerate:         (gapId: string) => void;
   onFinalize:         (docId: string) => void;
   onRegenerate:       (docId: string) => void;
-  onSanctionUpdate:   () => void;
-  onCloseGap:         (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
+  onSanctionUpdate:    () => void;
+  onCloseGap:          (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
+  literacyCompliant:   boolean;
 }) {
   const [previewDoc, setPreviewDoc] = useState<ActifyDocument | null>(null);
   const [articleSidebar, setArticleSidebar] = useState<number | null>(null);
@@ -440,11 +1118,14 @@ function ComplianceChecklist({
     );
   };
 
+  const isArt4 = (g: ComplianceGap) => /^Art\.?\s*4$/i.test(g.article);
+
   const llmCompliant   = gaps.filter(g => g.status === 'compliant' && !checklist[g.article]);
-  const userPresent    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'present');
-  const userPartial    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial');
-  const documentReady  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'document_ready');
-  const stillMissing   = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'missing');
+  const art4Compliant  = gaps.filter(g => isArt4(g) && literacyCompliant);
+  const userPresent    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'present' && !isArt4(g));
+  const userPartial    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial' && !isArt4(g));
+  const documentReady  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'document_ready' && !isArt4(g));
+  const stillMissing   = gaps.filter(g => g.status !== 'compliant' && (isArt4(g) ? !literacyCompliant : getStatus(g.article) === 'missing'));
 
   function handleMark(article: string, status: 'present' | 'partial') {
     const existing = checklist[article] ?? {};
@@ -471,6 +1152,7 @@ function ComplianceChecklist({
   }
 
   const GapActions = ({ gap }: { gap: ComplianceGap }) => {
+    if (isArt4(gap)) return null;
     const st = getStatus(gap.article);
     return (
       <div className="cl-gap-actions">
@@ -518,7 +1200,7 @@ function ComplianceChecklist({
         Al prossimo Compliance Check gli articoli dichiarati verranno esclusi dall'analisi AI.
       </div>
       <div className="cl-counts">
-        <span className="cl-count-ok">✓ {llmCompliant.length + userPresent.length} conformi</span>
+        <span className="cl-count-ok">✓ {llmCompliant.length + userPresent.length + art4Compliant.length} conformi</span>
         {documentReady.length > 0 && (
           <span className="cl-count-hybrid">⚡ {documentReady.length} azione richiesta</span>
         )}
@@ -532,7 +1214,7 @@ function ComplianceChecklist({
       </div>
 
       {/* ── MACRO BLOCCO 1: CONFORMI ─────────────────────────────────────── */}
-      {(llmCompliant.length > 0 || userPresent.length > 0) && (
+      {(llmCompliant.length > 0 || userPresent.length > 0 || art4Compliant.length > 0) && (
         <div className="cl-macro cl-macro-ok">
           <div className="cl-macro-header">
             <span className="cl-macro-icon">✅</span>
@@ -540,7 +1222,7 @@ function ComplianceChecklist({
               <div className="cl-macro-label">Requisiti conformi</div>
               <div className="cl-macro-sublabel">Già implementati o verificati dall&apos;analisi AI</div>
             </div>
-            <span className="cl-macro-count">{llmCompliant.length + userPresent.length} su {gaps.length}</span>
+            <span className="cl-macro-count">{llmCompliant.length + userPresent.length + art4Compliant.length} su {gaps.length}</span>
           </div>
           <div className="cl-macro-body">
 
@@ -587,6 +1269,23 @@ function ComplianceChecklist({
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Art. 4 compliant via AI Literacy */}
+            {art4Compliant.length > 0 && (
+              <div className="cl-section">
+                <div className="cl-section-title cl-ok-title">AI Literacy Tracker — Conforme Art. 4</div>
+                {art4Compliant.map(gap => (
+                  <div key={gap.gap_id} className="cl-item cl-item-ok">
+                    <span className="cl-art">{gap.article}</span>
+                    <span className="cl-req">{gap.requirement}</span>
+                    <span className="cl-status-ok" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      🎓 Conforme
+                    </span>
+                    <ArticleBtn article={gap.article} />
+                  </div>
+                ))}
               </div>
             )}
 
@@ -676,17 +1375,16 @@ function ComplianceChecklist({
               </div>
               <p className="cl-desc">{gap.description}</p>
               <GapActions gap={gap} />
-              {/^Art\.?\s*4$/i.test(gap.article) ? (
-                <div className="cl-manual-card">
+              {isArt4(gap) ? (
+                <div className="cl-manual-card" style={{ borderColor: 'rgba(34,197,94,.35)', background: 'rgba(34,197,94,.05)' }}>
                   <div className="cl-manual-header">
                     <span className="cl-manual-icon">🎓</span>
-                    <strong>Alfabetizzazione AI — Art. 4</strong>
+                    <strong style={{ color: '#4ade80' }}>Alfabetizzazione AI — Art. 4</strong>
                   </div>
-                  <p className="cl-manual-steps">Traccia e documenta la formazione del personale sull&apos;AI nell&apos;apposita feature dedicata.</p>
-                  <a href="/dashboard/literacy" className="so-bar-read-cta" style={{ marginTop: 4 }}>
+                  <p className="cl-manual-steps">La compliance sull&apos;Art. 4 si gestisce esclusivamente tramite <strong>AI Literacy Tracker</strong>. Censisci i profili di formazione del tuo personale e aggiungi evidenze (certificazioni, sessioni di training) per dichiarare la conformità su questo articolo.</p>
+                  <a href="/dashboard/literacy" className="so-bar-read-cta" style={{ marginTop: 8, background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', color: '#4ade80' }}>
                     <span>🎓</span>
-                    <span>Vai ad AI Literacy Tracker</span>
-                    <span style={{ opacity: 0.5 }}>→</span>
+                    <span style={{ fontWeight: 700 }}>Gestisci in AI Literacy Tracker →</span>
                   </a>
                 </div>
               ) : gap.can_actify_automate && gap.automation_type ? (
@@ -756,6 +1454,7 @@ function SystemDetailContent() {
   const [check, setCheck]     = useState<ComplianceCheck | null>(null);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
+  const [literacyCompliant, setLiteracyCompliant] = useState(false);
 
   // FIX-12: checklist state — supports enriched ChecklistEntry
   const [checklist, setChecklist] = useState<Record<string, ChecklistEntry>>({});
@@ -792,11 +1491,12 @@ function SystemDetailContent() {
   const load = useCallback(async () => {
     if (!systemId) return;
     try {
-      const [sysData, latestCheck, docsData, gensData] = await Promise.allSettled([
+      const [sysData, latestCheck, docsData, gensData, litData] = await Promise.allSettled([
         api.systems.get(systemId),
         api.compliance.getLatest(systemId),
         api.documents.listBySystem(systemId),
         api.docPipeline.listBySystem(systemId),
+        api.literacy.getProfiles(systemId),
       ]);
       if (sysData.status === 'fulfilled') setSystem(sysData.value);
       if (latestCheck.status === 'fulfilled') setCheck(latestCheck.value as unknown as ComplianceCheck);
@@ -820,6 +1520,10 @@ function SystemDetailContent() {
             pollDocGeneration(gen.generationId, gapId);
           }
         }
+      }
+      if (litData.status === 'fulfilled') {
+        const ls = (litData.value as { literacy_status?: string }).literacy_status;
+        setLiteracyCompliant(ls === 'compliant');
       }
     } finally {
       setLoading(false);
@@ -1148,6 +1852,7 @@ function SystemDetailContent() {
             onRegenerate={handleRegenerate}
             onSanctionUpdate={handleSanctionUpdate}
             onCloseGap={handleCloseGap}
+            literacyCompliant={literacyCompliant}
           />
         </>
       )}

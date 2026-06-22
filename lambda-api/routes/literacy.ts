@@ -141,15 +141,16 @@ export async function listSystemsLiteracy(event: APIGatewayProxyEventV2WithJWTAu
     const status = literacyStatus(profiles);
 
     return {
-      system_id:        systemId,
-      tool_name:        sys.tool_name,
-      vendor:           sys.vendor,
-      system_role:      (sys.system_role as SystemRole) ?? 'deployer',
-      category:         sys.category,
-      literacy_status:  status,
-      profiles_total:   active.length,
-      profiles_covered: active.filter(p => p.coverage_pct >= 80).length,
-      evidence_count:   rawProfiles.reduce((s, p) => s + p.evidences.length, 0),
+      system_id:           systemId,
+      tool_name:           sys.tool_name,
+      vendor:              sys.vendor,
+      system_role:         (sys.system_role as SystemRole) ?? 'deployer',
+      category:            sys.category,
+      risk_classification: (sys.risk_classification as string) ?? 'minimal',
+      literacy_status:     status,
+      profiles_total:      active.length,
+      profiles_covered:    active.filter(p => p.coverage_pct >= 80).length,
+      evidence_count:      rawProfiles.reduce((s, p) => s + p.evidences.length, 0),
     };
   });
 
@@ -470,6 +471,121 @@ export async function generateArt4Report(event: APIGatewayProxyEventV2WithJWTAut
   });
 
   await logEvent(auth.companyId, 'literacy_report_generated', { system_id: systemId, document_id: documentId }, auth.email);
+
+  return { statusCode: 200, body: JSON.stringify({ document_id: documentId, title }) };
+}
+
+// ─── POST /api/literacy/report/consolidated ── consolidated report all systems ─
+
+export async function generateConsolidatedArt4Report(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const auth = extractAuth(event);
+
+  const [systems, records, company] = await Promise.all([
+    dynamo.getSystemsByCompany(auth.companyId),
+    dynamo.listLiteracyRecords(auth.companyId),
+    dynamo.getCompany(auth.companyId),
+  ]);
+
+  if (!company) return { statusCode: 404, body: JSON.stringify({ error: 'company_not_found' }) };
+
+  const co = company as Record<string, unknown>;
+
+  const systemList = (systems as Record<string, unknown>[]).filter(
+    s => s.system_id && s.tool_name,
+  );
+
+  if (systemList.length === 0)
+    return { statusCode: 400, body: JSON.stringify({ error: 'no_systems' }) };
+
+  // Build per-system profile data (same logic as generateArt4Report)
+  const consolidatedSystems = systemList.map(sys => {
+    const systemId = sys.system_id as string;
+    const role     = (sys.system_role as SystemRole) ?? 'deployer';
+    const pts      = getProfilesForRole(role);
+
+    const profileRecs = pts.map(pt => {
+      const rec = records.find((r: Record<string, unknown>) => (r.record_id as string) === profileRecordId(systemId, pt));
+      if (!rec) return null;
+      const evidences = records.filter((r: Record<string, unknown>) => (r.record_id as string).startsWith(`EVIDENCE#${rec.profile_id as string}#`));
+      return { pt, rec, evidences };
+    }).filter(Boolean) as Array<{ pt: string; rec: Record<string, unknown>; evidences: Record<string, unknown>[] }>;
+
+    const profiles = profileRecs.map(({ pt, rec, evidences }) => {
+      const headcount  = (rec.headcount as number) ?? 0;
+      const mergedWith = (rec.merged_with as string | null) ?? null;
+      let allEvidences = evidences;
+      if (!mergedWith) {
+        const secondary = profileRecs.find(x => (x.rec.merged_with as string | null) === pt);
+        if (secondary) allEvidences = [...evidences, ...secondary.evidences];
+      }
+      return {
+        profile_type: pt,
+        label:        PROFILE_LABELS[pt],
+        headcount,
+        merged_with:  mergedWith,
+        coverage_pct: calcCoverage(headcount, allEvidences),
+        evidences:    allEvidences,
+      };
+    });
+
+    return {
+      system_id:          systemId,
+      tool_name:          (sys.tool_name as string) ?? 'Sistema AI',
+      vendor:             (sys.vendor as string) ?? '',
+      category:           (sys.category as string) ?? '',
+      system_role:        role,
+      risk_classification: (sys.risk_classification as string) ?? 'minimal',
+      profiles,
+    };
+  });
+
+  const payload = {
+    _consolidatedLiteracyReportRequest: {
+      company_name: (co.name as string) ?? 'Azienda',
+      generated_at: new Date().toISOString(),
+      systems:      consolidatedSystems,
+    },
+  };
+
+  const response = await lambdaClient.send(new InvokeCommand({
+    FunctionName:   process.env.LAMBDA_PDF_ARN!,
+    InvocationType: 'RequestResponse',
+    Payload:        Buffer.from(JSON.stringify(payload)),
+  }));
+
+  const result = JSON.parse(Buffer.from(response.Payload!).toString()) as { pdfBase64?: string };
+  if (!result.pdfBase64) return { statusCode: 500, body: JSON.stringify({ error: 'pdf_generation_failed' }) };
+
+  const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+  const s3     = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
+  const BUCKET = process.env.DOCUMENTS_BUCKET ?? 'actify-saas-documents';
+
+  const documentId = uuidv4();
+  const now        = new Date().toISOString();
+  const s3Key      = `documents/${auth.companyId}/consolidated/art4_literacy_report/${documentId}_v1.pdf`;
+  const title      = `Report Art. 4 Consolidato — Tutti i sistemi (${now.slice(0, 10)})`;
+
+  await s3.send(new PutObjectCommand({
+    Bucket:      BUCKET,
+    Key:         s3Key,
+    Body:        Buffer.from(result.pdfBase64, 'base64'),
+    ContentType: 'application/pdf',
+  }));
+
+  await dynamo.putDocument({
+    document_id:   documentId,
+    company_id:    auth.companyId,
+    system_id:     'consolidated',
+    document_type: 'art4_consolidated_report',
+    title,
+    status:        'final',
+    s3_key:        s3Key,
+    generated_at:  now,
+    generated_by:  auth.email ?? 'actify',
+    ttl:           null,
+  });
+
+  await logEvent(auth.companyId, 'literacy_report_generated', { system_id: 'consolidated', document_id: documentId }, auth.email);
 
   return { statusCode: 200, body: JSON.stringify({ document_id: documentId, title }) };
 }

@@ -148,15 +148,16 @@ export interface ActifyDocument {
 // ─── AI Literacy v2 ──────────────────────────────────────────────────────────
 
 export interface LiteracySystemSummary {
-  system_id:        string;
-  tool_name:        string;
-  vendor:           string;
-  system_role:      'provider' | 'deployer';
-  category:         string;
-  literacy_status:  'not_started' | 'in_progress' | 'compliant';
-  profiles_total:   number;
-  profiles_covered: number;
-  evidence_count:   number;
+  system_id:           string;
+  tool_name:           string;
+  vendor:              string;
+  system_role:         'provider' | 'deployer';
+  category:            string;
+  risk_classification: 'prohibited' | 'high' | 'limited' | 'minimal';
+  literacy_status:     'not_started' | 'in_progress' | 'compliant';
+  profiles_total:      number;
+  profiles_covered:    number;
+  evidence_count:      number;
 }
 
 export interface LiteracyEvidence {

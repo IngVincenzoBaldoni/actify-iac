@@ -18,6 +18,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showSettingsBadge, setShowSettingsBadge] = useState(false);
   const [showInventoryBadge, setShowInventoryBadge] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [companyName, setCompanyName] = useState('');
+  const [walletOpen, setWalletOpen] = useState(true);
 
   useEffect(() => {
     async function check() {
@@ -36,6 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setShowSettingsBadge(!c?.annual_revenue_range && !c?.annual_revenue_exact);
         setShowInventoryBadge((systems as unknown[]).length === 0);
         setIsPremium(['premium', 'enterprise'].includes(c?.subscription_tier as string));
+        if (c?.name) setCompanyName(String(c.name));
       } catch {
         // badges stay hidden on error
       }
@@ -69,41 +72,63 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="db-shell">
       <aside className="db-sidebar">
+        {/* Logo */}
         <div className="db-sidebar-logo">
-          <span dangerouslySetInnerHTML={{ __html: markSvg(24, 'green') }} />
+          <span dangerouslySetInnerHTML={{ __html: markSvg(40, 'green') }} />
           <span className="db-sidebar-brand">Actify</span>
         </div>
-        <nav className="db-nav-links">
-          {nav.map(item => {
-            const locked = item.premium && !isPremium;
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                className={`db-nav-link ${pathname?.startsWith(item.href) ? 'active' : ''}`}
-                style={locked ? { opacity: 0.55 } : undefined}
-              >
-                <span className="db-nav-icon">{item.icon}</span>
-                <span className="db-nav-label">{item.label}</span>
-                {locked && (
-                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: 'rgba(250,204,21,0.15)', color: '#CA8A04', border: '1px solid rgba(250,204,21,0.3)', letterSpacing: 0.3 }}>
-                    PREMIUM
-                  </span>
-                )}
-                {!locked && item.badge && (
-                  <span className="nav-callout">
-                    <span className="nav-callout-dot" />
-                    {item.callout}
-                  </span>
-                )}
-              </a>
-            );
-          })}
-        </nav>
+
+        {/* AI Wallet collapsible folder */}
+        <div className="db-wallet">
+          <button className="db-wallet-header" onClick={() => setWalletOpen(o => !o)}>
+            <span className="db-wallet-icon">💼</span>
+            <span className="db-wallet-name">
+              {companyName ? `${companyName} AI Wallet` : 'AI Wallet'}
+            </span>
+            <span className={`db-wallet-chevron${walletOpen ? ' open' : ''}`}>›</span>
+          </button>
+
+          {walletOpen && (
+            <nav className="db-nav-links">
+              {nav.map(item => {
+                const locked = item.premium && !isPremium;
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={`db-nav-link ${pathname?.startsWith(item.href) ? 'active' : ''}`}
+                    style={locked ? { opacity: 0.55 } : undefined}
+                  >
+                    <span className="db-nav-icon">{item.icon}</span>
+                    <span className="db-nav-label">{item.label}</span>
+                    {locked && (
+                      <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: 'rgba(250,204,21,0.15)', color: '#CA8A04', border: '1px solid rgba(250,204,21,0.3)', letterSpacing: 0.3 }}>
+                        PREMIUM
+                      </span>
+                    )}
+                    {!locked && item.badge && (
+                      <span className="nav-callout">
+                        <span className="nav-callout-dot" />
+                        {item.callout}
+                      </span>
+                    )}
+                  </a>
+                );
+              })}
+            </nav>
+          )}
+        </div>
+
+        {/* Footer — company name + email + badge + logout */}
         <div className="db-sidebar-footer">
+          {companyName && (
+            <div className="db-company-name">{companyName}</div>
+          )}
           <div className="db-user-email">{email}</div>
-          {role === 'admin' && <div className="db-role-badge">Admin</div>}
-          <button className="db-signout-btn" onClick={handleSignOut}>Esci</button>
+          <div className="db-footer-actions">
+            {role === 'admin' && <div className="db-role-badge">Admin</div>}
+            <button className="db-signout-btn" onClick={handleSignOut}>Esci</button>
+          </div>
         </div>
       </aside>
       <main className="db-main">

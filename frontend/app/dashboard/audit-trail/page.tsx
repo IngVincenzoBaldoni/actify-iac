@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { configureAmplify } from '@/lib/amplify';
 import { api } from '@/lib/api';
 import type { AuditEvent } from '@/lib/types';
@@ -288,6 +289,7 @@ function MultiSysSelect({
 }
 
 export default function AuditTrailPage() {
+  const router = useRouter();
   const [events, setEvents]         = useState<AuditEvent[]>([]);
   const [loading, setLoading]       = useState(true);
   const [filter, setFilter]         = useState('Tutti');
@@ -303,6 +305,7 @@ export default function AuditTrailPage() {
   const [modalTo, setModalTo]           = useState('');
   const [modalSystems, setModalSystems] = useState<string[]>([]);
   const [exporting, setExporting]       = useState(false);
+  const [exportError, setExportError]   = useState<string | null>(null);
 
   function loadEvents(from?: string, to?: string) {
     setLoading(true);
@@ -328,23 +331,17 @@ export default function AuditTrailPage() {
 
   async function handleExport() {
     setExporting(true);
+    setExportError(null);
     try {
-      const res = await api.auditTrail.export({
+      await api.auditTrail.export({
         from:        modalFrom                    || undefined,
         to:          modalTo                      || undefined,
         systemNames: modalSystems.length > 0 ? modalSystems : undefined,
       });
-      const bytes = Uint8Array.from(atob(res.pdfBase64), c => c.charCodeAt(0));
-      const blob  = new Blob([bytes], { type: 'application/pdf' });
-      const url   = URL.createObjectURL(blob);
-      const a     = document.createElement('a');
-      a.href      = url;
-      a.download  = res.filename;
-      a.click();
-      URL.revokeObjectURL(url);
       setShowModal(false);
-    } catch {
-      alert('Errore durante la generazione del PDF. Riprova.');
+      router.push('/dashboard/documents');
+    } catch (e) {
+      setExportError((e as Error).message ?? 'Errore durante la generazione del PDF.');
     } finally {
       setExporting(false);
     }
@@ -390,164 +387,237 @@ export default function AuditTrailPage() {
   }
 
   return (
-    <div style={{ padding: '0 28px 60px' }}>
+    <div className="inv-page">
 
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+      {/* ── Header ─────────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 32, flexWrap: 'wrap' }}>
+        <div>
+          <h1 className="inv-title">Audit Trail</h1>
+          <p className="inv-sub">Registro immutabile di tutte le azioni eseguite su Actify — in sola lettura.</p>
+        </div>
+        <div style={{
+          background: 'rgba(22,163,74,.1)', border: '1px solid rgba(22,163,74,.3)',
+          borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, color: '#16a34a',
+          display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 6,
+        }}>
+          <span style={{ fontSize: 8 }}>●</span> Sola lettura
+        </div>
+      </div>
+
+      {/* ── Intro board ──────────────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(145deg, rgba(108,71,255,.055) 0%, rgba(14,165,233,.025) 50%, rgba(99,102,241,.04) 100%)',
+        border: '1px solid rgba(255,255,255,.09)',
+        borderTop: '2px solid rgba(108,71,255,.5)',
+        borderRadius: 18,
+        boxShadow: '0 0 0 1px rgba(108,71,255,.04) inset, 0 8px 32px rgba(0,0,0,.45)',
+        padding: '28px 32px',
+        marginBottom: 28,
+      }}>
+
+        {/* Row 1 — cos'è */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, marginBottom: 24 }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: 'rgba(108,71,255,.12)', border: '1.5px solid rgba(108,71,255,.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-          }}>🔒</div>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', margin: 0 }}>Audit Trail Immutabile</h1>
-            <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
-              Registro in sola lettura di tutte le azioni eseguite su Actify
+            width: 48, height: 48, borderRadius: 13, flexShrink: 0,
+            background: 'rgba(108,71,255,.1)', border: '1.5px solid rgba(108,71,255,.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+          }}>🔏</div>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)', margin: '0 0 8px', letterSpacing: -0.3 }}>
+              Cos&apos;è l&apos;Audit Trail
+            </h2>
+            <p style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.7, margin: 0 }}>
+              Ogni azione eseguita su Actify — creare un sistema AI, avviare un compliance check, generare un documento,
+              aggiornare la formazione — viene registrata automaticamente in questo log.
+              Ogni evento riporta <strong>chi</strong> ha agito, <strong>cosa</strong> ha fatto,{' '}
+              <strong>quando</strong> (timestamp UTC con precisione al secondo) e l&apos;<strong>esito</strong> dell&apos;operazione.
+              Il registro è <strong>immutabile</strong>: nessun record può essere modificato o cancellato, nemmeno dagli amministratori.
+            </p>
+          </div>
+        </div>
+
+        {/* Row 2 — cosa traccia (4 card) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
+          {[
+            { icon: '🤖', label: 'AI Inventory',     desc: 'Creazione, modifica e cancellazione di sistemi AI censiti.' },
+            { icon: '📋', label: 'Compliance check', desc: 'Avvio, completamento e risultato di ogni valutazione di conformità.' },
+            { icon: '📄', label: 'Documenti',         desc: 'Generazione e finalizzazione di report nel Document Vault.' },
+            { icon: '🎓', label: 'AI Literacy',       desc: 'Aggiornamenti a profili, evidenze e report Art. 4.' },
+          ].map(c => (
+            <div key={c.label} style={{
+              background: 'rgba(255,255,255,.04)',
+              border: '1px solid rgba(255,255,255,.09)',
+              borderRadius: 12, padding: '16px 18px',
+            }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>{c.icon}</div>
+              <div style={{ fontWeight: 800, fontSize: 12, color: 'var(--text)', marginBottom: 5 }}>{c.label}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>{c.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'rgba(108,71,255,.2)', marginBottom: 22 }} />
+
+        {/* Row 3 — valore legale */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, marginBottom: 22 }}>
+          <div style={{ fontSize: 28, flexShrink: 0, marginTop: 2 }}>⚖️</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 8 }}>
+              Perché vale oro in caso di ispezione
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.75, margin: '0 0 10px' }}>
+              Il valore dell&apos;Audit Trail si manifesta nel momento in cui l&apos;impresa è soggetta a ispezione
+              da parte dell&apos;Autorità Nazionale o a contestazione formale. Il registro costituisce evidenza
+              documentale che l&apos;organizzazione ha{' '}
+              <strong style={{ color: 'var(--text)' }}>adottato le misure previste dalla normativa</strong>,
+              ha <strong style={{ color: 'var(--text)' }}>condotto le valutazioni di conformità nei tempi stabiliti</strong> e
+              ha <strong style={{ color: 'var(--text)' }}>implementato i provvedimenti tecnici e organizzativi richiesti</strong>.
+              Nel diritto amministrativo, la <strong style={{ color: '#a78bfa' }}>buona fede</strong> e la{' '}
+              <strong style={{ color: '#a78bfa' }}>diligenza dimostrata</strong> sono fattori attenuanti espliciti:{' '}
+              <strong style={{ color: 'var(--text)' }}>
+                un registro immutabile e certificato può fare la differenza tra la sanzione massima
+                (Art. 99 — fino a 35 milioni €) e quella minima.
+              </strong>
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { icon: '🛡️', text: 'Prova di diligenza documentale' },
+                { icon: '📅', text: 'Timestamp certificati per ogni azione' },
+                { icon: '🔍', text: 'Traccia audit-ready per le autorità' },
+                { icon: '⚡', text: 'Riduce il rischio di sanzioni massime' },
+              ].map(item => (
+                <div key={item.text} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)',
+                  borderRadius: 8, padding: '6px 12px', fontSize: 12,
+                }}>
+                  <span>{item.icon}</span>
+                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>{item.text}</span>
+                </div>
+              ))}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-            <div style={{
-              background: 'rgba(22,163,74,.1)', border: '1px solid rgba(22,163,74,.3)',
-              borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 700, color: '#16a34a',
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}>
-              <span>●</span> Sola lettura
-            </div>
-            {!loading && events.length > 0 && (
+        </div>
+
+        {/* Row 4 — CTA */}
+        {!loading && events.length > 0 && (
+          <>
+            <div style={{ height: 1, background: 'rgba(108,71,255,.2)', marginBottom: 22 }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 4 }}>
+                  Genera il Report Ufficiale Audit Trail
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6 }}>
+                  Salvato nel <strong>Document Vault</strong> come prova ispettiva immutabile — hash SHA-256 e timestamp certificato.
+                </div>
+              </div>
               <button
                 onClick={() => setShowModal(true)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  flexShrink: 0,
                   background: '#6C47FF', color: '#fff',
-                  border: 'none', borderRadius: 10, padding: '10px 20px',
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(108,71,255,.35)',
+                  border: 'none', borderRadius: 11,
+                  padding: '13px 26px', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(108,71,255,.45)',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                📄 Genera Report PDF
+                📄 Genera e Salva nel Document Vault →
+              </button>
+            </div>
+          </>
+        )}
+
+      </div>
+
+      {/* ── Stats + Filters board ─────────────────────────────────────────────── */}
+      {!loading && events.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(145deg, rgba(108,71,255,.055) 0%, rgba(14,165,233,.025) 50%, rgba(99,102,241,.04) 100%)',
+          border: '1px solid rgba(255,255,255,.09)',
+          borderTop: '2px solid rgba(108,71,255,.45)',
+          borderRadius: 18,
+          boxShadow: '0 0 0 1px rgba(108,71,255,.04) inset, 0 8px 32px rgba(0,0,0,.45)',
+          padding: '26px 30px',
+          marginBottom: 24,
+        }}>
+          {/* KPI row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
+            {[
+              { label: 'Eventi totali',     value: events.length,                                                                   color: '#818CF8', glow: 'rgba(129,140,248,.22)' },
+              { label: 'Compliance check',  value: events.filter(e => e.event_type === 'compliance_check_completed').length,        color: '#22C55E', glow: 'rgba(34,197,94,.22)'   },
+              { label: 'Sistemi AI censiti',value: events.filter(e => e.event_type === 'system_created').length,                   color: '#38BDF8', glow: 'rgba(14,165,233,.22)'  },
+              { label: 'Documenti generati',value: events.filter(e => e.event_type === 'document_generated').length,               color: '#F59E0B', glow: 'rgba(245,158,11,.22)'  },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: 'rgba(255,255,255,.035)',
+                border: '1px solid rgba(255,255,255,.08)',
+                borderRadius: 14,
+                padding: '20px 22px',
+                display: 'flex', alignItems: 'center', gap: 16,
+                boxShadow: s.value > 0 ? `0 0 24px ${s.glow}` : 'none',
+              }}>
+                <div style={{ fontSize: 40, fontWeight: 900, color: s.color, lineHeight: 1, letterSpacing: -1.5 }}>
+                  {s.value}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5 }}>
+                    {s.label}
+                  </div>
+                  <div style={{ width: 32, height: 2, background: s.color, borderRadius: 2, opacity: 0.55 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,.07)', marginBottom: 18 }} />
+
+          {/* Filters row */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.8, flexShrink: 0 }}>Filtri</div>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              style={{ padding: '8px 12px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, fontSize: 13, color: 'var(--text)', cursor: 'pointer', fontWeight: 600 }}
+            />
+            <span style={{ fontSize: 13, color: 'var(--muted)' }}>→</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              style={{ padding: '8px 12px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, fontSize: 13, color: 'var(--text)', cursor: 'pointer', fontWeight: 600 }}
+            />
+            {allSystemNames.length > 0 && (
+              <MultiSysSelect
+                selected={systemFilter}
+                onChange={setSystemFilter}
+                activeSysNames={activeSysNames}
+                deletedSysNames={deletedSysNames}
+                allSystemNames={allSystemNames}
+                compact
+              />
+            )}
+            <button
+              onClick={handleApplyFilters}
+              style={{ padding: '8px 18px', background: '#6C47FF', color: '#fff', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(108,71,255,.4)' }}
+            >
+              Applica
+            </button>
+            {(fromDate || toDate || systemFilter.length > 0) && (
+              <button
+                onClick={() => { setFromDate(''); setToDate(''); setSystemFilter([]); loadEvents(); }}
+                style={{ padding: '8px 12px', background: 'rgba(255,255,255,.06)', color: 'var(--muted)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, fontSize: 13, cursor: 'pointer' }}
+              >
+                ✕ Reset
               </button>
             )}
           </div>
         </div>
-      </div>
-
-      {/* Legal disclaimer */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(108,71,255,.06), rgba(14,165,233,.04))',
-        border: '1.5px solid rgba(108,71,255,.2)',
-        borderRadius: 14, padding: '20px 24px', marginBottom: 28,
-      }}>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 28, flexShrink: 0, marginTop: 2 }}>⚖️</div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 8 }}>
-              Perché l&apos;Audit Trail vale oro in caso di ispezione
-            </div>
-            <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.75, margin: '0 0 10px' }}>
-              Il valore strategico dell&apos;Audit Trail non risiede nell&apos;utilizzo ordinario, ma si manifesta
-              nel momento in cui l&apos;impresa è soggetta a un&apos;ispezione da parte dell&apos;Autorità Nazionale
-              competente o a una contestazione formale da parte delle autorità di vigilanza. In tale contesto, il
-              registro costituisce evidenza documentale che l&apos;organizzazione ha{' '}
-              <strong style={{ color: 'var(--text)' }}>adottato le misure previste dalla normativa</strong>,
-              ha <strong style={{ color: 'var(--text)' }}>condotto le valutazioni di conformità nei tempi stabiliti</strong>{' '}
-              e ha <strong style={{ color: 'var(--text)' }}>implementato i provvedimenti tecnici e organizzativi richiesti</strong>,
-              con indicazione precisa delle date.
-            </p>
-            <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.75, margin: 0 }}>
-              Nel diritto amministrativo e penale, la <strong style={{ color: '#6C47FF' }}>buona fede</strong> e la{' '}
-              <strong style={{ color: '#6C47FF' }}>diligenza dimostrata</strong> costituiscono fattori attenuanti
-              di rilievo nell&apos;applicazione delle sanzioni. L&apos;Audit Trail fornisce la prova documentale
-              di tale diligenza:{' '}
-              <strong style={{ color: 'var(--text)' }}>
-                la disponibilità di un registro immutabile e certificato può determinare la differenza sostanziale
-                tra l&apos;applicazione della sanzione massima (Art. 99 — fino a 35 milioni €) e quella minima.
-              </strong>
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-          {[
-            { icon: '🛡️', text: 'Prova di diligenza documentale' },
-            { icon: '📅', text: 'Timestamp certificati per ogni azione' },
-            { icon: '🔍', text: 'Traccia audit-ready per le autorità' },
-            { icon: '⚡', text: 'Riduce il rischio di sanzioni massime' },
-          ].map(item => (
-            <div key={item.text} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: 8, padding: '6px 12px', fontSize: 12,
-            }}>
-              <span>{item.icon}</span>
-              <span style={{ color: 'var(--text)', fontWeight: 600 }}>{item.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Stats bar */}
-      {!loading && events.length > 0 && (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[
-            { label: 'Eventi totali', value: events.length, color: '#6C47FF' },
-            { label: 'Compliance check', value: events.filter(e => e.event_type === 'compliance_check_completed').length, color: '#16a34a' },
-            { label: 'Sistemi AI censiti', value: events.filter(e => e.event_type === 'system_created').length, color: '#0ea5e9' },
-            { label: 'Documenti generati', value: events.filter(e => e.event_type === 'document_generated').length, color: '#f59e0b' },
-          ].map(s => (
-            <div key={s.label} style={{
-              flex: 1, minWidth: 120,
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '12px 16px', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
       )}
-
-      {/* Period + system filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.8, flexShrink: 0 }}>Filtri</div>
-        <input
-          type="date"
-          value={fromDate}
-          onChange={e => setFromDate(e.target.value)}
-          style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, color: 'var(--text)', cursor: 'pointer' }}
-        />
-        <span style={{ fontSize: 11, color: 'var(--muted)' }}>→</span>
-        <input
-          type="date"
-          value={toDate}
-          onChange={e => setToDate(e.target.value)}
-          style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, color: 'var(--text)', cursor: 'pointer' }}
-        />
-        {allSystemNames.length > 0 && (
-          <MultiSysSelect
-            selected={systemFilter}
-            onChange={setSystemFilter}
-            activeSysNames={activeSysNames}
-            deletedSysNames={deletedSysNames}
-            allSystemNames={allSystemNames}
-            compact
-          />
-        )}
-        <button
-          onClick={handleApplyFilters}
-          style={{ padding: '6px 14px', background: '#6C47FF', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-        >
-          Applica
-        </button>
-        {(fromDate || toDate || systemFilter.length > 0) && (
-          <button
-            onClick={() => { setFromDate(''); setToDate(''); setSystemFilter([]); loadEvents(); }}
-            style={{ padding: '6px 10px', background: 'none', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}
-          >
-            Reset
-          </button>
-        )}
-      </div>
 
       {/* ── Export PDF modal ── */}
       {showModal && (
@@ -572,8 +642,8 @@ export default function AuditTrailPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(108,71,255,.12)', border: '1.5px solid rgba(108,71,255,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>📄</div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>Genera Report PDF</div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Documento ufficiale con valore legale</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>Genera Report Audit Trail</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Salvato nel Document Vault — scaricabile da lì</div>
               </div>
             </div>
 
@@ -632,6 +702,13 @@ export default function AuditTrailPage() {
               )}
             </div>
 
+            {/* Error */}
+            {exportError && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(220,38,38,.1)', border: '1px solid rgba(220,38,38,.3)', borderRadius: 8, fontSize: 13, color: '#F87171' }}>
+                ✗ {exportError}
+              </div>
+            )}
+
             {/* CTA */}
             <button
               onClick={handleExport}
@@ -645,7 +722,7 @@ export default function AuditTrailPage() {
             >
               {exporting
                 ? <><span className="plan-cta-spin" style={{ width: 16, height: 16, borderWidth: 2 }} /> Generazione in corso…</>
-                : '📄 Genera e Scarica PDF'
+                : '📄 Genera e Salva nel Document Vault →'
               }
             </button>
           </div>

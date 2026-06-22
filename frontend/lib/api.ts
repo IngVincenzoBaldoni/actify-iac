@@ -149,6 +149,8 @@ export const api = {
       request<{ suggestions: unknown[]; cached?: boolean }>('GET', `/api/literacy/suggestions/${systemId}/${profileType}`),
     generateReport: (systemId: string) =>
       request<{ document_id: string; title: string }>('GET', `/api/literacy/${systemId}/report`),
+    generateConsolidatedReport: () =>
+      request<{ document_id: string; title: string }>('POST', '/api/literacy/report/consolidated'),
   },
 
   // ─── Partner ────────────────────────────────────────────────────────────────
@@ -225,6 +227,6 @@ export const api = {
       return request<import('./types').AuditEvent[]>('GET', `/api/audit-trail${qs ? '?' + qs : ''}`);
     },
     export: (opts?: { from?: string; to?: string; systemNames?: string[] }) =>
-      request<{ pdfBase64: string; filename: string }>('POST', '/api/audit-trail/export', opts),
+      request<{ document_id: string; title: string }>('POST', '/api/audit-trail/export', opts),
   },
 };

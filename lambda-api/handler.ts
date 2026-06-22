@@ -22,6 +22,7 @@ import {
 import {
   listSystemsLiteracy, getSystemProfiles, updateProfile,
   addEvidence, deleteEvidence, getSuggestions, generateArt4Report,
+  generateConsolidatedArt4Report,
 } from './routes/literacy';
 import {
   registerPartner, getPartnerMe, updatePartnerMe,
@@ -261,6 +262,10 @@ export const handler = async (
     // GET /api/literacy/{systemId}/profiles
     if (method === 'GET' && /^\/api\/literacy\/[^/]+\/profiles$/.test(path))
       return { ...await getSystemProfiles(ev), headers: CORS };
+
+    // POST /api/literacy/report/consolidated  ← must come before /{systemId}/report
+    if (method === 'POST' && path === '/api/literacy/report/consolidated')
+      return { ...await generateConsolidatedArt4Report(ev), headers: CORS };
 
     // GET /api/literacy/{systemId}/report
     if (method === 'GET' && /^\/api\/literacy\/[^/]+\/report$/.test(path))

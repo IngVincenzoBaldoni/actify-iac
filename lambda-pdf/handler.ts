@@ -6,8 +6,8 @@ import { analyze } from "./services/bedrockService";
 import { render } from "./services/htmlTemplate";
 import { htmlToPdf, buildNormativeDocumentHtml, buildDocPipelinePdfHtml } from "./services/pdfService";
 import { buildAuditTrailPdfHtml } from "./services/auditTrailPdfHtml";
-import { buildLiteracyReportHtml } from "./services/literacyReportHtml";
-import type { LiteracyReportPayload } from "./services/literacyReportHtml";
+import { buildLiteracyReportHtml, buildConsolidatedLiteracyReportHtml } from "./services/literacyReportHtml";
+import type { LiteracyReportPayload, ConsolidatedLiteracyReportPayload } from "./services/literacyReportHtml";
 import { uploadReport, writeToDatalake } from "./services/s3Service";
 import { formHtml } from "./services/formHtml";
 import { markReportGenerated } from "./services/otpService";
@@ -124,6 +124,13 @@ export async function handler(
   // ── Literacy Art. 4 report request from lambda-api ──────────────────────────
   if ("_literacyReportRequest" in event && event._literacyReportRequest) {
     const html = buildLiteracyReportHtml(event._literacyReportRequest as LiteracyReportPayload);
+    const pdfBuffer = await htmlToPdf(html);
+    return { pdfBase64: pdfBuffer.toString("base64") };
+  }
+
+  // ── Consolidated Art. 4 report (all systems) from lambda-api ────────────────
+  if ("_consolidatedLiteracyReportRequest" in event && event._consolidatedLiteracyReportRequest) {
+    const html = buildConsolidatedLiteracyReportHtml(event._consolidatedLiteracyReportRequest as ConsolidatedLiteracyReportPayload);
     const pdfBuffer = await htmlToPdf(html);
     return { pdfBase64: pdfBuffer.toString("base64") };
   }

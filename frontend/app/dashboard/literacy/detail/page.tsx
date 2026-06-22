@@ -5,10 +5,37 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { LiteracyProfile, LiteracyEvidence, CertSuggestion } from '@/lib/types';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Config maps ──────────────────────────────────────────────────────────────
 
 const LEVEL_LABEL: Record<string, string> = { beginner: 'Base', intermediate: 'Intermedio', advanced: 'Avanzato' };
 const LEVEL_COLOR: Record<string, string> = { beginner: '#16A34A', intermediate: '#CA8A04', advanced: '#DC2626' };
+
+const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
+  not_started: { label: 'Non avviato',  color: '#DC2626', bg: 'rgba(220,38,38,0.12)' },
+  in_progress: { label: 'In corso',     color: '#CA8A04', bg: 'rgba(202,138,4,0.12)' },
+  compliant:   { label: 'Conforme',     color: '#16A34A', bg: 'rgba(22,163,74,0.12)' },
+};
+
+const ROLE_CFG: Record<string, { label: string; color: string; bg: string }> = {
+  provider: { label: 'Provider', color: '#818CF8', bg: 'rgba(99,102,241,0.15)' },
+  deployer: { label: 'Deployer', color: '#38BDF8', bg: 'rgba(14,165,233,0.15)' },
+};
+
+const RISK_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  prohibited: { label: 'Vietato',          color: '#F87171', bg: 'rgba(220,38,38,0.15)',  border: '#DC2626' },
+  high:       { label: 'Alto Rischio',     color: '#FB923C', bg: 'rgba(234,88,12,0.15)',  border: '#EA580C' },
+  limited:    { label: 'Rischio Limitato', color: '#FCD34D', bg: 'rgba(202,138,4,0.15)',  border: '#CA8A04' },
+  minimal:    { label: 'Rischio Minimo',   color: '#4ADE80', bg: 'rgba(22,163,74,0.15)',  border: '#16A34A' },
+};
+
+const ELEVATED: React.CSSProperties = {
+  background: 'linear-gradient(145deg, rgba(255,255,255,.055) 0%, rgba(255,255,255,.018) 100%)',
+  border: '1px solid rgba(255,255,255,.09)',
+  borderTop: '1.5px solid rgba(255,255,255,.22)',
+  boxShadow: '0 0 0 1px rgba(255,255,255,.03) inset, 0 6px 24px rgba(0,0,0,.42)',
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string) {
   try { return new Date(iso).toLocaleDateString('it-IT'); } catch { return iso; }
@@ -195,6 +222,32 @@ function AddEvidenceModal({
   );
 }
 
+// ─── Evidence item ────────────────────────────────────────────────────────────
+
+function EvidenceItem({ ev, onDelete, deleting }: { ev: LiteracyEvidence; onDelete: () => void; deleting: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10 }}>
+      <span style={{ fontSize: 16, flexShrink: 0 }}>{ev.evidence_type === 'certification' ? '🎓' : '📋'}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 4 }}>{ev.title}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <span>📅 {fmtDate(ev.date)}</span>
+          <span>👥 {ev.people_count} persone</span>
+          {ev.issuer && <span>🏛 {ev.issuer}</span>}
+          {ev.url && <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>🔗 Link</a>}
+          {ev.topics?.length ? <span>📌 {ev.topics.slice(0, 3).join(', ')}{ev.topics.length > 3 ? `…+${ev.topics.length - 3}` : ''}</span> : null}
+        </div>
+      </div>
+      <button
+        onClick={onDelete}
+        disabled={deleting}
+        style={{ flexShrink: 0, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', borderRadius: 7, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>
+        {deleting ? '…' : '✕'}
+      </button>
+    </div>
+  );
+}
+
 // ─── Unified Profile Card (PMI mode ON) ───────────────────────────────────────
 
 type EvidenceWithPid = LiteracyEvidence & { _pid: string };
@@ -255,63 +308,67 @@ function UnifiedProfileCard({
   }
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 14, overflow: 'hidden', gridColumn: '1 / -1' }}>
+    <div style={{ ...ELEVATED, borderRadius: 14, overflow: 'hidden', gridColumn: '1 / -1', borderTopColor: 'rgba(99,102,241,.45)' }}>
       {/* Header */}
-      <div style={{ padding: '14px 20px', background: 'rgba(99,102,241,0.05)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '16px 22px', background: 'rgba(99,102,241,0.06)', borderBottom: '1px solid rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
             {primaryProfile.label} + {secondaryProfile.label}
-            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', background: 'rgba(99,102,241,0.15)', color: '#6366F1', borderRadius: 4 }}>Profilo unificato</span>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', background: 'rgba(99,102,241,0.18)', color: '#818CF8', borderRadius: 6, border: '1px solid rgba(99,102,241,.25)' }}>Profilo unificato</span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>Una persona copre entrambi i ruoli — Art. 4 PMI piccola</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>Una persona copre entrambi i ruoli — Art. 4 PMI piccola</div>
         </div>
         <div style={{ flexShrink: 0, textAlign: 'right' }}>
-          <div style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1 }}>
+          <div style={{ fontSize: 28, fontWeight: 900, color, lineHeight: 1 }}>
             {headcount === 0 ? '—' : `${coveragePct}%`}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--muted)' }}>copertura combinata</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>copertura combinata</div>
         </div>
       </div>
 
-      <div style={{ padding: '16px 20px' }}>
+      <div style={{ padding: '18px 22px' }}>
         {/* PMI note */}
-        <div style={{ marginBottom: 14, padding: '8px 12px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, fontSize: 12, color: '#6366F1', lineHeight: 1.5 }}>
+        <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 9, fontSize: 13, color: '#818CF8', lineHeight: 1.5 }}>
           Le evidenze qui registrate coprono entrambi i profili ({primaryProfile.label} e {secondaryProfile.label}) ai fini del calcolo Art. 4.
         </div>
 
         {/* Headcount */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Persone nel ruolo:</span>
-          {editHc ? (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input
-                type="number" min={0} value={hcInput}
-                onChange={e => setHcInput(e.target.value)}
-                style={{ width: 80, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 12 }}
-                autoFocus
-              />
-              <button onClick={saveHeadcount} disabled={savingHc} style={{ padding: '4px 10px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                {savingHc ? '…' : 'Salva'}
-              </button>
-              <button onClick={() => { setEditHc(false); setHcInput(String(primaryProfile.headcount)); }} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: headcount === 0 ? 'var(--muted)' : 'var(--text)' }}>
-                {headcount === 0 ? 'Non configurato' : headcount}
-              </span>
-              <button onClick={() => setEditHc(true)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✎ Modifica</button>
-            </div>
+        <div style={{ marginBottom: 16, padding: '14px 16px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Persone nel ruolo</div>
+            {editHc ? (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input type="number" min={0} value={hcInput} onChange={e => setHcInput(e.target.value)}
+                  style={{ width: 90, padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 15, fontWeight: 700 }} autoFocus />
+                <button onClick={saveHeadcount} disabled={savingHc} style={{ padding: '6px 14px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                  {savingHc ? '…' : 'Salva'}
+                </button>
+                <button onClick={() => { setEditHc(false); setHcInput(String(primaryProfile.headcount)); }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
+              </div>
+            ) : (
+              headcount === 0 ? (
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#F59E0B', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ background: 'rgba(245,158,11,.15)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 6, padding: '2px 10px' }}>⚠ Non configurato</span>
+                </span>
+              ) : (
+                <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)' }}>{headcount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>persone</span></span>
+              )
+            )}
+          </div>
+          {!editHc && (
+            <button onClick={() => setEditHc(true)} style={{ flexShrink: 0, background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.13)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, color: 'var(--text2)', cursor: 'pointer' }}>
+              ✎ {headcount === 0 ? 'Configura' : 'Modifica'}
+            </button>
           )}
         </div>
 
         {/* Coverage bar */}
         {headcount > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
-              <div style={{ height: '100%', width: `${coveragePct}%`, background: color, borderRadius: 3 }} />
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ height: 7, background: 'var(--border)', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
+              <div style={{ height: '100%', width: `${coveragePct}%`, background: color, borderRadius: 4, transition: 'width .4s' }} />
             </div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
               {totalCovered} / {headcount} persone formate (evidenze combinate)
             </div>
           </div>
@@ -319,51 +376,31 @@ function UnifiedProfileCard({
 
         {/* Evidences */}
         {allEvidences.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
             {allEvidences.map(ev => (
-              <div key={ev.evidence_id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 9 }}>
-                <span style={{ fontSize: 14, flexShrink: 0 }}>{ev.evidence_type === 'certification' ? '🎓' : '📋'}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{ev.title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <span>📅 {fmtDate(ev.date)}</span>
-                    <span>👥 {ev.people_count} persone</span>
-                    {ev.issuer && <span>🏛 {ev.issuer}</span>}
-                    {ev.url && <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>🔗 Link</a>}
-                    {ev.topics?.length ? <span>📌 {ev.topics.slice(0, 3).join(', ')}{ev.topics.length > 3 ? `…+${ev.topics.length - 3}` : ''}</span> : null}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDelete(ev)}
-                  disabled={deletingId === ev.evidence_id}
-                  style={{ flexShrink: 0, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', borderRadius: 7, padding: '5px 9px', fontSize: 11, cursor: 'pointer' }}>
-                  {deletingId === ev.evidence_id ? '…' : '✕'}
-                </button>
-              </div>
+              <EvidenceItem key={ev.evidence_id} ev={ev} deleting={deletingId === ev.evidence_id} onDelete={() => handleDelete(ev)} />
             ))}
           </div>
         )}
 
         {allEvidences.length === 0 && (
-          <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }}>
+          <p style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 14 }}>
             Nessuna evidenza registrata. Aggiungi certificazioni o formazione interna per coprire entrambi i profili.
           </p>
         )}
 
         {/* Un-merge toggle */}
         <button
-          type="button"
-          onClick={handleUnmerge}
-          disabled={unmerging}
-          style={{ marginBottom: 14, width: '100%', padding: '10px 14px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: unmerging ? 'wait' : 'pointer', textAlign: 'left', opacity: unmerging ? 0.7 : 1 }}>
-          <span style={{ fontSize: 16, lineHeight: 1 }}>{unmerging ? '⏳' : '✅'}</span>
-          <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>PMI piccola · clicca per separare</span>
+          type="button" onClick={handleUnmerge} disabled={unmerging}
+          style={{ marginBottom: 14, width: '100%', padding: '11px 16px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: unmerging ? 'wait' : 'pointer', textAlign: 'left', opacity: unmerging ? 0.7 : 1 }}>
+          <span style={{ fontSize: 17, lineHeight: 1 }}>{unmerging ? '⏳' : '✅'}</span>
+          <span style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>PMI piccola · clicca per separare</span>
         </button>
 
         <button
           onClick={() => setShowAdd(true)}
-          style={{ width: '100%', padding: '9px', background: 'rgba(34,197,94,0.08)', border: '1px dashed rgba(34,197,94,0.4)', color: 'var(--green)', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          style={{ width: '100%', padding: '10px', background: 'rgba(34,197,94,0.08)', border: '1px dashed rgba(34,197,94,0.4)', color: 'var(--green)', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
           + Aggiungi evidenza
         </button>
       </div>
@@ -418,7 +455,6 @@ function ProfileCard({
     if (mergeSaving || !other) return;
     setMergeSaving(true);
     try {
-      // ProfileCard only renders when PMI is OFF → merge THIS card to enable PMI
       await api.literacy.updateProfile(systemId, profile.profile_id, { merged_with: other.profile_type });
       onRefresh();
     } catch { /* silent */ }
@@ -436,55 +472,59 @@ function ProfileCard({
   }
 
   return (
-    <div style={{ background: 'var(--surface)', border: `1px solid ${color}40`, borderRadius: 14, overflow: 'hidden' }}>
+    <div style={{ ...ELEVATED, borderRadius: 14, overflow: 'hidden', borderTopColor: `${color}66` }}>
       {/* Card header */}
-      <div style={{ padding: '14px 20px', background: `${color}0a`, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '16px 22px', background: `${color}0d`, borderBottom: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 3 }}>{profile.label}</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>{profile.description}</div>
+          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 4 }}>{profile.label}</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>{profile.description}</div>
         </div>
         <div style={{ flexShrink: 0, textAlign: 'right' }}>
-          <div style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1 }}>
+          <div style={{ fontSize: 28, fontWeight: 900, color, lineHeight: 1 }}>
             {profile.headcount === 0 ? '—' : `${profile.coverage_pct}%`}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--muted)' }}>copertura</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>copertura</div>
         </div>
       </div>
 
-      <div style={{ padding: '16px 20px' }}>
+      <div style={{ padding: '18px 22px' }}>
         {/* Headcount row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Persone nel ruolo:</span>
-          {editHc ? (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input
-                type="number" min={0} value={hcInput}
-                onChange={e => setHcInput(e.target.value)}
-                style={{ width: 80, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 12 }}
-                autoFocus
-              />
-              <button onClick={saveHeadcount} disabled={savingHc} style={{ padding: '4px 10px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                {savingHc ? '…' : 'Salva'}
-              </button>
-              <button onClick={() => { setEditHc(false); setHcInput(String(profile.headcount)); }} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: profile.headcount === 0 ? 'var(--muted)' : 'var(--text)' }}>
-                {profile.headcount === 0 ? 'Non configurato' : profile.headcount}
-              </span>
-              <button onClick={() => setEditHc(true)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px', fontSize: 10, color: 'var(--muted)', cursor: 'pointer' }}>✎ Modifica</button>
-            </div>
+        <div style={{ marginBottom: 16, padding: '14px 16px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Persone nel ruolo</div>
+            {editHc ? (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input type="number" min={0} value={hcInput} onChange={e => setHcInput(e.target.value)}
+                  style={{ width: 90, padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 15, fontWeight: 700 }} autoFocus />
+                <button onClick={saveHeadcount} disabled={savingHc} style={{ padding: '6px 14px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                  {savingHc ? '…' : 'Salva'}
+                </button>
+                <button onClick={() => { setEditHc(false); setHcInput(String(profile.headcount)); }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 7, fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
+              </div>
+            ) : (
+              profile.headcount === 0 ? (
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#F59E0B', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ background: 'rgba(245,158,11,.15)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 6, padding: '2px 10px' }}>⚠ Non configurato</span>
+                </span>
+              ) : (
+                <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)' }}>{profile.headcount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>persone</span></span>
+              )
+            )}
+          </div>
+          {!editHc && (
+            <button onClick={() => setEditHc(true)} style={{ flexShrink: 0, background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.13)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, color: 'var(--text2)', cursor: 'pointer' }}>
+              ✎ {profile.headcount === 0 ? 'Configura' : 'Modifica'}
+            </button>
           )}
         </div>
 
         {/* Coverage bar */}
         {profile.headcount > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
-              <div style={{ height: '100%', width: `${profile.coverage_pct}%`, background: color, borderRadius: 3 }} />
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ height: 7, background: 'var(--border)', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
+              <div style={{ height: '100%', width: `${profile.coverage_pct}%`, background: color, borderRadius: 4, transition: 'width .4s' }} />
             </div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
               {profile.evidences.reduce((s, e) => s + (e.people_count ?? 0), 0)} / {profile.headcount} persone formate
             </div>
           </div>
@@ -492,51 +532,31 @@ function ProfileCard({
 
         {/* Evidences */}
         {profile.evidences.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
             {profile.evidences.map(ev => (
-              <div key={ev.evidence_id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 9 }}>
-                <span style={{ fontSize: 14, flexShrink: 0 }}>{ev.evidence_type === 'certification' ? '🎓' : '📋'}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{ev.title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <span>📅 {fmtDate(ev.date)}</span>
-                    <span>👥 {ev.people_count} persone</span>
-                    {ev.issuer && <span>🏛 {ev.issuer}</span>}
-                    {ev.url && <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>🔗 Link</a>}
-                    {ev.topics?.length ? <span>📌 {ev.topics.slice(0, 3).join(', ')}{ev.topics.length > 3 ? `…+${ev.topics.length - 3}` : ''}</span> : null}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDeleteEvidence(ev)}
-                  disabled={deletingId === ev.evidence_id}
-                  style={{ flexShrink: 0, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', borderRadius: 7, padding: '5px 9px', fontSize: 11, cursor: 'pointer' }}>
-                  {deletingId === ev.evidence_id ? '…' : '✕'}
-                </button>
-              </div>
+              <EvidenceItem key={ev.evidence_id} ev={ev} deleting={deletingId === ev.evidence_id} onDelete={() => handleDeleteEvidence(ev)} />
             ))}
           </div>
         )}
 
         {profile.evidences.length === 0 && (
-          <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }}>Nessuna evidenza registrata per questo profilo.</p>
+          <p style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 14 }}>Nessuna evidenza registrata per questo profilo.</p>
         )}
 
-        {/* Merge toggle — enables PMI mode (⬜ = PMI OFF, this card renders only when PMI is OFF) */}
+        {/* Merge toggle — enables PMI mode */}
         {showMerge && (
           <button
-            type="button"
-            onClick={handleMerge}
-            disabled={mergeSaving}
-            style={{ marginBottom: 14, width: '100%', padding: '10px 14px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: mergeSaving ? 'wait' : 'pointer', textAlign: 'left', opacity: mergeSaving ? 0.7 : 1 }}>
-            <span style={{ fontSize: 16, lineHeight: 1 }}>{mergeSaving ? '⏳' : '⬜'}</span>
-            <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>PMI piccola</span>
+            type="button" onClick={handleMerge} disabled={mergeSaving}
+            style={{ marginBottom: 14, width: '100%', padding: '11px 16px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 10, cursor: mergeSaving ? 'wait' : 'pointer', textAlign: 'left', opacity: mergeSaving ? 0.7 : 1 }}>
+            <span style={{ fontSize: 17, lineHeight: 1 }}>{mergeSaving ? '⏳' : '⬜'}</span>
+            <span style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 600, flex: 1 }}>Stessa persona copre entrambi i ruoli</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>PMI piccola</span>
           </button>
         )}
 
         <button
           onClick={() => setShowAdd(true)}
-          style={{ width: '100%', padding: '9px', background: 'rgba(34,197,94,0.08)', border: '1px dashed rgba(34,197,94,0.4)', color: 'var(--green)', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          style={{ width: '100%', padding: '10px', background: 'rgba(34,197,94,0.08)', border: '1px dashed rgba(34,197,94,0.4)', color: 'var(--green)', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
           + Aggiungi evidenza
         </button>
       </div>
@@ -575,32 +595,32 @@ function SuggestionsPanel({ systemId, profile }: { systemId: string; profile: Li
   }
 
   return (
-    <div style={{ border: '1px solid rgba(99,102,241,0.25)', borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
+    <div style={{ ...ELEVATED, borderRadius: 12, overflow: 'hidden', marginBottom: 10, borderTopColor: 'rgba(99,102,241,.3)' }}>
       <button
         onClick={load}
-        style={{ width: '100%', padding: '12px 18px', background: 'rgba(99,102,241,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#6366F1', fontWeight: 700, fontSize: 13 }}>
+        style={{ width: '100%', padding: '14px 20px', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#818CF8', fontWeight: 700, fontSize: 14 }}>
         <span>💡 Certificazioni consigliate — {profile.label}</span>
-        <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--muted)' }}>{open ? '▲ Chiudi' : '▼ Mostra'}</span>
+        <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>{open ? '▲ Chiudi' : '▼ Mostra'}</span>
       </button>
 
       {open && (
-        <div style={{ padding: '14px 18px' }}>
+        <div style={{ padding: '4px 20px 18px' }}>
           {loading && <div style={{ textAlign: 'center', padding: '20px 0' }}><div className="spin" style={{ margin: '0 auto 8px' }} /><p style={{ fontSize: 13, color: 'var(--muted)' }}>Analisi AI in corso…</p></div>}
           {!loading && suggestions.map((s, i) => (
-            <div key={i} style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <div key={i} style={{ display: 'flex', gap: 16, padding: '13px 0', borderBottom: i < suggestions.length - 1 ? '1px solid rgba(255,255,255,.06)' : 'none' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{s.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>{s.provider} · {s.format}</div>
-                <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>{s.description}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 3 }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>{s.provider} · {s.format}</div>
+                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.55 }}>{s.description}</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: `${LEVEL_COLOR[s.level]}22`, color: LEVEL_COLOR[s.level] }}>{LEVEL_LABEL[s.level]}</span>
-                <a href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query || `${s.name} ${s.provider}`)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>Cerca →</a>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 7, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 5, background: `${LEVEL_COLOR[s.level]}22`, color: LEVEL_COLOR[s.level] }}>{LEVEL_LABEL[s.level]}</span>
+                <a href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query || `${s.name} ${s.provider}`)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>Cerca →</a>
               </div>
             </div>
           ))}
           {!loading && loaded && (
-            <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12, fontStyle: 'italic', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 14, fontStyle: 'italic', lineHeight: 1.6 }}>
               Queste sono certificazioni suggerite a titolo indicativo. La PMI può valutare qualsiasi altro percorso formativo ritenuto idoneo per il proprio contesto e per la compliance Art. 4.
             </p>
           )}
@@ -647,13 +667,6 @@ function LiteracyDetailContent() {
     setGeneratingPdf(false);
   }
 
-  const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-    not_started: { label: 'Non avviato',  color: '#DC2626', bg: 'rgba(220,38,38,0.08)' },
-    in_progress: { label: 'In corso',     color: '#CA8A04', bg: 'rgba(202,138,4,0.08)' },
-    compliant:   { label: 'Conforme',     color: '#16A34A', bg: 'rgba(22,163,74,0.08)' },
-  };
-  const statusCfg = STATUS_MAP[litStatus] ?? STATUS_MAP.not_started;
-
   if (!systemId) {
     return (
       <div className="inv-page">
@@ -668,14 +681,16 @@ function LiteracyDetailContent() {
 
   if (loading) return <div className="db-loading"><div className="spin"></div></div>;
 
-  const toolName   = (system?.tool_name as string) ?? systemId;
-  const vendor     = (system?.vendor as string) ?? '';
-  const category   = (system?.category as string) ?? '';
-  const systemRole = (system?.system_role as string) ?? 'deployer';
-  const roleLabel  = systemRole === 'provider' ? 'Provider' : 'Deployer';
-  const roleColor  = systemRole === 'provider' ? '#6366F1' : '#0EA5E9';
+  const toolName    = (system?.tool_name as string)          ?? systemId;
+  const vendor      = (system?.vendor as string)             ?? '';
+  const category    = (system?.category as string)           ?? '';
+  const systemRole  = (system?.system_role as string)        ?? 'deployer';
+  const riskKey     = (system?.risk_classification as string) ?? 'minimal';
 
-  // PMI mode: one profile has merged_with set (secondary), the other doesn't (primary)
+  const roleCfg   = ROLE_CFG[systemRole]  ?? ROLE_CFG.deployer;
+  const riskCfg   = RISK_CFG[riskKey]     ?? RISK_CFG.minimal;
+  const statusCfg = STATUS_CFG[litStatus] ?? STATUS_CFG.not_started;
+
   const mergedProfile  = profiles.find(p => !!p.merged_with);
   const primaryProfile = profiles.find(p => !p.merged_with);
   const inPMIMode      = !!mergedProfile && !!primaryProfile;
@@ -683,17 +698,29 @@ function LiteracyDetailContent() {
   return (
     <div className="inv-page">
       {/* Back */}
-      <button onClick={() => router.push('/dashboard/literacy')} style={{ background: 'none', border: 'none', color: 'var(--green)', cursor: 'pointer', fontSize: 14, fontWeight: 600, marginBottom: 16, padding: 0 }}>
+      <button onClick={() => router.push('/dashboard/literacy')} style={{ background: 'none', border: 'none', color: 'var(--green)', cursor: 'pointer', fontSize: 14, fontWeight: 600, marginBottom: 18, padding: 0 }}>
         ← AI Literacy Tracker
       </button>
 
       {/* Header */}
-      <div className="inv-header" style={{ marginBottom: 20 }}>
+      <div className="inv-header" style={{ marginBottom: 24 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
             <h1 className="inv-title" style={{ marginBottom: 0 }}>{toolName}</h1>
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: `${roleColor}18`, color: roleColor }}>{roleLabel}</span>
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: statusCfg.bg, color: statusCfg.color }}>{statusCfg.label}</span>
+            <span style={{
+              fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 7,
+              background: roleCfg.bg, color: roleCfg.color,
+              border: `1px solid ${roleCfg.color}33`,
+            }}>{roleCfg.label}</span>
+            <span style={{
+              fontSize: 12, fontWeight: 700, padding: '4px 11px', borderRadius: 7,
+              background: riskCfg.bg, color: riskCfg.color,
+              border: `1px solid ${riskCfg.color}44`,
+            }}>{riskCfg.label}</span>
+            <span style={{
+              fontSize: 12, fontWeight: 700, padding: '4px 11px', borderRadius: 7,
+              background: statusCfg.bg, color: statusCfg.color,
+            }}>{statusCfg.label}</span>
           </div>
           <p className="inv-sub">
             {[vendor, category].filter(Boolean).join(' · ')}
@@ -703,23 +730,48 @@ function LiteracyDetailContent() {
       </div>
 
       {/* Report Art. 4 section */}
-      <div style={{ marginBottom: 24, padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 5 }}>📄 Report Art. 4 — Evidenze AI Literacy</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 500 }}>
-            Questo documento è <strong>fondamentale in caso di ispezione</strong> da parte delle autorità competenti (Art. 4 EU AI Act).
-            Verrà salvato nel <strong>Document Vault</strong> e sarà disponibile per il download e la condivisione con gli ispettori.
+      {(() => {
+        const canGenerate = litStatus === 'compliant';
+        const isDisabled  = !canGenerate || generatingPdf;
+        return (
+          <div style={{ ...ELEVATED, marginBottom: 24, padding: '18px 22px', borderRadius: 12, borderTopColor: canGenerate ? 'rgba(34,197,94,.45)' : 'rgba(255,255,255,.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>
+                  📄 Attestazione di Conformità Art. 4 — AI Literacy
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 520 }}>
+                  Genera e salva nel <strong>Document Vault</strong> l'attestazione formale Art. 4 da esibire
+                  in sede di audit o ispezione da parte delle autorità competenti.
+                </div>
+              </div>
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                <button
+                  onClick={handleGenerateReport}
+                  disabled={isDisabled}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    background: isDisabled ? 'rgba(255,255,255,.04)' : 'var(--green)',
+                    color: isDisabled ? 'var(--muted)' : '#fff',
+                    border: `1px solid ${isDisabled ? 'rgba(255,255,255,.08)' : 'rgba(34,197,94,.4)'}`,
+                    boxShadow: isDisabled ? 'none' : '0 2px 12px rgba(34,197,94,.25)',
+                  }}>
+                  {generatingPdf
+                    ? <><span className="spin" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generazione…</>
+                    : '📄 Genera e salva in Document Vault'}
+                </button>
+                {!canGenerate && (
+                  <div style={{ fontSize: 11, color: '#CA8A04', textAlign: 'right', maxWidth: 260, lineHeight: 1.45 }}>
+                    ⚠ Disponibile solo quando tutti i profili attivi hanno copertura ≥ 80%
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <button
-          onClick={handleGenerateReport}
-          disabled={generatingPdf}
-          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: generatingPdf ? 'var(--surface)' : '#0f172a', color: generatingPdf ? 'var(--muted)' : '#fff', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: generatingPdf ? 'default' : 'pointer' }}>
-          {generatingPdf
-            ? <><span className="spin" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvataggio…</>
-            : '📄 Salva in Document Vault'}
-        </button>
-      </div>
+        );
+      })()}
 
       {/* Profile cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, marginBottom: 28 }}>
@@ -746,10 +798,7 @@ function LiteracyDetailContent() {
       {profiles.length > 0 && (
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Certificazioni consigliate per profilo</div>
-          {inPMIMode && primaryProfile
-            ? <SuggestionsPanel key={primaryProfile.profile_id} systemId={systemId} profile={primaryProfile} />
-            : profiles.map(p => <SuggestionsPanel key={p.profile_id} systemId={systemId} profile={p} />)
-          }
+          {profiles.map(p => <SuggestionsPanel key={p.profile_id} systemId={systemId} profile={p} />)}
         </div>
       )}
     </div>

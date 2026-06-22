@@ -39,6 +39,7 @@ const PLANS: Plan[] = [
       { label: 'AI Inventory',            value: 'Illimitata',                             ok: true },
       { label: 'Gap Analysis',            value: null,                                     ok: true },
       { label: 'FEB (Fine Board Estimation)',   value: null,                                     ok: true },
+      { label: 'NBA (Next Best Action)',  value: null,                                     ok: true },
       { label: 'AI Literacy Tracker',     value: null,                                     ok: true },
       { label: 'Document Vault',          value: 'Tutte le categorie + FRIA',              ok: true },
       { label: 'Audit Trail',             value: null,                                     ok: true },

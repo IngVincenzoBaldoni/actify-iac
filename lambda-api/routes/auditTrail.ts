@@ -1,8 +1,14 @@
 import { createHash } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { extractAuth } from '../middleware/auth';
+import { logEvent } from '../services/auditService';
 import * as dynamo from '../services/dynamoService';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
+
+const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
+const BUCKET = process.env.DOCUMENTS_BUCKET ?? 'actify-saas-documents';
 
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION ?? 'eu-central-1' });
 
@@ -92,13 +98,35 @@ export async function exportAuditTrail(event: APIGatewayProxyEventV2WithJWTAutho
     return { statusCode: 500, body: JSON.stringify({ error: 'pdf_generation_failed' }) };
   }
 
-  const suffix = from && to ? `${from}_${to}` : now.slice(0, 10);
+  const documentId = uuidv4();
+  const suffix     = from && to ? `${from}_${to}` : now.slice(0, 10);
+  const title      = `Audit Trail — ${(company as Record<string, unknown>)?.name ?? 'Azienda'} (${suffix})`;
+  const s3Key      = `documents/${auth.companyId}/audit-trail/${documentId}_v1.pdf`;
+
+  await s3.send(new PutObjectCommand({
+    Bucket:      BUCKET,
+    Key:         s3Key,
+    Body:        Buffer.from(result.pdfBase64, 'base64'),
+    ContentType: 'application/pdf',
+  }));
+
+  await dynamo.putDocument({
+    document_id:   documentId,
+    company_id:    auth.companyId,
+    system_id:     'audit_trail',
+    document_type: 'audit_trail_report',
+    title,
+    status:        'final',
+    s3_key:        s3Key,
+    generated_at:  now,
+    generated_by:  auth.email ?? 'actify',
+    ttl:           null,
+  });
+
+  await logEvent(auth.companyId, 'document_generated', { document_id: documentId, document_type: 'audit_trail_report', title }, auth.email);
+
   return {
     statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      pdfBase64: result.pdfBase64,
-      filename:  `actify-audit-trail-${auth.companyId.slice(0, 8)}-${suffix}.pdf`,
-    }),
+    body: JSON.stringify({ document_id: documentId, title }),
   };
 }

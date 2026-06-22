@@ -29,11 +29,19 @@ import { execSync } from 'child_process';
 const [,, EMAIL, PASSWORD, ...flags] = process.argv;
 
 if (!EMAIL || !PASSWORD) {
-  console.error('\nUso: node scripts/seed-actify.mjs <email> <password> --high=N --medium=N --low=N\n');
-  console.error('  --high=N    sistemi alto rischio (Allegato III / safety component)');
-  console.error('  --medium=N  sistemi medio rischio (GPAI, content generation, automated decision)');
-  console.error('  --low=N     sistemi basso rischio (raccomandazione, supervisione umana)');
-  console.error('\nAlmeno uno tra --high, --medium, --low è obbligatorio.\n');
+  console.error('\nUso: node scripts/seed-actify.mjs <email> <password> [flags]\n');
+  console.error('  Per rischio (qualsiasi ruolo):');
+  console.error('    --high=N    sistemi alto rischio (provider + deployer)');
+  console.error('    --medium=N  sistemi medio rischio (GPAI + content generation)');
+  console.error('    --low=N     sistemi basso rischio');
+  console.error('\n  Per rischio + ruolo specifico:');
+  console.error('    --high-provider=N    solo provider alto rischio');
+  console.error('    --high-deployer=N    solo deployer alto rischio');
+  console.error('    --medium-provider=N  solo provider medio rischio');
+  console.error('    --medium-deployer=N  solo deployer medio rischio');
+  console.error('    --low-provider=N     solo provider basso rischio');
+  console.error('    --low-deployer=N     solo deployer basso rischio');
+  console.error('\n  I flag generici (--high) e specifici (--high-provider) sono combinabili.\n');
   process.exit(1);
 }
 
@@ -45,12 +53,23 @@ function parseFlag(name) {
   return val;
 }
 
-const N_HIGH   = parseFlag('high');
-const N_MEDIUM = parseFlag('medium');
-const N_LOW    = parseFlag('low');
+const N_HIGH            = parseFlag('high');
+const N_HIGH_PROVIDER   = parseFlag('high-provider');
+const N_HIGH_DEPLOYER   = parseFlag('high-deployer');
+const N_MEDIUM          = parseFlag('medium');
+const N_MEDIUM_PROVIDER = parseFlag('medium-provider');
+const N_MEDIUM_DEPLOYER = parseFlag('medium-deployer');
+const N_LOW             = parseFlag('low');
+const N_LOW_PROVIDER    = parseFlag('low-provider');
+const N_LOW_DEPLOYER    = parseFlag('low-deployer');
 
-if (N_HIGH + N_MEDIUM + N_LOW === 0) {
-  console.error('\nErrore: specifica almeno uno tra --high, --medium, --low maggiore di 0.\n');
+const totalRequested =
+  N_HIGH + N_HIGH_PROVIDER + N_HIGH_DEPLOYER +
+  N_MEDIUM + N_MEDIUM_PROVIDER + N_MEDIUM_DEPLOYER +
+  N_LOW + N_LOW_PROVIDER + N_LOW_DEPLOYER;
+
+if (totalRequested === 0) {
+  console.error('\nErrore: specifica almeno un flag (--high, --high-provider, --medium, ...) maggiore di 0.\n');
   process.exit(1);
 }
 
@@ -965,33 +984,78 @@ try {
   process.exit(1);
 }
 
-// ── Step 2: Selezione sistemi ─────────────────────────────────────────────────
+// ── Step 2: Sistemi già censiti in piattaforma ────────────────────────────────
 
-function pick(bank, n, label) {
+console.log('Recupero sistemi già censiti in piattaforma...');
+
+let existingNames = new Set();
+try {
+  const res = await fetch(`${API_BASE}/api/systems`, {
+    headers: { 'Authorization': `Bearer ${idToken}` },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const existing = await res.json();
+  existingNames = new Set(
+    (Array.isArray(existing) ? existing : [])
+      .map(s => String(s.tool_name ?? '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+  console.log(`  Trovati ${existingNames.size} tool già censiti.\n`);
+} catch (err) {
+  console.warn(`  Impossibile recuperare i sistemi esistenti: ${err.message}`);
+  console.warn('  Procedo comunque — i duplicati verranno rifiutati dall\'API (409).\n');
+}
+
+// ── Step 3: Selezione sistemi ─────────────────────────────────────────────────
+
+function pick(bank, n, riskLabel, roleFilter, existing) {
   if (n === 0) return [];
-  if (n > bank.length) {
-    console.warn(`Richiesti ${n} sistemi ${label} ma la banca ne ha solo ${bank.length}. Uso tutti e ${bank.length}.`);
+  const filtered = roleFilter ? bank.filter(s => s.role === roleFilter) : bank;
+  const label = roleFilter ? `${riskLabel} | ${roleFilter}` : riskLabel;
+  const skipped = filtered.filter(s => existing.has(s.tool_name.trim().toLowerCase()));
+  skipped.forEach(s => console.log(`  ⊘  SKIP  ${s.tool_name}  [${label}]  (già censito)`));
+  const available = filtered.filter(s => !existing.has(s.tool_name.trim().toLowerCase()));
+  if (n > available.length) {
+    console.warn(`  Richiesti ${n} tool [${label}] ma solo ${available.length} non ancora censiti nella banca.`);
   }
-  return bank.slice(0, Math.min(n, bank.length));
+  return available.slice(0, Math.min(n, available.length)).map(s => ({ ...s, _risk: riskLabel }));
 }
 
 const toCreate = [
-  ...pick(HIGH_RISK,   N_HIGH,   'HIGH'),
-  ...pick(MEDIUM_RISK, N_MEDIUM, 'MEDIUM'),
-  ...pick(LOW_RISK,    N_LOW,    'LOW'),
+  ...pick(HIGH_RISK,   N_HIGH,            'HIGH',   null,        existingNames),
+  ...pick(HIGH_RISK,   N_HIGH_PROVIDER,   'HIGH',   'provider',  existingNames),
+  ...pick(HIGH_RISK,   N_HIGH_DEPLOYER,   'HIGH',   'deployer',  existingNames),
+  ...pick(MEDIUM_RISK, N_MEDIUM,          'MEDIUM', null,        existingNames),
+  ...pick(MEDIUM_RISK, N_MEDIUM_PROVIDER, 'MEDIUM', 'provider',  existingNames),
+  ...pick(MEDIUM_RISK, N_MEDIUM_DEPLOYER, 'MEDIUM', 'deployer',  existingNames),
+  ...pick(LOW_RISK,    N_LOW,             'LOW',    null,        existingNames),
+  ...pick(LOW_RISK,    N_LOW_PROVIDER,    'LOW',    'provider',  existingNames),
+  ...pick(LOW_RISK,    N_LOW_DEPLOYER,    'LOW',    'deployer',  existingNames),
 ];
 
-console.log(`Gap coverage attesa:`);
-if (N_HIGH   > 0) console.log(`  HIGH   (${Math.min(N_HIGH,   HIGH_RISK.length)})  → Art. 9-23, 26-29, 49  (provider + deployer Annex III)`);
-if (N_MEDIUM > 0) console.log(`  MEDIUM (${Math.min(N_MEDIUM, MEDIUM_RISK.length)})  → Art. 50-55            (GPAI + content generation)`);
-if (N_LOW    > 0) console.log(`  LOW    (${Math.min(N_LOW,    LOW_RISK.length)})  → Art. 4                 (minimal risk)`);
-console.log(`  Totale: ${toCreate.length} sistemi\n`);
+// dedup per sicurezza (se --high e --high-provider si sovrappongono sullo stesso tool)
+const seen = new Set();
+const toCreateDeduped = toCreate.filter(s => {
+  const key = s.tool_name.trim().toLowerCase();
+  if (seen.has(key)) return false;
+  seen.add(key);
+  return true;
+});
 
-// ── Step 3: Creazione sistemi ─────────────────────────────────────────────────
+console.log(`\nDa creare: ${toCreateDeduped.length}\n`);
+
+if (toCreateDeduped.length === 0) {
+  console.log('Tutti i tool selezionati sono già censiti in piattaforma. Nulla da fare.\n');
+  process.exit(0);
+}
+
+// ── Step 4: Creazione sistemi ─────────────────────────────────────────────────
 
 let ok = 0, fail = 0;
 
-for (const sys of toCreate) {
+for (const sys of toCreateDeduped) {
+  const { _risk, ...payload } = sys;
+  const tag = `[${_risk} | ${sys.role}]`;
   try {
     const res = await fetch(`${API_BASE}/api/systems`, {
       method: 'POST',
@@ -999,26 +1063,38 @@ for (const sys of toCreate) {
         'Content-Type':  'application/json',
         'Authorization': `Bearer ${idToken}`,
       },
-      body: JSON.stringify(sys),
+      body: JSON.stringify(payload),
     });
 
     const body = await res.json();
 
     if (res.ok) {
-      console.log(`[${++ok}/${toCreate.length}] OK    ${sys.tool_name} — ID: ${body.system_id ?? '?'}`);
+      console.log(`[${++ok}/${toCreateDeduped.length}] OK    ${sys.tool_name}  ${tag}  — ID: ${body.system_id ?? '?'}`);
+    } else if (res.status === 409) {
+      console.warn(`       SKIP  ${sys.tool_name}  ${tag}  (409 — già censito)`);
     } else {
-      console.error(`[${sys.tool_name}] FAIL  HTTP ${res.status}: ${JSON.stringify(body)}`);
+      console.error(`       FAIL  ${sys.tool_name}  ${tag}  HTTP ${res.status}: ${JSON.stringify(body)}`);
       fail++;
     }
   } catch (err) {
-    console.error(`[${sys.tool_name}] ERROR rete: ${err.message}`);
+    console.error(`       ERROR ${sys.tool_name}  ${tag}  rete: ${err.message}`);
     fail++;
   }
 
   await new Promise(r => setTimeout(r, 300));
 }
 
-console.log(`\n${'─'.repeat(40)}`);
-console.log(`Creati:  ${ok}`);
-if (fail > 0) console.log(`Falliti: ${fail}`);
-console.log(`${'─'.repeat(40)}\n`);
+// ── riepilogo per rischio e ruolo ─────────────────────────────────────────────
+
+const byGroup = {};
+toCreateDeduped.forEach(s => {
+  const key = `${s._risk} | ${s.role}`;
+  byGroup[key] = (byGroup[key] || 0) + 1;
+});
+
+console.log(`\n${'─'.repeat(44)}`);
+console.log(`Creati:   ${ok}`);
+Object.entries(byGroup).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
+if (existingNames.size > 0) console.log(`Già in piattaforma: ${existingNames.size}`);
+if (fail > 0) console.log(`Falliti:  ${fail}`);
+console.log(`${'─'.repeat(44)}\n`);
