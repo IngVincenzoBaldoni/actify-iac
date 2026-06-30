@@ -2,6 +2,7 @@ import {
   CognitoIdentityProviderClient,
   AdminCreateUserCommand,
   AdminDeleteUserCommand,
+  AdminGetUserCommand,
   AdminUpdateUserAttributesCommand,
   AdminSetUserPasswordCommand,
   MessageActionType,
@@ -14,7 +15,7 @@ export async function adminCreateUser(params: {
   email: string;
   password?: string;
   companyId: string;
-  role: 'admin' | 'member' | 'partner';
+  role: 'admin' | 'collaborator' | 'partner';
   suppressEmail?: boolean;
 }) {
   const cmd = new AdminCreateUserCommand({
@@ -26,7 +27,7 @@ export async function adminCreateUser(params: {
       { Name: 'email', Value: params.email },
       { Name: 'email_verified', Value: 'true' },
       { Name: 'custom:company_id', Value: params.companyId },
-      { Name: 'custom:role', Value: params.role },
+      { Name: 'custom:role', Value: params.role === 'collaborator' ? 'member' : params.role },
     ],
   });
   return cognito.send(cmd);
@@ -41,6 +42,19 @@ export async function adminSetPermanentPassword(email: string, password: string)
   }));
 }
 
+export async function adminGetUser(email: string) {
+  try {
+    const r = await cognito.send(new AdminGetUserCommand({
+      UserPoolId: USER_POOL_ID,
+      Username: email,
+    }));
+    return r;
+  } catch (err: unknown) {
+    if ((err as { name?: string }).name === 'UserNotFoundException') return null;
+    throw err;
+  }
+}
+
 export async function adminDeleteUser(email: string) {
   await cognito.send(new AdminDeleteUserCommand({
     UserPoolId: USER_POOL_ID,
@@ -48,11 +62,11 @@ export async function adminDeleteUser(email: string) {
   }));
 }
 
-export async function adminUpdateUserRole(email: string, role: 'admin' | 'member') {
+export async function adminUpdateUserRole(email: string, role: 'admin' | 'collaborator') {
   await cognito.send(new AdminUpdateUserAttributesCommand({
     UserPoolId: USER_POOL_ID,
     Username: email,
-    UserAttributes: [{ Name: 'custom:role', Value: role }],
+    UserAttributes: [{ Name: 'custom:role', Value: role === 'collaborator' ? 'member' : role }],
   }));
 }
 

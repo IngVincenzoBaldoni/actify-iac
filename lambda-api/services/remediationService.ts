@@ -1,6 +1,6 @@
 import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as dynamo from './dynamoService';
 import type { AISystem } from '../types/aiSystem';
@@ -253,14 +253,71 @@ export async function uploadProofToS3(params: {
   return s3Key;
 }
 
+// ─── Migrate legacy PDF doc to DOCX (lazy, on first download) ────────────────
+// Only works for step-functions pipeline docs (s3_key ends with _v1.pdf + has _v1.md)
+
+export async function migrateDocToDocx(doc: Record<string, unknown>): Promise<string> {
+  const pdfKey = doc.s3_key as string;
+
+  // Only migrate step-functions pipeline docs (legacy path uses /{docId}.pdf without _v1)
+  if (!pdfKey.endsWith('_v1.pdf')) throw new Error('legacy_path_no_markdown');
+
+  const docxKey = pdfKey.replace('_v1.pdf', '_v1.docx');
+
+  // If DOCX already exists in S3, just update the record and return
+  try {
+    await s3Client.send(new HeadObjectCommand({ Bucket: DOCUMENTS_BUCKET, Key: docxKey }));
+    await dynamo.updateDocument(doc.document_id as string, { s3_key: docxKey });
+    return docxKey;
+  } catch { /* not found — need to generate */ }
+
+  // Read markdown source (saved by assembleDocument step)
+  const mdKey = pdfKey.replace('_v1.pdf', '_v1.md');
+  const mdResponse = await s3Client.send(new GetObjectCommand({ Bucket: DOCUMENTS_BUCKET, Key: mdKey }));
+  const markdownContent = await (mdResponse.Body as { transformToString(): Promise<string> }).transformToString();
+
+  if (!markdownContent?.trim()) throw new Error('empty_markdown');
+
+  // Extract generationId from filename (documents/cId/sId/TYPE/genId_v1.pdf)
+  const genId = (pdfKey.split('/').pop() ?? '').replace('_v1.pdf', '');
+
+  // Invoke lambda-pdf to render DOCX (same handler path used by Step Functions)
+  const invokeResult = await lambdaClient.send(new InvokeCommand({
+    FunctionName:   LAMBDA_PDF_ARN,
+    InvocationType: 'RequestResponse',
+    Payload:        Buffer.from(JSON.stringify({
+      _docPipelineRenderRequest: {
+        markdownContent,
+        generationId:  genId,
+        companyId:     doc.company_id as string,
+        systemId:      doc.system_id as string,
+        docType:       doc.document_type as string,
+        schemaVersion: '2.0.0',
+        kbVersion:     'migrated',
+        isDraft:       doc.status === 'draft',
+      },
+    })),
+  }));
+
+  if (invokeResult.FunctionError) {
+    const errBody = invokeResult.Payload ? JSON.parse(Buffer.from(invokeResult.Payload).toString()) : {};
+    throw new Error(`lambda-pdf error: ${errBody.errorMessage ?? 'unknown'}`);
+  }
+
+  // lambda-pdf saved the DOCX to docxKey — update DynamoDB record
+  await dynamo.updateDocument(doc.document_id as string, { s3_key: docxKey });
+  return docxKey;
+}
+
 // ─── Generate pre-signed URL for frontend preview ────────────────────────────
 
-export async function generatePresignedUrl(s3Key: string, expiresIn = 3600): Promise<string> {
-  return getSignedUrl(
-    s3Client,
-    new GetObjectCommand({ Bucket: DOCUMENTS_BUCKET, Key: s3Key }),
-    { expiresIn },
-  );
+export async function generatePresignedUrl(s3Key: string, expiresIn = 3600, filename?: string): Promise<string> {
+  const cmd = new GetObjectCommand({
+    Bucket: DOCUMENTS_BUCKET,
+    Key: s3Key,
+    ...(filename ? { ResponseContentDisposition: `attachment; filename="${filename}"` } : {}),
+  });
+  return getSignedUrl(s3Client, cmd, { expiresIn });
 }
 
 // ─── Core async generation function ──────────────────────────────────────────

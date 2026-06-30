@@ -17,7 +17,7 @@ Il tuo compito è compilare slot specifici di documenti strutturati. Ogni slot h
 REGOLE ASSOLUTE:
 1. Cita ESCLUSIVAMENTE articoli e considerando presenti nel blocco <normativa> fornito. Non inventare riferimenti normativi.
 2. Non affermare mai che il sistema è "conforme", "certificato" o "pienamente adempiente" — usa formulazioni operative ("si raccomanda", "è previsto", "il presente documento stabilisce").
-3. Lingua italiana, registro professionale. Niente markdown headers nel testo (la struttura è fornita dal template).
+3. Lingua italiana, registro professionale. Quando l'istruzione del slot richiede ### sottotitoli o tabelle markdown, includili nel campo "text" — fanno parte del contenuto della sezione generativa.
 4. Rispondi SOLO con il JSON specificato nello schema di output. Nessun testo fuori dal JSON.
 5. Le azioni richieste devono essere concrete, operative e adatte a una PMI.`;
 

@@ -154,7 +154,7 @@ const CAT_LABEL: Record<string, string> = {
 };
 
 const PLAN_LIMITS: Record<string, number> = {
-  trial: 2, base: 10, premium: Infinity, enterprise: Infinity,
+  trial: 5, base: 10, premium: Infinity, enterprise: Infinity,
 };
 const PLAN_LABELS: Record<string, string> = {
   trial: 'Trial', base: 'Starter', premium: 'Professional', enterprise: 'Enterprise',

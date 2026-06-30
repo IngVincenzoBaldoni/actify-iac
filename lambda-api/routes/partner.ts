@@ -4,10 +4,212 @@ import { parseBody } from '../middleware/validator';
 import { extractAuth, requirePartner } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
 import * as cognitoSvc from '../services/cognitoService';
-import { sendAssessmentEmail, sendReferralInviteEmail, sendOnboardingInviteEmail } from '../services/partnerEmailService';
+import {
+  sendAssessmentEmail, sendReferralInviteEmail, sendOnboardingInviteEmail,
+  sendPartnerRequestNotification, sendPartnerRequestConfirmation, sendPartnerRegistrationLink,
+} from '../services/partnerEmailService';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyEventV2 } from 'aws-lambda';
 
-// ─── Partner Registration (public) ───────────────────────────────────────────
+const BASE_URL = 'https://official-actify.com';
+
+// ─── POST /api/partner/request-access (public — gated contact form) ───────────
+
+const requestAccessSchema = z.object({
+  ragione_sociale: z.string().min(1).max(200),
+  tipo_studio:     z.string().min(1),
+  n_clienti:       z.number().int().min(1),
+  email:           z.string().email(),
+  messaggio:       z.string().max(1000).optional(),
+});
+
+export async function requestPartnerAccess(event: APIGatewayProxyEventV2) {
+  const body = parseBody(event.body, requestAccessSchema);
+  const rid         = uuidv4();
+  const approveKey  = uuidv4();
+  const now         = new Date().toISOString();
+
+  await dynamo.putPartner({
+    partner_id:           `REQUEST_${rid}`,
+    email:                body.email,
+    ragione_sociale:      body.ragione_sociale,
+    tipo_studio:          body.tipo_studio,
+    n_clienti:            body.n_clienti,
+    messaggio:            body.messaggio ?? '',
+    status:               'pending_review',
+    admin_approve_token:  approveKey,
+    registration_token:   null,
+    token_expires_at:     null,
+    created_at:           now,
+    updated_at:           now,
+  });
+
+  await Promise.all([
+    sendPartnerRequestNotification({
+      rid,
+      approveKey,
+      email:          body.email,
+      ragioneSociale: body.ragione_sociale,
+      tipoStudio:     body.tipo_studio,
+      nClienti:       body.n_clienti,
+      messaggio:      body.messaggio,
+    }),
+    sendPartnerRequestConfirmation({ to: body.email, ragioneSociale: body.ragione_sociale }),
+  ]);
+
+  return { statusCode: 200, body: JSON.stringify({ message: 'Richiesta inviata. Ti contatteremo entro 1–2 giorni lavorativi.' }) };
+}
+
+// ─── POST /api/partner/approve-request (public, secret-gated — called by admin frontend) ───
+
+const approveRequestSchema = z.object({
+  rid: z.string().uuid(),
+  key: z.string().uuid(),
+});
+
+export async function approvePartnerRequest(event: APIGatewayProxyEventV2) {
+  const body = parseBody(event.body, approveRequestSchema);
+
+  const record = await dynamo.getPartner(`REQUEST_${body.rid}`);
+  if (!record) {
+    return { statusCode: 404, body: JSON.stringify({ error: 'Richiesta non trovata.' }) };
+  }
+  if (record.status !== 'pending_review') {
+    return { statusCode: 409, body: JSON.stringify({ error: 'Questa richiesta è già stata elaborata.' }) };
+  }
+  if (record.admin_approve_token !== body.key) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Token non valido.' }) };
+  }
+
+  const registrationToken = uuidv4();
+  const tokenExpiresAt    = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const now               = new Date().toISOString();
+
+  await dynamo.updatePartner(`REQUEST_${body.rid}`, {
+    status:             'approved',
+    registration_token: registrationToken,
+    token_expires_at:   tokenExpiresAt,
+    updated_at:         now,
+  });
+
+  const registrationUrl = `${BASE_URL}/partner-accept?t=${registrationToken}&rid=${body.rid}`;
+  await sendPartnerRegistrationLink({
+    to:              record.email as string,
+    ragioneSociale:  record.ragione_sociale as string,
+    registrationUrl,
+  });
+
+  return { statusCode: 200, body: JSON.stringify({ message: 'Partner approvato. Link di registrazione inviato.' }) };
+}
+
+// ─── GET /api/partner/registration-info?t=<token>&rid=<rid> (public) ──────────
+
+export async function getPartnerRegistrationInfo(event: APIGatewayProxyEventV2) {
+  const params = (event.queryStringParameters ?? {}) as Record<string, string>;
+  const { t, rid } = params;
+  if (!t || !rid) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Parametri mancanti.' }) };
+  }
+
+  const record = await dynamo.getPartner(`REQUEST_${rid}`);
+  if (!record || record.status !== 'approved') {
+    return { statusCode: 404, body: JSON.stringify({ error: 'Link non valido.' }) };
+  }
+  if (record.registration_token !== t) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Token non valido.' }) };
+  }
+  if (new Date(record.token_expires_at as string) < new Date()) {
+    return { statusCode: 410, body: JSON.stringify({ error: 'Link scaduto. Contatta Actify per ricevere un nuovo link.' }) };
+  }
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      email:           record.email,
+      ragione_sociale: record.ragione_sociale,
+      tipo_studio:     record.tipo_studio,
+      n_clienti:       record.n_clienti,
+    }),
+  };
+}
+
+// ─── POST /api/partner/complete-registration (public) ─────────────────────────
+
+const completeRegSchema = z.object({
+  rid:      z.string().uuid(),
+  token:    z.string().uuid(),
+  password: z.string().min(8),
+});
+
+export async function completePartnerRegistration(event: APIGatewayProxyEventV2) {
+  const body = parseBody(event.body, completeRegSchema);
+  const now  = new Date().toISOString();
+
+  const record = await dynamo.getPartner(`REQUEST_${body.rid}`);
+  if (!record || record.status !== 'approved') {
+    return { statusCode: 404, body: JSON.stringify({ error: 'Link non valido o già utilizzato.' }) };
+  }
+  if (record.registration_token !== body.token) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Token non valido.' }) };
+  }
+  if (new Date(record.token_expires_at as string) < new Date()) {
+    return { statusCode: 410, body: JSON.stringify({ error: 'Link scaduto. Contatta Actify per ricevere un nuovo link.' }) };
+  }
+
+  const email = record.email as string;
+
+  const existingUser = await cognitoSvc.adminGetUser(email);
+  if (existingUser) {
+    return { statusCode: 409, body: JSON.stringify({ error: 'Questo indirizzo email è già registrato su Actify.' }) };
+  }
+
+  const partnerId = uuidv4();
+  let userId: string;
+  try {
+    const result = await cognitoSvc.adminCreateUser({
+      email,
+      companyId:     partnerId,
+      role:          'partner',
+      suppressEmail: true,
+    });
+    await cognitoSvc.adminSetPermanentPassword(email, body.password);
+    userId = result.User?.Attributes?.find(a => a.Name === 'sub')?.Value ?? email;
+  } catch (err: unknown) {
+    const cogErr = err as { name?: string };
+    if (cogErr.name === 'UsernameExistsException') {
+      return { statusCode: 409, body: JSON.stringify({ error: 'Email già registrata su Actify.' }) };
+    }
+    if (cogErr.name === 'InvalidPasswordException') {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Password non valida. Usa almeno 8 caratteri con maiuscole, minuscole e numeri.' }) };
+    }
+    throw err;
+  }
+
+  const referralCode = partnerId.replace(/-/g, '').substring(0, 8).toUpperCase();
+
+  await Promise.all([
+    dynamo.putPartner({
+      partner_id:       partnerId,
+      email,
+      ragione_sociale:  record.ragione_sociale,
+      tipo_studio:      record.tipo_studio,
+      n_clienti:        record.n_clienti,
+      status:           'approved',
+      user_id:          userId,
+      referral_code:    referralCode,
+      referred_pmi_ids: [],
+      created_at:       now,
+      updated_at:       now,
+    }),
+    dynamo.updatePartner(`REQUEST_${body.rid}`, { status: 'registered', updated_at: now }),
+  ]);
+
+  return {
+    statusCode: 201,
+    body: JSON.stringify({ partner_id: partnerId, message: 'Account partner creato. Accedi con le tue credenziali.' }),
+  };
+}
+
+// ─── Partner Registration (legacy — direct, no longer linked from UI) ─────────
 
 const requestSchema = z.object({
   email:           z.string().email(),

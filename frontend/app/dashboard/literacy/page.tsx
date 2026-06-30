@@ -38,14 +38,21 @@ function LiteracyContent() {
   const router = useRouter();
   const [systems, setSystems] = useState<LiteracySystemSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isTrialUser, setIsTrialUser] = useState(false);
   const [generatingConsolidated, setGeneratingConsolidated] = useState(false);
   const [consolidatedError, setConsolidatedError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.literacy.listSystems()
-      .then(r => setSystems((r as { systems: LiteracySystemSummary[] }).systems))
-      .catch(() => {/* silent */})
-      .finally(() => setLoading(false));
+    Promise.allSettled([
+      api.literacy.listSystems(),
+      api.company.get(),
+    ]).then(([litRes, companyRes]) => {
+      if (litRes.status === 'fulfilled') setSystems((litRes.value as { systems: LiteracySystemSummary[] }).systems);
+      if (companyRes.status === 'fulfilled') {
+        const tier = (companyRes.value as Record<string, unknown>).subscription_tier as string ?? '';
+        setIsTrialUser(!['base', 'premium', 'enterprise'].includes(tier));
+      }
+    }).finally(() => setLoading(false));
   }, []);
 
   const compliant   = systems.filter(s => s.literacy_status === 'compliant').length;
@@ -64,6 +71,26 @@ function LiteracyContent() {
     } finally {
       setGeneratingConsolidated(false);
     }
+  }
+
+  if (!loading && isTrialUser) {
+    return (
+      <div className="inv-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center', maxWidth: 480, padding: '48px 32px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🎓</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text1)', marginBottom: 8 }}>AI Literacy Tracker</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
+            Il tracciamento della formazione AI (obbligo Art. 4 EU AI Act) e la gestione dei profili di competenza sono disponibili dal piano <strong style={{ color: 'var(--text1)' }}>Starter</strong> in su.
+          </p>
+          <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.6, marginBottom: 28 }}>
+            Con il piano Trial hai già identificato i tuoi gap con la Gap Analysis. Passa a Starter per iniziare a chiuderli con la formazione certificata.
+          </p>
+          <a href="/plan" style={{ display: 'inline-block', padding: '12px 28px', background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', fontWeight: 700, borderRadius: 10, textDecoration: 'none', fontSize: 15 }}>
+            Passa a Starter →
+          </a>
+        </div>
+      </div>
+    );
   }
 
   return (

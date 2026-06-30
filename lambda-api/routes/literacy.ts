@@ -83,6 +83,136 @@ function calcCoverage(headcount: number, evidences: Record<string, unknown>[]): 
   return Math.min(Math.round((covered / headcount) * 100), 100);
 }
 
+// ─── Exposure sync helper ──────────────────────────────────────────────────────
+// Called after any literacy write. Recomputes effective exposure (Art. 4 zeroed
+// when literacy is compliant) using the same deduplication as computeSanctions,
+// then updates the system record if the stored value differs.
+function normalizeArt(article: string): string {
+  const m = article.match(/art(?:icolo|\.?)[\s.]*(\d+)/i);
+  return m ? `Art. ${m[1]}` : article.trim().toLowerCase();
+}
+
+async function syncSystemExposure(companyId: string, systemId: string): Promise<void> {
+  const [allRecords, latestCheck, sys] = await Promise.all([
+    dynamo.listLiteracyRecords(companyId),
+    dynamo.getLatestComplianceCheck(companyId, systemId),
+    dynamo.getSystem(companyId, systemId),
+  ]);
+  if (!latestCheck?.result || !sys) {
+    console.log(`[syncExposure] ${systemId}: no check or system, skip`);
+    return;
+  }
+
+  const sysProfiles = allRecords.filter(r => (r.record_id as string).startsWith(`PROFILE#${systemId}#`));
+  const primaryProfiles = sysProfiles.filter(p => !p.merged_with);
+  const profileCoverages = primaryProfiles.map(p => {
+    const pid = p.profile_id as string;
+    const pt  = (p.record_id as string).split('#')[2];
+    const primaryEv   = allRecords.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${pid}#`));
+    const secondaries = sysProfiles.filter(s => (s.merged_with as string | null) === pt);
+    const secondaryEv = secondaries.flatMap(s =>
+      allRecords.filter(r => (r.record_id as string).startsWith(`EVIDENCE#${s.profile_id as string}#`))
+    );
+    const hc = (p.headcount as number) ?? 0;
+    return { headcount: hc, coverage_pct: calcCoverage(hc, [...primaryEv, ...secondaryEv]), merged_with: null as string | null };
+  });
+  const litCompliant = literacyStatus(profileCoverages) === 'compliant';
+  console.log(`[syncExposure] ${systemId}: litCompliant=${litCompliant} profiles=${primaryProfiles.length}`);
+
+  type Gap = { article: string; status?: string; estimated_sanction_max?: number; estimated_sanction_min?: number };
+  const result = latestCheck.result as { compliance_gaps?: Gap[] };
+  const freshGaps = result.compliance_gaps ?? [];
+  const rawCl = ((sys as Record<string, unknown>).compliance_checklist ?? {}) as Record<string, { status?: string } | string>;
+
+  // Apply literacy + checklist overrides
+  const effectiveGaps = freshGaps.map(g => {
+    const entry = rawCl[g.article];
+    const st = typeof entry === 'string' ? entry : (entry as { status?: string })?.status;
+    if (st === 'present' || (litCompliant && /^Art\.?\s*4$/i.test(g.article))) {
+      return { ...g, estimated_sanction_max: 0, estimated_sanction_min: 0, status: 'compliant' as const };
+    }
+    return g;
+  });
+
+  // Deduplicate per normalized article key — mirrors computeSanctions.byArticle
+  const byArticle = new Map<string, { min: number; max: number }>();
+  for (const g of effectiveGaps) {
+    if (g.status === 'compliant') continue;
+    const key = normalizeArt(g.article);
+    const existing = byArticle.get(key);
+    if (!existing || (g.estimated_sanction_max ?? 0) > existing.max) {
+      byArticle.set(key, { min: g.estimated_sanction_min ?? 0, max: g.estimated_sanction_max ?? 0 });
+    }
+  }
+  const newMax = Array.from(byArticle.values()).reduce((s, v) => s + v.max, 0);
+  const newMin = Array.from(byArticle.values()).reduce((s, v) => s + v.min, 0);
+  const storedMax = ((sys as Record<string, unknown>).last_exposure_max as number) ?? 0;
+
+  console.log(`[syncExposure] ${systemId}: storedMax=${storedMax} newMax=${newMax} gaps=${freshGaps.length}`);
+
+  // Sync compliance_checklist so that the fines/inventory pages (which read
+  // last_article_sanctions + compliance_checklist) correctly exclude Art. 4.
+  type ClEntry = { status?: string; addressed_at?: string; evidence_note?: string } | string;
+  const updatedCl: Record<string, ClEntry> = { ...(rawCl as Record<string, ClEntry>) };
+  const now = new Date().toISOString();
+  if (litCompliant) {
+    const existing = rawCl['Art. 4'] as ClEntry | undefined;
+    const existingSt = typeof existing === 'string' ? existing : existing?.status;
+    // Set as present only if not already manually present (or if it was set by us before)
+    if (existingSt !== 'present' || (typeof existing === 'object' && existing?.evidence_note === 'literacy')) {
+      updatedCl['Art. 4'] = { status: 'present', addressed_at: now, evidence_note: 'literacy' };
+    }
+  } else {
+    // Revert only if it was set by literacy — don't touch manual overrides
+    const existing = rawCl['Art. 4'] as ClEntry | undefined;
+    if (existing && typeof existing === 'object' && existing?.evidence_note === 'literacy') {
+      delete updatedCl['Art. 4'];
+    }
+  }
+  const clChanged = JSON.stringify(updatedCl) !== JSON.stringify(rawCl);
+
+  const exposureChanged = Math.abs(storedMax - newMax) > 1;
+  if (exposureChanged || clChanged) {
+    const updates: Record<string, unknown> = { updated_at: now };
+    if (exposureChanged) {
+      updates.last_exposure_max = newMax;
+      updates.last_exposure_min = newMin;
+      updates.compliance_status = newMax === 0 ? 'compliant' : 'gap_found';
+    }
+    if (clChanged) {
+      updates.compliance_checklist = updatedCl;
+    }
+    await dynamo.updateSystem(companyId, systemId, updates);
+    console.log(`[syncExposure] ${systemId}: updated — exposure=${exposureChanged} cl=${clChanged} litCompliant=${litCompliant}`);
+  }
+
+  // When checklist changes, append a new SanctionSnapshot so the chart tooltip
+  // (which reads articles_in_gap from the timeline) reflects the updated state.
+  if (clChanged) {
+    try {
+      const lastSanctionsStr = ((sys as Record<string, unknown>).last_article_sanctions as string | undefined);
+      if (lastSanctionsStr) {
+        const lastSanctions = JSON.parse(lastSanctionsStr) as Record<string, { min: number; max: number }>;
+        const newArticlesInGap: Record<string, { min: number; max: number }> = {};
+        for (const [art, val] of Object.entries(lastSanctions)) {
+          const entry = updatedCl[art] as { status?: string } | string | undefined;
+          const st = typeof entry === 'string' ? entry : entry?.status;
+          if (st !== 'present') newArticlesInGap[art] = val;
+        }
+        await dynamo.appendSanctionSnapshot(companyId, systemId, {
+          at: now,
+          min: newMin,
+          max: newMax,
+          source: 'checklist',
+          articles_in_gap: newArticlesInGap,
+        });
+      }
+    } catch (err) {
+      console.error('[syncExposure] appendSanctionSnapshot error', err);
+    }
+  }
+}
+
 function literacyStatus(
   profiles: Array<{ headcount: number; coverage_pct: number; merged_with: string | null }>
 ): 'not_started' | 'in_progress' | 'compliant' {
@@ -236,6 +366,12 @@ export async function getSystemProfiles(event: APIGatewayProxyEventV2WithJWTAuth
     merged_with:  p.merged_with,
   })));
 
+  // Side-effect: whenever the literacy tracker is viewed and literacy is compliant,
+  // ensure last_exposure_max on the system record reflects Art. 4 being resolved.
+  if (allStatus === 'compliant') {
+    syncSystemExposure(auth.companyId, systemId).catch(err => console.error('[syncExposure] getSystemProfiles', err));
+  }
+
   return { statusCode: 200, body: JSON.stringify({ system: sys, profiles: finalProfiles, literacy_status: allStatus }) };
 }
 
@@ -263,6 +399,7 @@ export async function updateProfile(event: APIGatewayProxyEventV2WithJWTAuthoriz
 
   await dynamo.updateLiteracyRecord(auth.companyId, profileRec.record_id as string, updates);
   await logEvent(auth.companyId, 'literacy_profile_updated', { profile_id: profileId, system_id: systemId, ...updates }, auth.email);
+  await syncSystemExposure(auth.companyId, systemId).catch(err => console.error('[syncExposure] updateProfile error', err));
 
   return { statusCode: 200, body: JSON.stringify({ message: 'Profilo aggiornato.' }) };
 }
@@ -308,6 +445,8 @@ export async function addEvidence(event: APIGatewayProxyEventV2WithJWTAuthorizer
     evidence_type: body.evidence_type, title: body.title, people_count: body.people_count,
   }, auth.email);
 
+  await syncSystemExposure(auth.companyId, systemId).catch(err => console.error('[syncExposure] addEvidence error', err));
+
   return { statusCode: 201, body: JSON.stringify({ evidence_id: evidenceId }) };
 }
 
@@ -320,7 +459,12 @@ export async function deleteEvidence(event: APIGatewayProxyEventV2WithJWTAuthori
   const evidenceId = event.pathParameters?.evidenceId ?? s[7];
   if (!profileId || !evidenceId) return { statusCode: 400, body: JSON.stringify({ error: 'profileId and evidenceId required' }) };
 
+  // Derive systemId from the evidence record (needed for exposure re-sync)
+  const s2   = seg(event);
+  const sysId = event.pathParameters?.systemId ?? s2[3];
+
   await dynamo.deleteLiteracyRecord(auth.companyId, evidenceRecordId(profileId, evidenceId));
+  if (sysId) await syncSystemExposure(auth.companyId, sysId).catch(err => console.error('[syncExposure] deleteEvidence error', err));
   return { statusCode: 200, body: JSON.stringify({ message: 'Evidenza eliminata.' }) };
 }
 

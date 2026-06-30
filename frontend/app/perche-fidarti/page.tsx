@@ -1,4 +1,16 @@
+import type { Metadata } from 'next';
 import { badgeSvg, markSvg } from '@/lib/branding';
+
+export const metadata: Metadata = {
+  title: 'Perché Fidarsi di Actify — Compliance Pubblica e Trasparenza',
+  description: "Actify usa il proprio tool su sé stessa: 0 violazioni AI Act, 11 articoli verificati, 100% score conformità. Registro AI pubblico, dichiarazione di conformità Reg. UE 2024/1689 e informativa Art. 50.",
+  alternates: { canonical: '/perche-fidarti' },
+  openGraph: {
+    title: 'Perché Fidarsi di Actify — Siamo i Nostri Primi Clienti',
+    description: 'La nostra conformità è pubblica, documentata e verificabile. Registro AI, dichiarazione di conformità e informativa Art. 50 accessibili a chiunque.',
+    url: 'https://official-actify.com/perche-fidarti',
+  },
+};
 
 export default function PercheFildartiPage() {
   return (

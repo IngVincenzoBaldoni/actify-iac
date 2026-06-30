@@ -4,7 +4,7 @@ import type {
   APIGatewayProxyResultV2,
 } from 'aws-lambda';
 
-import { register, invite } from './routes/auth';
+import { register, invite, validateInvite, acceptInvite } from './routes/auth';
 import { getCompany, updateCompany, setupWizard, getUsers, deleteUser } from './routes/company';
 import { listSystems, createSystem, getSystem, updateSystem, deleteSystem } from './routes/systems';
 import {
@@ -29,6 +29,8 @@ import {
   listPMI, addPMI, importPMICSV, getPMI, deletePMI, updatePMIStatus,
   sendAssessment, sendReferralEmail, sendOnboardingEmail, generatePMIPdf,
   getAssessmentForm, submitAssessmentForm,
+  requestPartnerAccess, approvePartnerRequest,
+  getPartnerRegistrationInfo, completePartnerRegistration,
 } from './routes/partner';
 import {
   getInventoryOverview, getPMIInventory,
@@ -94,6 +96,36 @@ export const handler = async (
 
     if (method === 'POST' && path === '/api/partner/request') {
       const r = await registerPartner(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
+    if (method === 'POST' && path === '/api/partner/request-access') {
+      const r = await requestPartnerAccess(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
+    if (method === 'POST' && path === '/api/partner/approve-request') {
+      const r = await approvePartnerRequest(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
+    if (method === 'GET' && path === '/api/partner/registration-info') {
+      const r = await getPartnerRegistrationInfo(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
+    if (method === 'POST' && path === '/api/partner/complete-registration') {
+      const r = await completePartnerRegistration(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
+    if (method === 'GET' && path === '/api/auth/invite/validate') {
+      const r = await validateInvite(ev as unknown as APIGatewayProxyEventV2);
+      return { ...r, headers: CORS };
+    }
+
+    if (method === 'POST' && path === '/api/auth/invite/accept') {
+      const r = await acceptInvite(ev as unknown as APIGatewayProxyEventV2);
       return { ...r, headers: CORS };
     }
 

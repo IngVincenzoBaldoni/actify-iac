@@ -144,7 +144,7 @@ export default function RevenueSharePage() {
           label="ARR potenziale"
           value={fmtInt(totalARR)}
           sub="Se tutte le PMI rinnovano"
-          accent="#6C47FF"
+          accent="#0ea5e9"
         />
         <KpiCard
           label="Prossima PMI"
@@ -313,7 +313,7 @@ export default function RevenueSharePage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ARR Potenziale</div>
-                <div style={{ fontWeight: 800, fontSize: 20, color: '#6C47FF' }}>{fmtInt(totalARR)}/anno</div>
+                <div style={{ fontWeight: 800, fontSize: 20, color: '#0ea5e9' }}>{fmtInt(totalARR)}/anno</div>
               </div>
             </div>
           </>

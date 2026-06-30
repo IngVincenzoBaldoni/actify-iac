@@ -6,6 +6,7 @@ import { configureAmplify } from '@/lib/amplify';
 import { getAuthClaims, doSignOut } from '@/lib/auth';
 import { markSvg } from '@/lib/branding';
 import { api } from '@/lib/api';
+import type { Partner } from '@/lib/types';
 
 configureAmplify();
 
@@ -18,11 +19,11 @@ interface PMISummary {
 export default function PartnerLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [email, setEmail]         = useState('');
-  const [pmiList, setPmiList]     = useState<PMISummary[]>([]);
+  const [email, setEmail]             = useState('');
+  const [studioName, setStudioName]   = useState('');
+  const [pmiList, setPmiList]         = useState<PMISummary[]>([]);
   const [activePmiId, setActivePmiId] = useState('');
 
-  // Track active PMI from URL search params — safe client-side read
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -37,6 +38,11 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
         return;
       }
       setEmail(claims.email);
+
+      api.partner.getMe().then(p => {
+        const partner = p as unknown as Partner;
+        if (partner?.ragione_sociale) setStudioName(partner.ragione_sociale);
+      }).catch(() => {});
 
       api.partnerInventory.getOverview()
         .then(data => {
@@ -62,30 +68,28 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
   return (
     <div className="partner-layout">
       <aside className="partner-sidebar">
+
+        {/* Logo */}
         <div className="partner-sidebar-logo">
-          <span dangerouslySetInnerHTML={{ __html: markSvg(28) }} />
+          <span dangerouslySetInnerHTML={{ __html: markSvg(28, 'green') }} />
           <span className="partner-sidebar-logo-name">Actify Partner</span>
         </div>
 
         {/* Discovery Dashboard */}
         <a href="/partner" className={`partner-nav-item${pathname === '/partner' ? ' active' : ''}`}>
-          <span>🏠</span>Discovery Dashboard
+          <NavIcon type="home" />
+          Discovery Dashboard
         </a>
 
         {/* AI Inventory */}
         <button
-          className="partner-nav-item"
-          style={{
-            background: inventoryActive ? 'rgba(108,71,255,.12)' : undefined,
-            color: inventoryActive ? 'var(--text)' : undefined,
-            fontWeight: inventoryActive ? 600 : undefined,
-          }}
+          className={`partner-nav-item${inventoryActive ? ' active' : ''}`}
           onClick={() => { setActivePmiId(''); router.push('/partner/inventory'); }}
         >
-          <span>📊</span>AI Inventory
+          <NavIcon type="inventory" />
+          AI Inventory
         </button>
 
-        {/* PMI sub-items — client-side via router.push */}
         {pmiList.length > 0 && (
           <div className="pnav-sub">
             {pmiList.map(pmi => (
@@ -95,34 +99,45 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
                 onClick={() => navToPMI(pmi.pmi_id)}
                 title={pmi.company_name}
               >
-                <span style={{ flexShrink: 0 }}>🏢</span>
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" style={{ flexShrink: 0, opacity: .4, borderRadius: 2 }}>
+                  <rect width="8" height="8" rx="1.5"/>
+                </svg>
                 {pmi.company_name}
               </button>
             ))}
           </div>
         )}
 
-        {/* AI Act Reader */}
-        <a href="/partner/ai-act" className={`partner-nav-item${pathname === '/partner/ai-act' ? ' active' : ''}`}>
-          <span>⚖️</span>Testo AI Act
+        {/* Testo AI Act */}
+        <a href="/partner/ai-act" className={`partner-nav-item${pathname.startsWith('/partner/ai-act') ? ' active' : ''}`}>
+          <NavIcon type="law" />
+          Testo AI Act
         </a>
 
         {/* Revenue Share */}
-        <a href="/partner/revenue" className={`partner-nav-item${pathname === '/partner/revenue' ? ' active' : ''}`}>
-          <span>💰</span>Revenue Share
+        <a href="/partner/revenue" className={`partner-nav-item${pathname.startsWith('/partner/revenue') ? ' active' : ''}`}>
+          <NavIcon type="revenue" />
+          Revenue Share
         </a>
 
         {/* Impostazioni */}
-        <a href="/partner/settings" className={`partner-nav-item${pathname === '/partner/settings' ? ' active' : ''}`}>
-          <span>⚙️</span>Impostazioni
+        <a href="/partner/settings" className={`partner-nav-item${pathname.startsWith('/partner/settings') ? ' active' : ''}`}>
+          <NavIcon type="settings" />
+          Impostazioni
         </a>
 
-        <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, wordBreak: 'break-all' }}>{email}</div>
-          <button className="partner-nav-item" onClick={handleSignOut} style={{ color: 'var(--red)', padding: '8px 0' }}>
+        {/* Footer */}
+        <div className="partner-sidebar-footer">
+          {studioName && <div className="partner-sidebar-footer-name">{studioName}</div>}
+          <div className="partner-sidebar-footer-email">{email}</div>
+          <button
+            onClick={handleSignOut}
+            style={{ fontSize: 12, color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+          >
             Esci
           </button>
         </div>
+
       </aside>
 
       <main className="partner-main">
@@ -130,4 +145,44 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
       </main>
     </div>
   );
+}
+
+// ─── Nav icons ────────────────────────────────────────────────────────────────
+
+function NavIcon({ type }: { type: string }) {
+  const base = { width: 15, height: 15, flexShrink: 0 } as const;
+  if (type === 'home') return (
+    <svg {...base} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 7.5L8 2l6 5.5V14a.5.5 0 01-.5.5h-4V10H6.5v4.5h-4A.5.5 0 012 14V7.5z"/>
+    </svg>
+  );
+  if (type === 'inventory') return (
+    <svg {...base} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="1.5" width="5" height="5" rx="1"/>
+      <rect x="9.5" y="1.5" width="5" height="5" rx="1"/>
+      <rect x="1.5" y="9.5" width="5" height="5" rx="1"/>
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1"/>
+    </svg>
+  );
+  if (type === 'law') return (
+    <svg {...base} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v12"/>
+      <path d="M3 5l5-3 5 3"/>
+      <path d="M1.5 10.5l3-5M14.5 10.5l-3-5"/>
+      <path d="M.5 12h5M10.5 12h5"/>
+    </svg>
+  );
+  if (type === 'revenue') return (
+    <svg {...base} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1,12 4.5,7.5 7.5,9.5 11,4.5 14.5,7"/>
+      <line x1="1" y1="14.5" x2="15" y2="14.5"/>
+    </svg>
+  );
+  if (type === 'settings') return (
+    <svg {...base} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="2.5"/>
+      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4"/>
+    </svg>
+  );
+  return null;
 }

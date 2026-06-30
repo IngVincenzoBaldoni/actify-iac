@@ -30,7 +30,10 @@ const PLAN_META: Record<string, {
     gradient: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #64748b 100%)',
     glow: '0 0 0 1px rgba(255,255,255,.06) inset, 0 8px 40px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4)',
     borderTop: 'rgba(255,255,255,.30)',
-    features: [],
+    features: [
+      'AIPI (fino a 5 tool)', 'Gap Analysis', 'FEB (Fine Board Estimation)',
+      'Audit Trail', 'Supporto email',
+    ],
     checkColor: '#94a3b8',
   },
   base: {
@@ -40,9 +43,9 @@ const PLAN_META: Record<string, {
     glow: '0 0 0 1px rgba(96,165,250,.15) inset, 0 8px 48px rgba(37,99,235,.45), 0 2px 8px rgba(0,0,0,.5)',
     borderTop: 'rgba(147,197,253,.70)',
     features: [
-      'AIPI (fino a 10 tool)', 'Gap Analysis', 'FEB (Fine Board Estimation)',
+      'AIPI (fino a 5 tool)', 'Gap Analysis', 'FEB (Fine Board Estimation)',
       'AI Literacy Tracker', 'Document Vault (5 categorie)', 'Audit Trail',
-      'Supporto email standard',
+      'Team collaborativo (3 membri)', 'Supporto email standard',
     ],
     checkColor: '#93c5fd',
   },
@@ -55,7 +58,7 @@ const PLAN_META: Record<string, {
     features: [
       'AIPI illimitata', 'Gap Analysis', 'FEB (Fine Board Estimation)', 'NBA (Next Best Action)',
       'AI Literacy Tracker', 'Document Vault (tutte le categorie + FRIA)',
-      'Audit Trail', 'Testo AI Act ufficiale', 'Supporto prioritario',
+      'Audit Trail', 'Team collaborativo (10 membri)', 'Testo AI Act ufficiale', 'Supporto prioritario',
     ],
     checkColor: '#c4b5fd',
   },
@@ -82,7 +85,7 @@ const ELEVATED_CARD: React.CSSProperties = {
 };
 
 interface CompanyUser {
-  user_id: string; email: string; role: 'admin' | 'member'; status: string; joined_at: string | null;
+  user_id: string; email: string; role: 'admin' | 'collaborator'; status: string; joined_at: string | null;
 }
 
 function ReferringPartnerCard(p: Record<string, unknown> | undefined) {
@@ -112,7 +115,7 @@ function ReferringPartnerCard(p: Record<string, unknown> | undefined) {
 export default function SettingsPage() {
   const [company, setCompany]         = useState<Record<string, unknown> | null>(null);
   const [users, setUsers]             = useState<CompanyUser[]>([]);
-  const [myRole, setMyRole]           = useState<'admin' | 'member' | 'partner'>('member');
+  const [myRole, setMyRole]           = useState<'admin' | 'collaborator' | 'partner'>('collaborator');
   const [myId, setMyId]               = useState('');
   const [loading, setLoading]         = useState(true);
   const [revenueRange, setRevenueRange] = useState('');
@@ -123,6 +126,10 @@ export default function SettingsPage() {
   const [sectorCustom, setSectorCustom] = useState('');
   const [savingSector, setSavingSector] = useState(false);
   const [sectorMsg, setSectorMsg]     = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole]   = useState<'admin' | 'collaborator'>('collaborator');
+  const [inviting, setInviting]       = useState(false);
+  const [inviteMsg, setInviteMsg]     = useState('');
 
   useEffect(() => {
     async function load() {
@@ -193,6 +200,21 @@ export default function SettingsPage() {
     } catch (err: unknown) {
       alert((err as { message?: string }).message ?? 'Errore');
     }
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviting(true); setInviteMsg('');
+    try {
+      await api.auth.invite({ email: inviteEmail.trim(), role: inviteRole });
+      setInviteMsg(`✓ Invito inviato a ${inviteEmail.trim()}`);
+      setInviteEmail('');
+      const updated = await api.company.getUsers();
+      setUsers(updated as CompanyUser[]);
+    } catch (err: unknown) {
+      setInviteMsg(`✗ ${(err as { message?: string }).message ?? 'Errore'}`);
+    } finally { setInviting(false); }
   }
 
   if (loading) return <div className="db-loading"><div className="spin"></div></div>;
@@ -366,26 +388,138 @@ export default function SettingsPage() {
       {/* Studio di Riferimento */}
       {ReferringPartnerCard(company?.referring_partner as Record<string, unknown> | undefined)}
 
-      {/* Team — solo lista, no invite */}
-      {myRole === 'admin' && (
-        <div className="fcard" style={ELEVATED_CARD}>
-          <h3>Team ({users.length} utenti)</h3>
-          <div className="users-list">
-            {users.map(user => (
-              <div key={user.user_id} className="user-row">
-                <div className="user-info">
-                  <span className="user-email">{user.email}</span>
-                  <span className={`user-role ${user.role}`}>{user.role}</span>
-                  <span className={`user-status ${user.status}`}>{user.status}</span>
+      {/* ── TEAM ──────────────────────────────────────────────────────── */}
+      {myRole === 'admin' && (() => {
+        const TEAM_LIMITS: Record<string, number> = { trial: 1, base: 3, premium: 10, enterprise: 100 };
+        const teamLimit = TEAM_LIMITS[tier] ?? 1;
+        const canInvite = tier !== 'trial' && users.length < teamLimit;
+        const atLimit   = users.length >= teamLimit;
+
+        return (
+          <div className="fcard" style={ELEVATED_CARD}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ margin: 0 }}>Team collaborativo</h3>
+                <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 4 }}>
+                  {tier === 'trial'
+                    ? 'Disponibile dal piano Starter — fino a 3 collaboratori'
+                    : `${users.length} / ${teamLimit} membri`}
                 </div>
-                {user.user_id !== myId && (
-                  <button className="btn-rm" onClick={() => handleRemoveUser(user.user_id)}>Rimuovi</button>
-                )}
               </div>
-            ))}
+              {tier !== 'trial' && (
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {Array.from({ length: teamLimit > 10 ? 10 : teamLimit }).map((_, i) => (
+                    <div key={i} style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: i < users.length ? 'var(--green)' : 'rgba(255,255,255,.1)',
+                      border: i < users.length ? '1px solid rgba(34,197,94,.5)' : '1px solid rgba(255,255,255,.15)',
+                    }} />
+                  ))}
+                  {teamLimit > 10 && <span style={{ fontSize: 11, color: 'var(--dim)', marginLeft: 4, alignSelf: 'center' }}>+{teamLimit - 10}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* Invite form */}
+            {tier === 'trial' ? (
+              <div style={{ padding: '16px 20px', background: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.18)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="rgba(34,197,94,.6)" strokeWidth="1.5"/><path d="M10 6v4M10 13v1" stroke="#22C55E" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 2 }}>Team non disponibile nel piano Trial</div>
+                  <a href="/plan" style={{ fontSize: 12, color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>Passa a Starter (3 membri) o Professional (10 membri) →</a>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleInvite} style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                <input
+                  type="email"
+                  className="settings-input"
+                  style={{ flex: 1, minWidth: 200, opacity: atLimit ? 0.5 : 1 }}
+                  placeholder="email@collaboratore.it"
+                  value={inviteEmail}
+                  onChange={e => { setInviteEmail(e.target.value); setInviteMsg(''); }}
+                  disabled={atLimit || inviting}
+                  required
+                />
+<button
+                  type="submit"
+                  className="btn-save-small"
+                  style={{ whiteSpace: 'nowrap' }}
+                  disabled={atLimit || inviting}
+                >
+                  {inviting ? 'Invio…' : 'Invita'}
+                </button>
+              </form>
+            )}
+            {inviteMsg && (
+              <div style={{ fontSize: 13, color: inviteMsg.startsWith('✓') ? 'var(--green)' : 'var(--red)', marginBottom: 16 }}>{inviteMsg}</div>
+            )}
+            {atLimit && tier !== 'trial' && (
+              <div style={{ fontSize: 12, color: 'var(--orange)', marginBottom: 16 }}>
+                Limite di {teamLimit} membri raggiunto. <a href="/plan" style={{ color: 'var(--green)', fontWeight: 600 }}>Aggiorna piano →</a>
+              </div>
+            )}
+
+            {/* User list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {users.map((user, idx) => (
+                <div key={user.user_id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: idx % 2 === 0 ? 'rgba(255,255,255,.025)' : 'transparent',
+                  borderRadius: 8, gap: 12,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                      background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.25)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 800, color: 'var(--green)',
+                    }}>
+                      {user.email[0].toUpperCase()}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+                      <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 1 }}>
+                        {user.joined_at ? `Accesso dal ${new Date(user.joined_at).toLocaleDateString('it-IT')}` : 'Invito in attesa'}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 5,
+                      background: user.role === 'admin' ? 'rgba(99,102,241,.2)' : 'rgba(100,116,139,.15)',
+                      color: user.role === 'admin' ? '#a5b4fc' : 'var(--muted)',
+                      border: `1px solid ${user.role === 'admin' ? 'rgba(99,102,241,.35)' : 'rgba(100,116,139,.25)'}`,
+                      textTransform: 'uppercase', letterSpacing: '.4px',
+                    }}>{user.role === 'admin' ? 'Admin' : 'Collaboratore'}</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
+                      background: user.status === 'active' ? 'rgba(34,197,94,.12)' : 'rgba(234,179,8,.1)',
+                      color: user.status === 'active' ? 'var(--green)' : '#fbbf24',
+                      border: `1px solid ${user.status === 'active' ? 'rgba(34,197,94,.25)' : 'rgba(234,179,8,.25)'}`,
+                    }}>{user.status === 'active' ? 'attivo' : 'in attesa'}</span>
+                    {user.user_id !== myId && (
+                      <button
+                        onClick={() => handleRemoveUser(user.user_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', color: 'var(--dim)', borderRadius: 6, transition: 'color .15s' }}
+                        title="Rimuovi membro"
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--dim)')}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

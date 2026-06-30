@@ -29,11 +29,11 @@ function defaultAssessmentEmailBody(companyName: string, formUrl: string, studio
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<PartnerPMI['status'], { label: string; color: string; bg: string; border: string }> = {
-  todo:        { label: 'Da contattare',          color: 'var(--muted)',   bg: 'rgba(100,116,139,.08)', border: 'rgba(100,116,139,.2)' },
-  pending:     { label: 'Assessment inviato',      color: '#f97316',        bg: 'rgba(249,115,22,.08)',  border: 'rgba(249,115,22,.25)' },
-  completato:  { label: 'Free Assessment completato', color: '#6C47FF',    bg: 'rgba(108,71,255,.08)', border: 'rgba(108,71,255,.25)' },
-  onboarding:  { label: 'Onboarding in corso',    color: '#3b82f6',        bg: 'rgba(59,130,246,.08)',  border: 'rgba(59,130,246,.25)' },
-  onboarded:   { label: 'Onboarded su Actify',     color: '#16a34a',        bg: 'rgba(34,197,94,.08)',   border: 'rgba(34,197,94,.25)' },
+  todo:        { label: 'Da contattare',               color: 'var(--muted)', bg: 'rgba(100,116,139,.08)', border: 'rgba(100,116,139,.2)' },
+  pending:     { label: 'Assessment inviato',           color: '#f97316',      bg: 'rgba(249,115,22,.08)',  border: 'rgba(249,115,22,.25)' },
+  completato:  { label: 'Free Assessment completato',   color: '#0ea5e9',      bg: 'rgba(14,165,233,.08)',  border: 'rgba(14,165,233,.25)' },
+  onboarding:  { label: 'Onboarding in corso',          color: '#f59e0b',      bg: 'rgba(245,158,11,.08)',  border: 'rgba(245,158,11,.25)' },
+  onboarded:   { label: 'Onboarded su Actify',          color: '#16a34a',      bg: 'rgba(34,197,94,.08)',   border: 'rgba(34,197,94,.25)' },
 };
 
 function StatusBadge({ status }: { status: PartnerPMI['status'] }) {
@@ -216,24 +216,41 @@ export default function PartnerDashboard() {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <input ref={csvRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleCSVImport} />
-          <button className="inv-btn-secondary" onClick={() => csvRef.current?.click()} disabled={csvLoading}>
-            {csvLoading ? 'Importando…' : '↑ Importa CSV'}
+          <button
+            onClick={() => setShowAdd(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #059669, #34d399)',
+              color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: '-.1px',
+              boxShadow: '0 0 0 1px rgba(34,197,94,.3), 0 4px 16px rgba(5,150,105,.35)',
+              transition: 'opacity .15s, transform .15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '.88')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="7.5" y1="2" x2="7.5" y2="13"/><line x1="2" y1="7.5" x2="13" y2="7.5"/>
+            </svg>
+            Onboarda PMI
           </button>
-          <button className="inv-btn" onClick={() => setShowAdd(true)}>+ Aggiungi PMI</button>
         </div>
       </div>
 
       {/* Stats row */}
-      <div className="pmi-stat-row" style={{ marginBottom: 28 }}>
+      <div className="pmi-stat-row">
         <div className="pmi-stat">
+          <div className="pmi-stat-bar" style={{ background: 'rgba(148,163,184,.4)' }} />
           <div className="pmi-stat-val">{stats.total}</div>
           <div className="pmi-stat-label">PMI nel pipeline</div>
         </div>
         <div className="pmi-stat">
-          <div className="pmi-stat-val" style={{ color: '#6C47FF' }}>{stats.assessed}</div>
+          <div className="pmi-stat-bar" style={{ background: '#0ea5e9' }} />
+          <div className="pmi-stat-val" style={{ color: '#0ea5e9' }}>{stats.assessed}</div>
           <div className="pmi-stat-label">Assessment completati</div>
         </div>
         <div className="pmi-stat">
+          <div className="pmi-stat-bar" style={{ background: '#16a34a' }} />
           <div className="pmi-stat-val" style={{ color: 'var(--green)' }}>{stats.onboarded}</div>
           <div className="pmi-stat-label">Onboarded su Actify</div>
         </div>
@@ -255,7 +272,21 @@ export default function PartnerDashboard() {
           <div className="inv-empty-icon">🏢</div>
           <div className="inv-empty-title">Nessuna PMI ancora</div>
           <div className="inv-empty-sub">Aggiungi la prima PMI manualmente o importa un CSV con le aziende da seguire.</div>
-          <button className="inv-btn" style={{ margin: '16px auto 0' }} onClick={() => setShowAdd(true)}>+ Aggiungi la prima PMI</button>
+          <button
+            onClick={() => setShowAdd(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              margin: '20px auto 0', padding: '11px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #059669, #34d399)',
+              color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: '-.1px',
+              boxShadow: '0 0 0 1px rgba(34,197,94,.3), 0 4px 16px rgba(5,150,105,.35)',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="7" y1="1.5" x2="7" y2="12.5"/><line x1="1.5" y1="7" x2="12.5" y2="7"/>
+            </svg>
+            Onboarda la prima PMI
+          </button>
         </div>
       ) : (
         <div className="pmi-grid">
@@ -376,7 +407,7 @@ export default function PartnerDashboard() {
                     <button
                       onClick={() => handleSendOnboarding(pmi)}
                       disabled={isSendingOnboarding}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: isSendingOnboarding ? 'default' : 'pointer', opacity: isSendingOnboarding ? 0.7 : 1, background: onboardingJustSent ? 'rgba(34,197,94,0.15)' : '#6C47FF', border: onboardingJustSent ? '1px solid rgba(34,197,94,0.4)' : 'none', color: onboardingJustSent ? '#22c55e' : '#fff' }}>
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: isSendingOnboarding ? 'default' : 'pointer', opacity: isSendingOnboarding ? 0.7 : 1, background: onboardingJustSent ? 'rgba(34,197,94,0.15)' : 'linear-gradient(135deg,#059669,#34d399)', border: onboardingJustSent ? '1px solid rgba(34,197,94,0.4)' : 'none', color: '#fff' }}>
                       {isSendingOnboarding ? '⟳ Invio…' : onboardingJustSent ? '✓ Inviata!' : '🚀 Invia onboarding'}
                     </button>
                   </>)}

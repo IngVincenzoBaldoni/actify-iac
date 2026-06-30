@@ -7,8 +7,8 @@ export const complianceGapSchema = z.object({
   status: z.enum(['missing', 'partial', 'compliant']),
   deadline: z.string().nullable(),
   urgency: z.enum(['critical', 'high', 'medium', 'low']),
-  description: z.string().max(600),
-  what_to_do: z.string().max(600),
+  description: z.string().transform(s => s.slice(0, 600)),
+  what_to_do: z.string().transform(s => s.slice(0, 600)),
   can_actify_automate: z.boolean(),
   automation_type: z.preprocess(
     v => {
@@ -51,10 +51,10 @@ export const complianceResultSchema = z.object({
   }),
   priority_actions: z.array(z.object({
     priority:  z.enum(['immediate', 'short_term', 'medium_term']),
-    action:    z.string().max(250),
-    rationale: z.string().max(250),
+    action:    z.string().transform(s => s.slice(0, 250)),
+    rationale: z.string().transform(s => s.slice(0, 250)),
   })),
-  executive_summary: z.string().max(600),
+  executive_summary: z.string().transform(s => s.slice(0, 600)),
 });
 
 export type ComplianceResultParsed = z.infer<typeof complianceResultSchema>;

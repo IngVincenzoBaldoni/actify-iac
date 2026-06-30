@@ -14,6 +14,7 @@ function parseArticleNum(article: string): number | null {
   const m = article.match(/\d+/);
   return m ? parseInt(m[0], 10) : null;
 }
+function isArt4Gap(article: string) { return /^Art\.?\s*4$/i.test(article); }
 
 function formatArticleText(text: string): React.ReactNode {
   return text.split(/\n\n+/).map((para, i) => (
@@ -694,16 +695,31 @@ function DocScopeModal({ gap, onConfirm, onClose, generating }: {
 
         </div>
 
+        {/* ── AI disclaimer banner */}
+        <div style={{
+          margin: '0 28px 0',
+          padding: '10px 14px',
+          background: 'rgba(245,158,11,.07)',
+          border: '1px solid rgba(245,158,11,.25)',
+          borderRadius: 10,
+          fontSize: 12,
+          color: 'rgba(251,191,36,.9)',
+          lineHeight: 1.55,
+        }}>
+          <strong>Nota:</strong> il documento è generato automaticamente da un template standard + AI sulla base dei dati del tuo sistema.
+          Devi <strong>validare integralmente la struttura</strong>, completare i campi [DA COMPLETARE], e puoi aggiungere o rimuovere paragrafi liberamente prima di firmarlo e depositarlo.
+        </div>
+
         {/* ── Footer */}
         <div style={{
-          padding: '18px 28px',
+          padding: '16px 28px 18px',
           borderTop: '1px solid rgba(255,255,255,.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
           background: 'rgba(0,0,0,.2)',
         }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-            Il documento verrà generato da Actify AI, personalizzato per il tuo sistema,
-            e <strong style={{ color: 'var(--text2)' }}>salvato automaticamente nel Document Vault</strong> come prova ispettiva.
+            Il documento verrà personalizzato per il tuo sistema
+            e <strong style={{ color: 'var(--text2)' }}>salvato automaticamente nel Document Vault</strong>.
           </div>
           <button
             onClick={onConfirm}
@@ -883,6 +899,7 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
   }
 
   if (doc.status === 'draft') {
+    const isTechDoc = gap.automation_type === 'document_generation';
     return (
       <div className="gap-gen-block gap-gen-draft">
         <div className="gap-gen-type">{typeLabel}</div>
@@ -891,15 +908,12 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
           <span className="badge-draft">Salvato nel Vault</span>
         </div>
         <p className="gap-gen-hint">
-          Il documento è stato salvato nel Document Vault. Aprilo dal Vault per scaricarlo e verificarlo.
+          {isTechDoc
+            ? 'Scarica il file .docx dal Document Vault, completa tutti i campi seguendo la struttura del documento, poi ricaricalo firmato tramite "↑ Ricarica" nel Vault. Una volta caricata la versione finalizzata, torna qui e segna il gap come conforme.'
+            : 'Il documento è stato salvato nel Document Vault. Aprilo dal Vault per scaricarlo e verificarlo.'}
         </p>
         <div className="gap-gen-actions" style={{ marginBottom: 14 }}>
           <button className="btn-doc-regen" onClick={() => onRegenerate(doc.document_id)}>↻ Rigenera</button>
-          {onSanctionUpdate && (
-            <button className="btn-sanction-sync" onClick={onSanctionUpdate} title="Aggiorna la stima sanzionatoria">
-              ⚖️ Aggiorna stima
-            </button>
-          )}
         </div>
         {onCloseGap && (
           <div className="gap-gen-close-gap">
@@ -919,15 +933,15 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
                   Azione richiesta prima di dichiarare la conformità
                 </div>
                 <p style={{ fontSize: 12.5, color: 'rgba(252,211,77,.85)', lineHeight: 1.6, margin: 0 }}>
-                  Segna questo gap come conforme solo dopo aver <strong>implementato concretamente tutte le azioni necessarie</strong> per soddisfare il requisito.
-                  Il documento generato è una prova documentale, ma non sostituisce l&apos;implementazione operativa.
-                  Dichiarare la conformità senza aver agito costituisce una falsa attestazione in sede ispettiva.
+                  {isTechDoc
+                    ? <>Segna il gap come conforme solo dopo aver <strong>completato e firmato</strong> la Documentazione Tecnica. Se non hai ancora ricaricato la versione firmata nel Vault, il gap risulterà conforme <strong>con avviso</strong> fino al caricamento.</>
+                    : <>Segna questo gap come conforme solo dopo aver <strong>implementato concretamente tutte le azioni necessarie</strong> per soddisfare il requisito. Il documento generato è una prova documentale, ma non sostituisce l&apos;implementazione operativa. Dichiarare la conformità senza aver agito costituisce una falsa attestazione in sede ispettiva.</>}
                 </p>
               </div>
             </div>
             <button
               className="btn-hybrid-close"
-              onClick={() => onCloseGap(gap.gap_id)}>
+              onClick={() => onCloseGap(gap.gap_id, isTechDoc ? '_no_finalized_doc' : undefined)}>
               ✓ Segna gap come conforme
             </button>
           </div>
@@ -945,11 +959,6 @@ function GapGenerateBlock({ gap, doc, gen, generating, onGenerate, onFinalize, o
       </div>
       <div className="gap-gen-actions" style={{ marginBottom: 12 }}>
         <button className="btn-doc-regen" onClick={() => onRegenerate(doc.document_id)}>↻ Rigenera</button>
-        {onSanctionUpdate && (
-          <button className="btn-sanction-sync" onClick={onSanctionUpdate} title="Aggiorna la stima sanzionatoria">
-            ⚖️ Aggiorna stima
-          </button>
-        )}
       </div>
       {onCloseGap && (
         <div className="gap-gen-close-gap">
@@ -1079,6 +1088,8 @@ function ComplianceChecklist({
   onSanctionUpdate,
   onCloseGap,
   literacyCompliant,
+  isPremium,
+  isStarterOrAbove,
 }: {
   gaps:               ComplianceGap[];
   checklist:          Record<string, ChecklistEntry>;
@@ -1093,6 +1104,8 @@ function ComplianceChecklist({
   onSanctionUpdate:    () => void;
   onCloseGap:          (gapId: string, evidenceNote?: string, proofFile?: File) => Promise<void>;
   literacyCompliant:   boolean;
+  isPremium:           boolean;
+  isStarterOrAbove:    boolean;
 }) {
   const [previewDoc, setPreviewDoc] = useState<ActifyDocument | null>(null);
   const [articleSidebar, setArticleSidebar] = useState<number | null>(null);
@@ -1103,7 +1116,7 @@ function ComplianceChecklist({
 
   const ArticleBtn = ({ article }: { article: string }) => {
     const num = parseArticleNum(article);
-    if (!num) return null;
+    if (!num || !isPremium) return null;
     return (
       <button
         onClick={() => setArticleSidebar(num)}
@@ -1120,19 +1133,26 @@ function ComplianceChecklist({
 
   const isArt4 = (g: ComplianceGap) => /^Art\.?\s*4$/i.test(g.article);
 
+  // llmCompliant: AI marked compliant, no user checklist entry (pure AI determination)
   const llmCompliant   = gaps.filter(g => g.status === 'compliant' && !checklist[g.article]);
   const art4Compliant  = gaps.filter(g => isArt4(g) && literacyCompliant);
-  const userPresent    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'present' && !isArt4(g));
-  const userPartial    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial' && !isArt4(g));
+  // userPresent: user closed the gap (checklist 'present') — includes gaps also marked
+  // compliant by AI after closeGap sets BOTH status:'compliant' AND checklist:'present'
+  const userPresent    = gaps.filter(g => getStatus(g.article) === 'present' && (!isArt4(g) || !isStarterOrAbove));
+  const userPartial    = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial' && (!isArt4(g) || !isStarterOrAbove));
   const documentReady  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'document_ready' && !isArt4(g));
-  const stillMissing   = gaps.filter(g => g.status !== 'compliant' && (isArt4(g) ? !literacyCompliant : getStatus(g.article) === 'missing'));
+  const stillMissing   = gaps.filter(g => {
+    if (g.status === 'compliant') return false;
+    if (isArt4(g)) return isStarterOrAbove ? !literacyCompliant : getStatus(g.article) === 'missing';
+    return getStatus(g.article) === 'missing';
+  });
 
   function handleMark(article: string, status: 'present' | 'partial') {
     const existing = checklist[article] ?? {};
     const entry: ChecklistEntry = {
       ...(typeof existing === 'object' ? existing : {}),
       status,
-      ...(status === 'present' ? { addressed_at: new Date().toISOString().split('T')[0] } : {}),
+      ...(status === 'present' ? { addressed_at: new Date().toISOString() } : {}),
     };
     onSetEntry(article, entry);
     setNoteDrafts(prev => ({ ...prev, [article]: (existing as ChecklistEntry).evidence_note ?? '' }));
@@ -1152,7 +1172,7 @@ function ComplianceChecklist({
   }
 
   const GapActions = ({ gap }: { gap: ComplianceGap }) => {
-    if (isArt4(gap)) return null;
+    if (isArt4(gap) && isStarterOrAbove) return null;
     const st = getStatus(gap.article);
     return (
       <div className="cl-gap-actions">
@@ -1258,9 +1278,25 @@ function ComplianceChecklist({
                       {entry.addressed_at && (
                         <div className="cl-addressed-date">📅 Addressato il {entry.addressed_at}</div>
                       )}
-                      {entry.evidence_note && (
+                      {entry.evidence_note === '_no_finalized_doc' ? (
+                        <div style={{
+                          background: 'rgba(245,158,11,.1)',
+                          border: '1px solid rgba(245,158,11,.35)',
+                          borderRadius: 8,
+                          padding: '8px 12px',
+                          marginTop: 6,
+                          fontSize: 12,
+                          color: '#FCD34D',
+                          display: 'flex',
+                          gap: 8,
+                          alignItems: 'flex-start',
+                        }}>
+                          <span style={{ flexShrink: 0 }}>⚠</span>
+                          <span>Documentazione tecnica non ancora finalizzata nel Vault. Carica la versione firmata tramite <strong>"↑ Ricarica"</strong> nel Document Vault per completare l&apos;evidenza.</span>
+                        </div>
+                      ) : entry.evidence_note ? (
                         <div className="cl-evidence-note">📎 {entry.evidence_note}</div>
-                      )}
+                      ) : null}
                       <EvidenceInput gap={gap} />
                       <div className="cl-user-row">
                         <span className="cl-user-note">Escluso dal calcolo sanzionatorio</span>
@@ -1277,7 +1313,7 @@ function ComplianceChecklist({
               <div className="cl-section">
                 <div className="cl-section-title cl-ok-title">AI Literacy Tracker — Conforme Art. 4</div>
                 {art4Compliant.map(gap => (
-                  <div key={gap.gap_id} className="cl-item cl-item-ok">
+                  <div key={gap.gap_id} className="cl-item cl-item-ok" style={{ flexWrap: 'wrap', gap: 8 }}>
                     <span className="cl-art">{gap.article}</span>
                     <span className="cl-req">{gap.requirement}</span>
                     <span className="cl-status-ok" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1376,30 +1412,67 @@ function ComplianceChecklist({
               <p className="cl-desc">{gap.description}</p>
               <GapActions gap={gap} />
               {isArt4(gap) ? (
-                <div className="cl-manual-card" style={{ borderColor: 'rgba(34,197,94,.35)', background: 'rgba(34,197,94,.05)' }}>
-                  <div className="cl-manual-header">
-                    <span className="cl-manual-icon">🎓</span>
-                    <strong style={{ color: '#4ade80' }}>Alfabetizzazione AI — Art. 4</strong>
+                isStarterOrAbove ? (
+                  <div className="cl-manual-card" style={{ borderColor: 'rgba(34,197,94,.35)', background: 'rgba(34,197,94,.05)' }}>
+                    <div className="cl-manual-header">
+                      <span className="cl-manual-icon">🎓</span>
+                      <strong style={{ color: '#4ade80' }}>Alfabetizzazione AI — Art. 4</strong>
+                    </div>
+                    <p className="cl-manual-steps">La compliance sull&apos;Art. 4 si gestisce esclusivamente tramite <strong>AI Literacy Tracker</strong>. Censisci i profili di formazione del tuo personale e aggiungi evidenze (certificazioni, sessioni di training) per dichiarare la conformità su questo articolo.</p>
+                    <a href="/dashboard/literacy" className="so-bar-read-cta" style={{ marginTop: 8, background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', color: '#4ade80' }}>
+                      <span>🎓</span>
+                      <span style={{ fontWeight: 700 }}>Gestisci in AI Literacy Tracker →</span>
+                    </a>
                   </div>
-                  <p className="cl-manual-steps">La compliance sull&apos;Art. 4 si gestisce esclusivamente tramite <strong>AI Literacy Tracker</strong>. Censisci i profili di formazione del tuo personale e aggiungi evidenze (certificazioni, sessioni di training) per dichiarare la conformità su questo articolo.</p>
-                  <a href="/dashboard/literacy" className="so-bar-read-cta" style={{ marginTop: 8, background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', color: '#4ade80' }}>
-                    <span>🎓</span>
-                    <span style={{ fontWeight: 700 }}>Gestisci in AI Literacy Tracker →</span>
-                  </a>
-                </div>
+                ) : (
+                  <div className="cl-manual-card" style={{ borderColor: 'rgba(139,92,246,.3)', background: 'rgba(139,92,246,.05)', marginTop: 10 }}>
+                    <div className="cl-manual-header">
+                      <span className="cl-manual-icon">🔒</span>
+                      <strong style={{ color: '#a78bfa' }}>AI Literacy Tracker — disponibile da Piano Starter</strong>
+                    </div>
+                    <p className="cl-manual-steps">
+                      Nei piani <strong>Starter</strong> e <strong>Professional</strong> puoi usare l&apos;AI Literacy Tracker per gestire i profili di formazione, caricare certificazioni e dichiarare automaticamente la conformità all&apos;Art. 4.{' '}
+                      <a href="/plan" style={{ color: '#a78bfa', fontWeight: 700 }}>Esegui l&apos;upgrade →</a>
+                    </p>
+                  </div>
+                )
               ) : gap.can_actify_automate && gap.automation_type ? (
-                <GapGenerateBlock
-                  gap={gap}
-                  doc={documents[gap.gap_id]}
-                  gen={docGenerations[gap.gap_id]}
-                  generating={generatingGapId === gap.gap_id}
-                  onGenerate={() => onGenerate(gap.gap_id)}
-                  onFinalize={onFinalize}
-                  onRegenerate={onRegenerate}
-                  onOpenPreview={(d: ActifyDocument) => setPreviewDoc(d)}
-                  onSanctionUpdate={onSanctionUpdate}
-                  onCloseGap={onCloseGap}
-                />
+                !isStarterOrAbove ? (
+                  <div className="cl-manual-card" style={{ borderColor: 'rgba(59,130,246,.3)', background: 'rgba(59,130,246,.05)' }}>
+                    <div className="cl-manual-header">
+                      <span className="cl-manual-icon">🔒</span>
+                      <strong style={{ color: '#93c5fd' }}>Generazione documenti — Piano Starter o superiore</strong>
+                    </div>
+                    <p className="cl-manual-steps">
+                      La generazione automatica dei documenti di compliance è disponibile nei piani Starter, Professional ed Enterprise.{' '}
+                      <a href="/plan" style={{ color: '#60a5fa', fontWeight: 700 }}>Esegui l&apos;upgrade →</a>
+                    </p>
+                  </div>
+                ) : gap.automation_type === 'risk_assessment' && !isPremium ? (
+                  <div className="cl-manual-card" style={{ borderColor: 'rgba(139,92,246,.3)', background: 'rgba(139,92,246,.05)' }}>
+                    <div className="cl-manual-header">
+                      <span className="cl-manual-icon">🔒</span>
+                      <strong style={{ color: '#a78bfa' }}>FRIA — Solo Piano Professional</strong>
+                    </div>
+                    <p className="cl-manual-steps">
+                      La Valutazione di Impatto sui Diritti Fondamentali (FRIA) è disponibile nei piani Professional ed Enterprise.{' '}
+                      <a href="/plan" style={{ color: '#a78bfa', fontWeight: 700 }}>Esegui l&apos;upgrade →</a>
+                    </p>
+                  </div>
+                ) : (
+                  <GapGenerateBlock
+                    gap={gap}
+                    doc={documents[gap.gap_id]}
+                    gen={docGenerations[gap.gap_id]}
+                    generating={generatingGapId === gap.gap_id}
+                    onGenerate={() => onGenerate(gap.gap_id)}
+                    onFinalize={onFinalize}
+                    onRegenerate={onRegenerate}
+                    onOpenPreview={(d: ActifyDocument) => setPreviewDoc(d)}
+                    onSanctionUpdate={onSanctionUpdate}
+                    onCloseGap={onCloseGap}
+                  />
+                )
               ) : (
                 <div className="cl-manual-card">
                   <div className="cl-manual-header">
@@ -1452,9 +1525,12 @@ function SystemDetailContent() {
 
   const [system, setSystem]   = useState<Record<string, unknown> | null>(null);
   const [check, setCheck]     = useState<ComplianceCheck | null>(null);
+  const [company, setCompany] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
   const [literacyCompliant, setLiteracyCompliant] = useState(false);
+  const isPremium = ['premium', 'enterprise'].includes((company.subscription_tier as string) ?? '');
+  const isStarterOrAbove = ['base', 'premium', 'enterprise'].includes((company.subscription_tier as string) ?? '');
 
   // FIX-12: checklist state — supports enriched ChecklistEntry
   const [checklist, setChecklist] = useState<Record<string, ChecklistEntry>>({});
@@ -1491,12 +1567,13 @@ function SystemDetailContent() {
   const load = useCallback(async () => {
     if (!systemId) return;
     try {
-      const [sysData, latestCheck, docsData, gensData, litData] = await Promise.allSettled([
+      const [sysData, latestCheck, docsData, gensData, litData, companyData] = await Promise.allSettled([
         api.systems.get(systemId),
         api.compliance.getLatest(systemId),
         api.documents.listBySystem(systemId),
         api.docPipeline.listBySystem(systemId),
         api.literacy.getProfiles(systemId),
+        api.company.get(),
       ]);
       if (sysData.status === 'fulfilled') setSystem(sysData.value);
       if (latestCheck.status === 'fulfilled') setCheck(latestCheck.value as unknown as ComplianceCheck);
@@ -1523,8 +1600,53 @@ function SystemDetailContent() {
       }
       if (litData.status === 'fulfilled') {
         const ls = (litData.value as { literacy_status?: string }).literacy_status;
-        setLiteracyCompliant(ls === 'compliant');
+        const litCompliant = ls === 'compliant';
+        setLiteracyCompliant(litCompliant);
+
+        // Auto-sync: when literacy is compliant, mark Art. 4 as 'present' in the
+        // compliance_checklist so that fines/inventory pages (which use
+        // last_article_sanctions + compliance_checklist) correctly exclude it.
+        if (litCompliant && latestCheck.status === 'fulfilled' && sysData.status === 'fulfilled') {
+          const freshGaps = ((latestCheck.value as unknown as ComplianceCheck)?.result?.compliance_gaps ?? []) as ComplianceGap[];
+          const sys = sysData.value as Record<string, unknown>;
+          const rawCl = (sys.compliance_checklist ?? {}) as Record<string, { status?: string; evidence_note?: string } | string>;
+          const art4Entry = rawCl['Art. 4'];
+          const art4St = typeof art4Entry === 'string' ? art4Entry : (art4Entry as { status?: string })?.status;
+          const needsClUpdate = art4St !== 'present';
+
+          const effectiveNow = freshGaps.map(g => {
+            const e = rawCl[g.article];
+            const st = typeof e === 'string' ? e : (e as { status?: string })?.status;
+            if (st === 'present' || isArt4Gap(g.article)) {
+              return { ...g, status: 'compliant' as const, estimated_sanction_max: 0, estimated_sanction_min: 0 };
+            }
+            return g;
+          });
+          const nonCompliant = effectiveNow.filter(g => g.status !== 'compliant');
+          const newMax = nonCompliant.reduce((s, g) => s + (g.estimated_sanction_max ?? 0), 0);
+          const newMin = nonCompliant.reduce((s, g) => s + (g.estimated_sanction_min ?? 0), 0);
+          const storedMax = (sys.last_exposure_max as number) ?? 0;
+          const needsExposureUpdate = Math.abs(storedMax - newMax) > 1;
+
+          if (needsClUpdate || needsExposureUpdate) {
+            try {
+              const updatedCl = { ...rawCl, 'Art. 4': { status: 'present' as const, addressed_at: new Date().toISOString(), evidence_note: 'literacy' } };
+              await api.systems.update(systemId, {
+                ...(needsExposureUpdate ? { last_exposure_min: newMin, last_exposure_max: newMax, compliance_status: newMax === 0 ? 'compliant' : 'gap_found' } : {}),
+                compliance_checklist: updatedCl,
+                updated_at: new Date().toISOString(),
+              });
+              setSystem(prev => prev ? {
+                ...prev,
+                compliance_checklist: updatedCl,
+                ...(needsExposureUpdate ? { last_exposure_max: newMax, last_exposure_min: newMin, compliance_status: newMax === 0 ? 'compliant' : 'gap_found' } : {}),
+              } : prev);
+              setChecklist(prev => ({ ...prev, 'Art. 4': { status: 'present', addressed_at: new Date().toISOString() } }));
+            } catch { /* silent — next load will retry */ }
+          }
+        }
       }
+      if (companyData.status === 'fulfilled') setCompany(companyData.value as Record<string, unknown>);
     } finally {
       setLoading(false);
     }
@@ -1555,16 +1677,16 @@ function SystemDetailContent() {
   const result = check?.result;
   const gaps   = result?.compliance_gaps ?? [];
 
-  // Derive effective gaps: user-present articles → compliant + 0 sanctions
+  // Derive effective gaps: user-present articles OR Art. 4 literacy-compliant → 0 sanctions
   const effectiveGaps = useMemo((): ComplianceGap[] => {
     return gaps.map(g => {
       const entry = checklist[g.article];
-      if (entry?.status === 'present') {
+      if (entry?.status === 'present' || (isArt4Gap(g.article) && literacyCompliant)) {
         return { ...g, status: 'compliant' as const, estimated_sanction_max: 0, estimated_sanction_min: 0 };
       }
       return g;
     });
-  }, [gaps, checklist]);
+  }, [gaps, checklist, literacyCompliant]);
 
   const effectiveResult = useMemo((): ComplianceResult | undefined => {
     if (!result) return undefined;
@@ -1598,7 +1720,7 @@ function SystemDetailContent() {
         if (gaps.length > 0) {
           const effectiveGapsNow = gaps.map(g => {
             const e = next[g.article];
-            if (e?.status === 'present') {
+            if (e?.status === 'present' || (isArt4Gap(g.article) && literacyCompliant)) {
               return { ...g, status: 'compliant' as const, estimated_sanction_max: 0, estimated_sanction_min: 0 };
             }
             return g;
@@ -1627,7 +1749,7 @@ function SystemDetailContent() {
         // Apply current checklist overrides (same logic as effectiveGaps useMemo)
         const effectiveGapsNow = freshGaps.map(g => {
           const entry = checklist[g.article];
-          if (entry?.status === 'present') {
+          if (entry?.status === 'present' || (isArt4Gap(g.article) && literacyCompliant)) {
             return { ...g, status: 'compliant' as const, estimated_sanction_max: 0, estimated_sanction_min: 0 };
           }
           return g;
@@ -1853,6 +1975,8 @@ function SystemDetailContent() {
             onSanctionUpdate={handleSanctionUpdate}
             onCloseGap={handleCloseGap}
             literacyCompliant={literacyCompliant}
+            isPremium={isPremium}
+            isStarterOrAbove={isStarterOrAbove}
           />
         </>
       )}

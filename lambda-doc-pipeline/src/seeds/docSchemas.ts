@@ -5,7 +5,7 @@ const NOW = new Date().toISOString();
 // ─── DISCLOSURE_NOTICE — Art. 50 ─────────────────────────────────────────────
 export const DISCLOSURE_NOTICE_V1: DocSchema = {
   docType:        'DISCLOSURE_NOTICE',
-  version:        '1.0.0',
+  version:        '1.1.0',
   status:         'ACTIVE',
   modelTier:      'economy',
   outputLanguage: 'it',
@@ -35,15 +35,22 @@ export const DISCLOSURE_NOTICE_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'scope',
-        instruction:     "Descrivi in linguaggio chiaro e non tecnico: (1) cosa fa il sistema AI, (2) come viene utilizzato dall'azienda, (3) cosa NON fa o NON può decidere autonomamente. Max 200 parole. Evita tecnicismi. Formato: stringa di testo semplice.",
+        instruction:     `Descrivi il sistema AI in linguaggio chiaro e accessibile — prosa continua, senza tecnicismi.
+Struttura il testo come segue (senza usare ### per questa sezione di informativa — prosa piana):
+Prima spiega cosa fa concretamente il sistema AI nel contesto aziendale (es. "Il sistema analizza automaticamente...").
+Poi spiega come viene utilizzato dall'organizzazione nel processo descritto — chi lo usa e in quale momento del processo.
+Infine chiarisci esplicitamente cosa NON fa o NON può decidere autonomamente: questo è fondamentale per la trasparenza verso l'utente finale.
+Scrivi come se dovessi spiegarlo a un utente non esperto. Max 200 parole.
+Usa [DA COMPLETARE — specificare: ___] per elementi non noti.
+Rispondi SOLO con JSON valido: { "text": "...descrizione completa in prosa chiara..." }`,
         maxWords:        200,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'informativo',
         outputSchema: {
           type: 'object',
-          required: ['description'],
+          required: ['text'],
           properties: {
-            description: { type: 'string', description: 'Descrizione del sistema in linguaggio accessibile' },
+            text: { type: 'string', description: 'Descrizione del sistema in linguaggio accessibile — prosa continua senza ###' },
           },
         },
       },
@@ -55,16 +62,20 @@ export const DISCLOSURE_NOTICE_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'user_rights',
-        instruction:     "Specifica: (1) come l'utente può richiedere intervento umano o opporsi a decisioni automatizzate (se applicabile), (2) un indirizzo di contatto generico (es. compliance@[azienda].it — l'azienda completerà il recapito), (3) come l'utente può presentare un reclamo. Max 150 parole.",
+        instruction:     `Descrivi i diritti degli utenti e le modalità di contatto in prosa accessibile con ### sottotitoli.
+### Diritti dell'Utente
+In prosa, spiega come l'utente può: richiedere l'intervento di un operatore umano o opporsi a decisioni automatizzate (se applicabile); comprendere il ruolo del sistema AI nella decisione che lo riguarda; presentare un reclamo formale.
+### Come Contattarci
+In prosa, indica un indirizzo di contatto generico (es. compliance@[nome-azienda].it — l'azienda deve completare con il recapito reale) e le modalità di accesso per esercitare i propri diritti.
+Max 150 parole. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown..." }`,
         maxWords:        150,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'informativo',
         outputSchema: {
           type: 'object',
-          required: ['rights_text', 'contact_placeholder'],
+          required: ['text'],
           properties: {
-            rights_text:          { type: 'string' },
-            contact_placeholder:  { type: 'string', description: 'Es: compliance@[nome-azienda].it — completare con il recapito reale' },
+            text: { type: 'string', description: 'Sezione diritti e contatti in markdown con ### sottotitoli' },
           },
         },
       },
@@ -93,7 +104,7 @@ export const DISCLOSURE_NOTICE_V1: DocSchema = {
 // ─── MONITORING_PLAN — Art. 26, 72 ───────────────────────────────────────────
 export const MONITORING_PLAN_V1: DocSchema = {
   docType:        'MONITORING_PLAN',
-  version:        '1.0.0',
+  version:        '1.1.0',
   status:         'ACTIVE',
   modelTier:      'standard',
   outputLanguage: 'it',
@@ -123,17 +134,20 @@ export const MONITORING_PLAN_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'responsibilities',
-        instruction:     "Descrivi: (1) il ruolo aziendale responsabile della supervisione del sistema AI (es. Responsabile IT, Data Protection Officer, Referente AI), (2) le responsabilità specifiche di questo ruolo, (3) la catena di escalation in caso di anomalie. Non usare nomi propri, solo ruoli. Max 200 parole.",
+        instruction:     `Descrivi la governance e le responsabilità di supervisione in prosa operativa con ### sottotitoli. Non usare nomi propri — solo ruoli aziendali.
+### Responsabile della Supervisione
+In prosa, identifica il ruolo aziendale responsabile della supervisione del sistema AI (es. Responsabile IT, Data Protection Officer, Referente AI), descrivendo le sue responsabilità specifiche nel contesto di questo piano.
+### Catena di Escalation
+In prosa, descrivi la catena di escalation in caso di anomalie o malfunzionamenti: chi viene contattato per primo, con quale mezzo (es. ticket, email, chiamata), entro quanto tempo, e chi ha l'autorità di prendere decisioni in caso di incidente.
+Max 200 parole. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown..." }`,
         maxWords:        200,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['supervisor_role', 'responsibilities', 'escalation_chain'],
+          required: ['text'],
           properties: {
-            supervisor_role:    { type: 'string' },
-            responsibilities:   { type: 'array', items: { type: 'string' } },
-            escalation_chain:   { type: 'string' },
+            text: { type: 'string', description: 'Sezione governance e responsabilità in markdown con ### sottotitoli' },
           },
         },
       },
@@ -145,17 +159,26 @@ export const MONITORING_PLAN_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'monitoring_activities',
-        instruction:     "Definisci le attività di monitoraggio con frequenza concreta: (1) controlli periodici (giornalieri/settimanali/mensili) con descrizione di cosa si verifica, (2) KPI o soglie di allerta specifiche (usa valori numerici o descrittivi concreti), (3) modalità di log degli interventi umani. Adatta alla dimensione dell'azienda. Max 300 parole.",
+        instruction:     `Descrivi le attività di monitoraggio in prosa operativa con ### sottotitoli e una tabella markdown obbligatoria. Adatta alla dimensione e al settore dell'azienda.
+### Controlli Periodici
+Includi OBBLIGATORIAMENTE una tabella markdown con le attività di controllo:
+| Attività di Controllo | Frequenza | Cosa si Verifica | Responsabile |
+| --- | --- | --- | --- |
+| [Descrizione attività] | Giornaliera / Settimanale / Mensile | [Cosa viene verificato concretamente] | [Ruolo] |
+Aggiungi 2-3 righe pertinenti al tipo di sistema AI. Dopo la tabella, aggiungi una breve nota narrativa sulle attività più critiche.
+### KPI e Soglie di Allerta
+In prosa, descrivi almeno 2 KPI o soglie di allerta con valori concreti (es. "Se il tasso di errore supera il 5% in 7 giorni, si attiva una revisione straordinaria del modello").
+### Procedura di Log degli Interventi Umani
+In prosa, descrivi come vengono tracciati gli interventi umani (override, correzioni, segnalazioni), chi accede ai log e per quanto tempo vengono conservati.
+Max 300 parole totali. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown con tabella..." }`,
         maxWords:        300,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['periodic_checks', 'kpis', 'logging_procedure'],
+          required: ['text'],
           properties: {
-            periodic_checks:   { type: 'array', items: { type: 'string' } },
-            kpis:              { type: 'array', items: { type: 'string' } },
-            logging_procedure: { type: 'string' },
+            text: { type: 'string', description: 'Sezione attività di monitoraggio in markdown — includi tabella markdown per le attività e prosa con ### sottotitoli' },
           },
         },
       },
@@ -167,17 +190,22 @@ export const MONITORING_PLAN_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'review',
-        instruction:     "Specifica: (1) cadenza della revisione periodica del piano (almeno annuale), (2) eventi trigger che richiedono revisione anticipata (es. incidenti, modifiche al sistema, aggiornamenti normativi), (3) procedura di approvazione delle revisioni. Max 150 parole.",
+        instruction:     `Descrivi il processo di revisione e aggiornamento del piano in prosa con ### sottotitoli.
+### Cadenza di Revisione Periodica
+In prosa, indica la frequenza della revisione del piano (almeno annuale obbligatoria per AI Act) e la motivazione della cadenza scelta in base al profilo di rischio del sistema.
+### Trigger di Revisione Anticipata
+In prosa, descrivi almeno 3 eventi che richiedono una revisione anticipata del piano prima della scadenza ordinaria: es. incidenti significativi, modifiche sostanziali al sistema AI, aggiornamenti normativi, cambiamenti nel contesto d'uso o nella struttura aziendale.
+### Procedura di Approvazione
+In prosa, chi approva le versioni revisionate del piano, come viene documentata l'approvazione (firma, sistema documentale) e come viene comunicata agli utenti del sistema.
+Max 150 parole. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown..." }`,
         maxWords:        150,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['review_frequency', 'triggers', 'approval_procedure'],
+          required: ['text'],
           properties: {
-            review_frequency:    { type: 'string' },
-            triggers:            { type: 'array', items: { type: 'string' } },
-            approval_procedure:  { type: 'string' },
+            text: { type: 'string', description: 'Sezione revisione e aggiornamento piano in markdown con ### sottotitoli' },
           },
         },
       },
@@ -206,7 +234,7 @@ export const MONITORING_PLAN_V1: DocSchema = {
 // ─── AI_POLICY — Art. 4, 26 ──────────────────────────────────────────────────
 export const AI_POLICY_V1: DocSchema = {
   docType:        'AI_POLICY',
-  version:        '1.0.0',
+  version:        '1.1.0',
   status:         'ACTIVE',
   modelTier:      'standard',
   outputLanguage: 'it',
@@ -236,17 +264,22 @@ export const AI_POLICY_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'usage_rules',
-        instruction:     "Definisci regole concrete di utilizzo del sistema AI: (1) usi consentiti (elenca almeno 3 casi d'uso approvati), (2) usi vietati (almeno 3 comportamenti proibiti, es. uso per decisioni discriminatorie, condivisione output con terzi non autorizzati), (3) requisiti di revisione umana degli output. Adatta al settore e dimensione dell'azienda. Max 300 parole.",
+        instruction:     `Redigi la sezione sulle regole d'uso del sistema AI in prosa operativa con ### sottotitoli. Adatta al settore e alla dimensione dell'azienda.
+### Usi Consentiti
+In prosa, descrivi almeno 3 casi d'uso approvati e specifici per questo sistema AI nel contesto aziendale, spiegando brevemente per ogni caso perché è appropriato e quali garanzie di supervisione si applicano.
+### Usi Vietati
+In prosa, descrivi almeno 3 comportamenti esplicitamente proibiti — sii specifico al sistema e al contesto (es. "È vietato utilizzare gli output del sistema per prendere decisioni finali su candidati senza revisione umana", "È vietato condividere gli output con soggetti terzi non autorizzati"). Evita formulazioni generiche.
+### Requisiti di Revisione Umana degli Output
+In prosa, specifica quando e come gli output del sistema AI devono essere revisionati da un operatore umano prima di essere agiti: quali tipi di output richiedono revisione, chi la effettua, con quale procedura.
+Max 300 parole. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown..." }`,
         maxWords:        300,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['allowed_uses', 'prohibited_uses', 'human_review_requirement'],
+          required: ['text'],
           properties: {
-            allowed_uses:              { type: 'array', items: { type: 'string' } },
-            prohibited_uses:           { type: 'array', items: { type: 'string' } },
-            human_review_requirement:  { type: 'string' },
+            text: { type: 'string', description: 'Sezione regole d\'uso in markdown con ### sottotitoli e misure concrete' },
           },
         },
       },
@@ -258,17 +291,22 @@ export const AI_POLICY_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'responsibilities',
-        instruction:     "Specifica: (1) responsabilità degli utenti del sistema AI (firma policy, formazione, segnalazione anomalie), (2) ruolo del Referente AI interno (chi supervisiona, con quale frequenza), (3) procedura di segnalazione incidenti o malfunzionamenti. Max 200 parole.",
+        instruction:     `Descrivi le responsabilità degli utenti e del Referente AI interno in prosa con ### sottotitoli.
+### Responsabilità degli Utenti
+In prosa, elenca e spiega le responsabilità di chi utilizza il sistema AI: firma e rispetto della policy, completamento della formazione minima richiesta, segnalazione tempestiva di anomalie o output problematici, rispetto delle regole d'uso definite nella sezione precedente.
+### Ruolo del Referente AI Interno
+In prosa, descrivi chi supervisiona il sistema AI a livello aziendale (ruolo, non nome), con quale frequenza effettua controlli sulle attività e sugli output, e come coordina le segnalazioni degli utenti.
+### Procedura di Segnalazione Incidenti
+In prosa, descrivi come un utente deve segnalare un malfunzionamento, un output inappropriato o un uso improprio: canale di segnalazione (es. email dedicata, sistema di ticketing), tempi attesi di risposta, chi gestisce la segnalazione e come viene tracciata.
+Max 200 parole. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown..." }`,
         maxWords:        200,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['user_responsibilities', 'ai_referent_role', 'incident_procedure'],
+          required: ['text'],
           properties: {
-            user_responsibilities: { type: 'array', items: { type: 'string' } },
-            ai_referent_role:      { type: 'string' },
-            incident_procedure:    { type: 'string' },
+            text: { type: 'string', description: 'Sezione responsabilità utenti e Referente AI in markdown con ### sottotitoli' },
           },
         },
       },
@@ -294,10 +332,13 @@ export const AI_POLICY_V1: DocSchema = {
   ],
 };
 
-// ─── TECH_DOC — Art. 11-12, 26 ───────────────────────────────────────────────
+// ─── TECH_DOC — Allegato IV AI Act (v2.1.0 — prosa markdown, no JSON frammentato) ──
+// v2.1: tutti gli slot generativi emettono { text: "...markdown..." } invece di JSON
+//       strutturato → assembleDocument.ts restituisce content['text'] direttamente
+//       senza frammentare valori senza contesto.
 export const TECH_DOC_V1: DocSchema = {
   docType:        'TECH_DOC',
-  version:        '1.0.0',
+  version:        '2.1.0',
   status:         'ACTIVE',
   modelTier:      'standard',
   outputLanguage: 'it',
@@ -305,69 +346,264 @@ export const TECH_DOC_V1: DocSchema = {
   closingActions: [{
     gapTypes: ['document_generation', '*'],
     actions: [
-      "Completare le sezioni marcate [DA COMPLETARE] con le informazioni specifiche del sistema (versione, date, referenti).",
-      "Richiedere al fornitore del sistema AI (se deployer) la documentazione tecnica prevista dall'Allegato IV AI Act e allegarla.",
-      "Assegnare un numero di versione e una data ufficiale al documento prima dell'archiviazione.",
-      "Conservare il documento per tutta la durata di utilizzo del sistema + 10 anni. Caricare evidenza in Actify per chiudere il gap.",
+      "Completare tutte le sezioni [DA COMPLETARE] con i dati tecnici reali: versione modello, metriche misurate, referenti nominativi, date. Se deployer, richiedere la scheda tecnica al fornitore.",
+      "Se deployer: richiedere al fornitore la Documentazione Tecnica Allegato IV e allegarla come Appendice A. Verificare che copra tutti i punti §1-§8.",
+      "Far verificare il documento dal Responsabile Tecnico AI e controfirmare dal rappresentante legale prima di archiviarlo ufficialmente.",
+      "Assegnare numero di versione (es. v1.0), data di emissione e classificazione al documento prima del deposito.",
+      "Conservare per tutta la durata d'uso del sistema + 10 anni (Art. 72 AI Act). Ricaricare la versione completata e firmata in Actify per chiudere il gap.",
     ],
   }],
   sections: [
+    // ── 1. FIXED — Copertina / identificazione ────────────────────────────────
     {
-      sectionId: 'intro',
-      title:     'Identificazione del Sistema AI',
+      sectionId: 'identification',
+      title:     'Copertina e Identificazione del Sistema AI',
       order:     1,
       kind:      'FIXED',
-      template:  "Il presente documento descrive il sistema AI {{system.name}} utilizzato da {{company.name}} in qualità di {{system.role}} ai sensi del Regolamento UE 2024/1689 (AI Act).",
-      bindings:  ['system.name', 'company.name', 'system.role'],
+      template:  `⚠ BOZZA — Completare e far firmare prima dell'uso ufficiale ⚠
+
+DOCUMENTAZIONE TECNICA DEL SISTEMA AI
+Redatta ai sensi dell'Allegato IV, Regolamento UE 2024/1689 (AI Act)
+Generata da Actify AI — da revisionare, completare e approvare
+
+---
+
+Organizzazione: {{company.name}}
+Settore: {{company.sector}}
+Ruolo AI Act: {{system.role}}
+
+Sistema AI: {{system.name}}
+Fornitore / Sviluppatore: {{system.vendor}}
+Versione sistema: [X.X — DA COMPLETARE]
+Categoria di rischio: [Alto rischio — Allegato III — DA COMPLETARE]
+
+Versione documento: [1.0 — DA COMPLETARE]
+Data prima emissione: [GG/MM/AAAA — DA COMPLETARE]
+Data ultima revisione: [GG/MM/AAAA — DA COMPLETARE]
+Classificazione: Riservato — uso interno
+Responsabile documento: [Nome, cognome e ruolo — DA COMPLETARE]`,
+      bindings:  ['company.name', 'company.sector', 'system.name', 'system.vendor', 'system.role'],
     },
+
+    // ── 2. GENERATIVE — §1 Descrizione generale ──────────────────────────────
     {
-      sectionId: 'system_description',
-      title:     'Descrizione Generale e Capacità del Sistema',
+      sectionId: 'system_overview',
+      title:     'All. IV §1 — Descrizione Generale del Sistema AI',
       order:     2,
       kind:      'GENERATIVE',
       slot: {
-        slotId:          'system_description',
-        instruction:     "Descrivi: (1) funzionalità principali e scopo del sistema, (2) tipo di output prodotto (testo, immagini, raccomandazioni, decisioni), (3) capacità e limitazioni note, (4) personalizzazioni apportate dall'azienda (system prompt, configurazioni, RAG). Sii specifico e tecnico. Max 300 parole.",
-        maxWords:        300,
+        slotId:           'system_overview',
+        instruction:      `Redigi la sezione §1 dell'Allegato IV AI Act basandoti sul profilo del sistema nel contesto.
+Struttura la sezione con sottotitoli ### e prosa continua coerente — NON elenchi di valori isolati.
+(1) ### Finalità del Sistema — cosa fa il sistema, quale problema risolve — specifico e tecnico.
+(2) ### Casi d'Uso Principali — 2-3 scenari concreti, specificando come il sistema partecipa al processo decisionale (es. "il recruiter vede solo i candidati con score ≥ 70").
+(3) ### Tipo di Output — decisioni autonome, raccomandazioni, classificazioni, contenuti — specifica se vincolante o consultivo e in quale misura.
+(4) ### Utenti Finali — categorie di personale che interagisce con il sistema, chi supervisiona, chi riceve le decisioni.
+(5) ### Livello di Autonomia — il sistema decide autonomamente, raccomanda con supervisione obbligatoria, o genera contenuto revisionato? Indica esplicitamente le garanzie di supervisione umana.
+Usa [DA COMPLETARE — specificare: ___] per elementi che l'azienda deve completare. Max 350 parole.
+Rispondi SOLO con JSON valido: { "text": "...sezione §1 completa in markdown..." }`,
+        maxWords:         350,
         allowedCitations: 'FROM_CONTEXT_ONLY',
-        tone:            'operativo',
+        tone:             'operativo',
         outputSchema: {
           type: 'object',
-          required: ['main_functions', 'output_type', 'limitations', 'customizations'],
+          required: ['text'],
           properties: {
-            main_functions:  { type: 'string' },
-            output_type:     { type: 'string' },
-            limitations:     { type: 'array', items: { type: 'string' } },
-            customizations:  { type: 'array', items: { type: 'string' } },
+            text: { type: 'string', description: 'Sezione §1 completa in markdown — prosa con ### sottotitoli e punti elenco dove appropriato' },
           },
         },
       },
     },
+
+    // ── 3. GENERATIVE — §2 Architettura e sviluppo ───────────────────────────
     {
-      sectionId: 'oversight',
-      title:     'Misure di Supervisione Umana e Sicurezza',
+      sectionId: 'architecture',
+      title:     'All. IV §2 — Architettura, Sviluppo e Componenti del Sistema',
       order:     3,
       kind:      'GENERATIVE',
       slot: {
-        slotId:          'oversight',
-        instruction:     "Descrivi: (1) le misure di supervisione umana implementate (chi verifica, come, con quale frequenza), (2) misure di cybersecurity adottate (es. controllo accessi, log degli utilizzi), (3) referente tecnico interno responsabile del sistema. Max 200 parole.",
-        maxWords:        200,
+        slotId:           'architecture',
+        instruction:      `Redigi la sezione §2 dell'Allegato IV come prosa tecnica strutturata con sottotitoli ###.
+### Architettura e Tecnologia AI — tipo di architettura AI/ML (es. "LLM (Large Language Model) con RAG", "Classificatore supervisionato (Gradient Boosting)") — sii tecnico e specifico al sistema descritto.
+### Componenti Principali — descrivi in prosa i componenti principali deployati nell'organizzazione (almeno 3: es. modello base, interfaccia API, modulo log, pipeline dati), spiegando il ruolo di ciascuno.
+### Personalizzazioni — personalizzazioni rispetto al sistema base del fornitore: system prompt, fine-tuning, RAG su knowledge base interna, soglie configurate. Se nessuna: "Il sistema è utilizzato as-is, senza personalizzazioni rispetto alla versione del fornitore."
+### Processo di Selezione e Deployment — come l'organizzazione ha selezionato, testato e messo in produzione il sistema (criteri di valutazione, test preliminari, rollout).
+### Versione e Aggiornamenti — versione corrente e data ultimo aggiornamento, o [DA COMPLETARE — richiedere la versione corrente al fornitore].
+Adatta a provider (sviluppa il sistema) o deployer (acquista il sistema). Max 300 parole.
+Rispondi SOLO con JSON valido: { "text": "...sezione §2 completa in markdown..." }`,
+        maxWords:         300,
         allowedCitations: 'FROM_CONTEXT_ONLY',
-        tone:            'operativo',
+        tone:             'operativo',
         outputSchema: {
           type: 'object',
-          required: ['oversight_measures', 'security_measures', 'technical_referent'],
+          required: ['text'],
           properties: {
-            oversight_measures: { type: 'array', items: { type: 'string' } },
-            security_measures:  { type: 'array', items: { type: 'string' } },
-            technical_referent: { type: 'string', description: 'Ruolo, non nome. Es: "Responsabile IT"' },
+            text: { type: 'string', description: 'Sezione §2 completa in markdown — prosa tecnica con ### sottotitoli' },
           },
         },
       },
     },
+
+    // ── 4. GENERATIVE — §3 Dati ──────────────────────────────────────────────
+    {
+      sectionId: 'training_data',
+      title:     'All. IV §3 — Dati di Addestramento, Validazione e Test',
+      order:     4,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:           'training_data',
+        instruction:      `Redigi la sezione §3 dell'Allegato IV relativa ai dati come prosa tecnica con sottotitoli ###.
+### Contesto: Deployer o Provider — apri con una frase che identifica se l'organizzazione è deployer (acquista sistema di terzi) o provider (sviluppa il sistema), e cosa questo implica per la responsabilità sui dati.
+Se DEPLOYER: in prosa, descrivi (a) i dati elaborati in produzione dal sistema, (b) le garanzie contrattuali del fornitore su training e qualità dei dati, (c) eventuali personalizzazioni con dati interni (RAG, fine-tuning).
+Se PROVIDER: in prosa, descrivi dataset di training (fonti, dimensione, periodo), preprocessing, split train/val/test, copertura demografica.
+### Categorie di Dati Trattati in Produzione — elenca in prosa le categorie specifiche di dati trattati (almeno 3, es. dati anagrafici, curriculum, storico transazioni).
+### Misure di Qualità dei Dati — descrivi in prosa le misure di qualità dei dati in input (validazione, pulizia, deduplicazione — almeno 2 misure concrete).
+### Rischi di Bias e Mitigazioni — bias identificati e misure di mitigazione concrete. Se non ancora analizzato: "[DA COMPLETARE — condurre analisi bias formale entro [X] giorni dall'adozione di questo documento]".
+Max 300 parole. Rispondi SOLO con JSON valido: { "text": "...sezione §3 completa in markdown..." }`,
+        maxWords:         300,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:             'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['text'],
+          properties: {
+            text: { type: 'string', description: 'Sezione §3 completa in markdown — prosa con ### sottotitoli' },
+          },
+        },
+      },
+    },
+
+    // ── 5. GENERATIVE — §4 Metriche (sezione critica per audit) ──────────────
+    {
+      sectionId: 'performance_metrics',
+      title:     'All. IV §4 — Metriche di Performance, Test e Validazione',
+      order:     5,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:           'performance_metrics',
+        instruction:      `Redigi la sezione §4 dell'Allegato IV — SEZIONE CRITICA: senza metriche concrete il documento non regge un audit.
+Struttura come prosa tecnica con ### sottotitoli e una tabella markdown obbligatoria per le metriche.
+### Metriche di Performance
+Includi OBBLIGATORIAMENTE una tabella markdown con almeno 3 metriche nel formato:
+| Metrica | Valore Misurato | Benchmark di Riferimento | Fonte / Data |
+| --- | --- | --- | --- |
+| Accuracy | [DA COMPLETARE — richiedere scheda tecnica al fornitore] | ≥ 85% | [DA COMPLETARE] |
+| ... | ... | ... | ... |
+Scegli le metriche pertinenti al tipo di sistema: Classificatori (Accuracy, Precision, Recall, F1-Score, AUC-ROC, FPR); Sistemi LLM/generativi (Tasso rifiuto prompt non conformi, Tasso allucinazioni rilevate, Accuracy fattuale); Sistemi decisionali (Tasso override umano, Tasso errori gravi, Tempo medio risposta).
+Se deployer, indica "Fonte: Documentazione tecnica fornitore" e usa "[DA COMPLETARE — richiedere al fornitore entro 30 giorni]" per valori mancanti.
+### Metodologia di Test e Validazione
+Descrivi in prosa come il sistema è stato valutato (test set interno, benchmark pubblico, valutazione umana, A/B test). Includi data ultima validazione o "[DA COMPLETARE]".
+### Test di Bias
+Gruppi demografici o categorie protette testati e risultati. Se non condotti: "[DA COMPLETARE — pianificare bias audit formale entro [X] mesi dall'adozione del documento]".
+### Limitazioni Note
+Descrivi in prosa almeno 2 scenari in cui il sistema può errare o performa in modo degradato (obbligatorio Allegato IV).
+Max 400 parole totali. Rispondi SOLO con JSON valido: { "text": "...sezione §4 completa in markdown con tabella..." }`,
+        maxWords:         400,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:             'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['text'],
+          properties: {
+            text: { type: 'string', description: 'Sezione §4 completa in markdown — includi tabella markdown per le metriche e prosa con ### sottotitoli' },
+          },
+        },
+      },
+    },
+
+    // ── 6. GENERATIVE — §6 Supervisione umana ────────────────────────────────
+    {
+      sectionId: 'oversight',
+      title:     'All. IV §6 — Supervisione Umana, Monitoraggio e Controllo',
+      order:     6,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:           'oversight',
+        instruction:      `Redigi la sezione §6 dell'Allegato IV come prosa operativa con ### sottotitoli. Art. 14 AI Act richiede misure concrete di supervisione.
+### Procedure di Supervisione
+Descrivi in prosa chi verifica gli output e con quale procedura concreta — sii specifico (NON "il manager controlla" ma "il Responsabile [Ruolo] rivede ogni output AI prima di comunicarlo usando una checklist di [N] punti che include: [...]"). Indica la frequenza (per ogni output / giornaliera / settimanale).
+### Procedura di Override
+Descrivi in prosa come un operatore può ignorare, modificare o annullare la decisione o raccomandazione del sistema AI. Specifica in quali circostanze l'override è obbligatorio e chi ha l'autorità definitiva.
+### KPI e Soglie di Allerta in Produzione
+Descrivi almeno 2 metriche monitorate in produzione con valori numerici di soglia che attivano una revisione (es. "Se il tasso di override supera il 20% in un periodo di 30 giorni, si avvia una revisione del modello"). Se non ancora definite: "[DA DEFINIRE — formalizzare le soglie entro [GG/MM/AAAA]]".
+### Sistema di Log e Tracciabilità
+Descrivi in prosa cosa viene tracciato (chi usa il sistema, su quali dati, con quale esito), chi accede ai log, e il periodo di conservazione (retention period).
+Max 300 parole. Rispondi SOLO con JSON valido: { "text": "...sezione §6 completa in markdown..." }`,
+        maxWords:         300,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:             'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['text'],
+          properties: {
+            text: { type: 'string', description: 'Sezione §6 completa in markdown — prosa operativa con ### sottotitoli e misure concrete' },
+          },
+        },
+      },
+    },
+
+    // ── 7. GENERATIVE — §7 Sicurezza e robustezza ────────────────────────────
+    {
+      sectionId: 'security',
+      title:     'All. IV §7 — Sicurezza, Robustezza e Gestione degli Incidenti',
+      order:     7,
+      kind:      'GENERATIVE',
+      slot: {
+        slotId:           'security',
+        instruction:      `Redigi la sezione §7 dell'Allegato IV come prosa operativa con ### sottotitoli.
+### Controllo degli Accessi
+Descrivi in prosa: chi può accedere al sistema AI (ruoli aziendali specifici), come vengono autenticati (es. SSO, MFA, credenziali aziendali), e chi approva e revoca gli accessi. Includi almeno 3 misure concrete.
+### Protezione degli Output
+Descrivi dove vengono memorizzati gli output del sistema, chi vi ha accesso, per quanto tempo vengono conservati, e se vengono condivisi con terzi (e con quali garanzie contrattuali).
+### Robustezza e Guardrail
+Descrivi come il sistema gestisce prompt malformati, input anomali o tentativi di manipolazione (jailbreak). Elenca i guardrail in atto (es. filtri contenuto, validazione input, rate limiting).
+### Definizione di Incidente AI e Procedura di Risposta
+Prima definisci cosa costituisce un incidente rilevante nel contesto di questo sistema — almeno 3 esempi specifici (es. "output discriminatorio rilevato in una raccomandazione HR", "allucinazione con impatto su una decisione critica", "accesso non autorizzato ai log del sistema"). Poi descrivi il piano di risposta: chi notificare internamente, entro quanto tempo, e se sussiste obbligo di notifica esterna ai sensi dell'Art. 73 AI Act.
+### Disattivazione di Emergenza
+Descrivi la procedura di disattivazione o bypass del sistema in caso di malfunzionamento grave — chi ha l'autorità di disattivare e come.
+Max 300 parole. Rispondi SOLO con JSON valido: { "text": "...sezione §7 completa in markdown..." }`,
+        maxWords:         300,
+        allowedCitations: 'FROM_CONTEXT_ONLY',
+        tone:             'operativo',
+        outputSchema: {
+          type: 'object',
+          required: ['text'],
+          properties: {
+            text: { type: 'string', description: 'Sezione §7 completa in markdown — prosa operativa con ### sottotitoli e misure concrete' },
+          },
+        },
+      },
+    },
+
+    // ── 8. FIXED — Pagina firma / approvazione ────────────────────────────────
+    {
+      sectionId: 'signature_page',
+      title:     'Approvazione e Firma del Documento',
+      order:     8,
+      kind:      'FIXED',
+      template:  `Il presente documento costituisce la Documentazione Tecnica del sistema AI {{system.name}} redatta ai sensi dell'Allegato IV del Reg. UE 2024/1689. È una BOZZA generata da Actify AI. Deve essere completata, verificata e firmata prima di qualsiasi deposito ufficiale o trasmissione alle autorità di vigilanza.
+
+FIRME DI APPROVAZIONE
+
+| Ruolo | Nome e Cognome | Firma | Data |
+| --- | --- | --- | --- |
+| Responsabile Tecnico AI | [DA COMPLETARE] | _____________ | ___/___/______ |
+| Rappresentante Legale | [DA COMPLETARE] | _____________ | ___/___/______ |
+| DPO (se nominato) | [N/A o DA COMPLETARE] | _____________ | ___/___/______ |
+
+REGISTRO REVISIONI
+
+| Versione | Data | Autore | Descrizione Modifiche |
+| --- | --- | --- | --- |
+| 1.0 | [DA COMPLETARE] | [DA COMPLETARE] | Prima emissione — bozza Actify |
+| | | | |`,
+      bindings:  ['system.name'],
+    },
+
+    // ── Sezioni finali fisse ──────────────────────────────────────────────────
     {
       sectionId: 'normative_references',
-      title:     'Riferimenti Normativi',
+      title:     'Riferimenti Normativi (Allegato IV AI Act)',
       order:     90,
       kind:      'FIXED',
     },
@@ -389,7 +625,7 @@ export const TECH_DOC_V1: DocSchema = {
 // ─── CONFORMITY_DECL — Art. 47 (autovalutazione interna, non marcatura CE) ───
 export const CONFORMITY_DECL_V1: DocSchema = {
   docType:        'CONFORMITY_DECL',
-  version:        '1.0.0',
+  version:        '1.1.0',
   status:         'ACTIVE',
   modelTier:      'standard',
   outputLanguage: 'it',
@@ -419,26 +655,25 @@ export const CONFORMITY_DECL_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'conformity_statement',
-        instruction:     "Redigi la dichiarazione di conformità autovalutata includendo: (1) identificazione del sistema AI (nome, versione se nota, fornitore), (2) gli articoli del Regolamento UE 2024/1689 per i quali si dichiara l'adempimento, (3) le misure concrete adottate per ciascun articolo citato (una frase per misura). Usa formulazioni operative ('è stata adottata', 'è prevista', 'è in vigore') — mai formulazioni certificate. Max 350 parole.",
+        instruction:     `Redigi la dichiarazione di conformità autovalutata in prosa formale con ### sottotitoli e una tabella markdown obbligatoria.
+Inizia con un breve paragrafo introduttivo che identifica il sistema AI (nome, versione se nota, fornitore) e il contesto della dichiarazione.
+### Misure di Adempimento per Articolo
+Includi OBBLIGATORIAMENTE una tabella markdown con gli articoli del Regolamento UE 2024/1689 per i quali si dichiara l'adempimento:
+| Articolo | Titolo / Oggetto | Misura Concreta Adottata |
+| --- | --- | --- |
+| Art. XX | [Titolo dell'articolo] | [Descrizione della misura adottata — una frase operativa] |
+Includi almeno 4-6 articoli pertinenti al profilo e alla classificazione del sistema AI. Usa formulazioni operative ("è stata adottata", "è prevista", "è in vigore") — mai formulazioni certificate.
+### Limiti della Dichiarazione
+In prosa (3-4 frasi): chiarisci che si tratta di un'autovalutazione interna operativa, non di una certificazione di terze parti, e che non sostituisce una valutazione di conformità formale ai sensi dell'Art. 43 AI Act.
+Max 350 parole totali. Rispondi SOLO con JSON valido: { "text": "...dichiarazione completa in markdown con tabella..." }`,
         maxWords:        350,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['system_identification', 'compliance_measures'],
+          required: ['text'],
           properties: {
-            system_identification: { type: 'string' },
-            compliance_measures: {
-              type: 'array',
-              items: {
-                type: 'object',
-                required: ['article', 'measure_description'],
-                properties: {
-                  article:             { type: 'string' },
-                  measure_description: { type: 'string' },
-                },
-              },
-            },
+            text: { type: 'string', description: 'Dichiarazione di conformità completa in markdown — include tabella articoli/misure e prosa con ### sottotitoli' },
           },
         },
       },
@@ -468,7 +703,7 @@ export const CONFORMITY_DECL_V1: DocSchema = {
 // Usa sempre Nova Pro: documento ad alta criticità legale, max dettaglio richiesto.
 export const FRIA_V1: DocSchema = {
   docType:        'FRIA',
-  version:        '1.0.0',
+  version:        '1.1.0',
   status:         'ACTIVE',
   modelTier:      'standard',
   modelId:        'eu.amazon.nova-pro-v1:0',
@@ -501,18 +736,24 @@ export const FRIA_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'process_use',
-        instruction:     "Descrivi con precisione: (1) il processo aziendale specifico in cui verrà utilizzato il sistema AI, incluse le decisioni che vengono prese con o tramite il sistema (es. selezione del personale, concessione di credito, erogazione di servizi, valutazione delle prestazioni, accesso a servizi pubblici); (2) se il sistema AI supporta una decisione umana, raccomanda un'azione, o determina autonomamente un esito — sii esplicito su questo punto; (3) la frequenza di utilizzo prevista (es. quotidiana, per ogni richiesta di servizio, mensile) e il periodo di impiego del sistema; (4) le categorie di dati personali elaborati dal sistema (es. dati identificativi, dati comportamentali, dati biometrici, dati relativi a vulnerabilità, dati economici). Adatta la descrizione al settore e alla dimensione dell'azienda.",
+        instruction:     `Descrivi il processo aziendale e le modalità d'uso del sistema AI in prosa operativa con ### sottotitoli. Adatta al settore e alla dimensione dell'azienda.
+### Processo Aziendale e Finalità d'Uso
+In prosa, descrivi il processo aziendale specifico in cui il sistema AI è impiegato e le decisioni prese con o tramite il sistema. Sii specifico e concreto (es. non "supporta le decisioni HR" ma "classifica automaticamente le candidature e le ordina per score di adeguatezza, che il responsabile HR usa per definire la shortlist").
+### Tipo di Contributo del Sistema AI
+In prosa, spiega esplicitamente se il sistema supporta una decisione umana, raccomanda un'azione, determina autonomamente un esito, o classifica soggetti. Indica chiaramente il livello di autonomia e le garanzie di supervisione umana presenti — questo è il punto più critico per la FRIA.
+### Frequenza e Periodo d'Uso
+In prosa, la frequenza di utilizzo prevista (es. quotidiana per ogni richiesta, settimanale, per ogni nuovo caso) e il periodo di impiego del sistema (inizio previsto, durata stimata).
+### Categorie di Dati Personali Elaborati
+In prosa, elenca le categorie di dati personali trattati dal sistema (almeno 2 specifiche, es. dati identificativi, dati comportamentali, dati economici, biometria). Indica se si tratta di dati di categorie speciali ai sensi dell'Art. 9 GDPR.
+Max 350 parole. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown..." }`,
         maxWords:        350,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['business_process', 'decision_type', 'frequency_and_period', 'data_categories'],
+          required: ['text'],
           properties: {
-            business_process:     { type: 'string', description: 'Descrizione del processo aziendale specifico in cui il sistema AI è impiegato' },
-            decision_type:        { type: 'string', enum: ['supporto decisionale', 'raccomandazione', 'decisione autonoma', 'classificazione', 'altro'], description: 'Tipo di contributo del sistema AI al processo decisionale' },
-            frequency_and_period: { type: 'string', description: 'Frequenza di utilizzo e periodo previsto di impiego' },
-            data_categories:      { type: 'array', items: { type: 'string' }, description: 'Categorie di dati personali trattati (almeno 2)' },
+            text: { type: 'string', description: 'Sezione processo aziendale e modalità d\'uso in markdown con ### sottotitoli' },
           },
         },
       },
@@ -524,41 +765,36 @@ export const FRIA_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'affected_persons',
-        instruction:     "Identifica e descrivi sistematicamente tutte le persone fisiche che potrebbero essere influenzate dal sistema AI. Per ciascuna categoria: (1) descrivi la categoria (es. candidati a posizioni lavorative, clienti richiedenti credito, utenti di un servizio pubblico, pazienti, studenti); (2) fornisci una stima indicativa della scala di impatto (es. 'decine di persone/anno', 'potenzialmente tutta la clientela', 'popolazione di una specifica area geografica'); (3) specifica se l'impatto è diretto (il sistema prende/informa decisioni su di loro) o indiretto. Poi analizza i GRUPPI VULNERABILI tra gli interessati: esamina esplicitamente — anche se la conclusione è 'non presente nel contesto' — ciascuno dei seguenti: (a) minori (sotto i 18 anni); (b) anziani; (c) persone con disabilità fisica o cognitiva; (d) minoranze etniche, religiose o linguistiche; (e) migranti o richiedenti asilo; (f) persone economicamente svantaggiate o con basso livello di alfabetizzazione digitale; (g) lavoratori in posizione subordinata o precaria. Infine: specifica se il sistema tratta dati di categorie speciali (dati sulla salute, etnia, orientamento sessuale, opinioni politiche, biometria — rilevante per Art. 9 GDPR).",
+        instruction:     `Descrivi le categorie di persone interessate e i gruppi vulnerabili in prosa analitica con ### sottotitoli e tabelle markdown obbligatorie.
+### Categorie di Persone Interessate
+Includi OBBLIGATORIAMENTE una tabella markdown:
+| Categoria di Persone | Stima Scala Impatto | Natura dell'Impatto |
+| --- | --- | --- |
+| [Nome categoria] | [Es: "circa 50 persone/anno", "potenzialmente tutta la clientela"] | Diretto / Indiretto / Diretto e indiretto |
+Aggiungi almeno 1 categoria pertinente al contesto. Dopo la tabella, un breve paragrafo narrativo sulle categorie più rilevanti.
+### Analisi dei Gruppi Vulnerabili
+Includi OBBLIGATORIAMENTE una tabella markdown che analizza tutti e 7 i gruppi vulnerabili — anche quelli non presenti nel contesto (indicando "No" e la motivazione):
+| Gruppo Vulnerabile | Presente nel Contesto | Rischi Specifici o Motivazione Assenza |
+| --- | --- | --- |
+| Minori (< 18 anni) | Sì / No | [Rischi specifici se Sì, oppure breve motivazione se No] |
+| Anziani | Sì / No | ... |
+| Persone con disabilità fisica o cognitiva | Sì / No | ... |
+| Minoranze etniche, religiose o linguistiche | Sì / No | ... |
+| Migranti o richiedenti asilo | Sì / No | ... |
+| Persone economicamente svantaggiate o con bassa alfabetizzazione digitale | Sì / No | ... |
+| Lavoratori in posizione subordinata o precaria | Sì / No | ... |
+Aggiungi una nota narrativa sui gruppi presenti e i rischi più rilevanti.
+### Dati di Categorie Speciali (Art. 9 GDPR)
+In prosa: indica se il sistema elabora dati di categorie speciali (salute, etnia, orientamento sessuale, opinioni politiche, biometria) e le implicazioni per la valutazione dei rischi.
+Max 400 parole totali. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown con tabelle..." }`,
         maxWords:        400,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['affected_categories', 'vulnerable_groups', 'special_data_categories'],
+          required: ['text'],
           properties: {
-            affected_categories: {
-              type: 'array',
-              items: {
-                type: 'object',
-                required: ['category', 'estimated_scale', 'impact_nature'],
-                properties: {
-                  category:        { type: 'string', description: 'Nome della categoria di persone interessate' },
-                  estimated_scale: { type: 'string', description: 'Stima indicativa della portata (es: "circa 50 persone/anno", "potenzialmente tutta la clientela")' },
-                  impact_nature:   { type: 'string', enum: ['diretto', 'indiretto', 'diretto e indiretto'] },
-                },
-              },
-              description: 'Almeno 1 categoria identificata',
-            },
-            vulnerable_groups: {
-              type: 'array',
-              items: {
-                type: 'object',
-                required: ['group', 'present_in_context', 'specific_risks'],
-                properties: {
-                  group:              { type: 'string', description: 'Nome del gruppo vulnerabile analizzato' },
-                  present_in_context: { type: 'boolean', description: 'true se questo gruppo è presente tra gli interessati nel contesto specifico' },
-                  specific_risks:     { type: 'string', description: 'Se presente: rischi specifici per questo gruppo. Se assente: motivazione breve.' },
-                },
-              },
-              description: 'Analisi di tutti i 7 gruppi vulnerabili elencati nell\'istruzione — anche quelli non presenti nel contesto',
-            },
-            special_data_categories: { type: 'boolean', description: 'true se il sistema elabora dati di categorie speciali ai sensi dell\'Art. 9 GDPR' },
+            text: { type: 'string', description: 'Sezione persone interessate e gruppi vulnerabili in markdown — include due tabelle markdown obbligatorie e prosa con ### sottotitoli' },
           },
         },
       },
@@ -570,30 +806,31 @@ export const FRIA_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'rights_risks',
-        instruction:     "Conduci una valutazione strutturata dei rischi per i diritti fondamentali garantiti dalla Carta dei Diritti Fondamentali dell'UE. Per ciascun diritto analizzato, valuta: probabilità che il rischio si materializzi nel contesto specifico (alta/media/bassa), gravità dell'impatto potenziale (alta/media/bassa), e descrizione concreta del rischio. ANALIZZA OBBLIGATORIAMENTE tutti i seguenti diritti fondamentali in relazione al sistema AI e al suo contesto d'uso: (1) 'Non discriminazione e parità di trattamento' — rischi di bias algoritmici, discriminazione per genere, etnia, età, disabilità, orientamento sessuale nelle decisioni automatizzate o semi-automatizzate; (2) 'Protezione dei dati personali e riservatezza' — rischi di profilazione non autorizzata, accesso illecito, conservazione eccessiva, trasferimento a terzi senza base giuridica; (3) 'Dignità umana' — rischi di trattamento degradante, etichettatura automatica stigmatizzante, riduzione della persona a dati; (4) 'Accesso a servizi essenziali e libertà' — rischi di esclusione da servizi di lavoro, credito, assistenza, libertà di movimento o espressione causata da decisioni algoritmiche; (5) 'Diritto a un ricorso effettivo e alla revisione delle decisioni' — rischi che le persone interessate non possano contestare o comprendere una decisione automatizzata che le riguarda; (6) Diritti specifici al settore — se pertinente: diritti del minore, diritti dei lavoratori, diritto all'istruzione, presunzione di innocenza. Per i rischi con probabilità ALTA o gravità ALTA: espandi la descrizione con l'impatto concreto nel contesto aziendale specifico.",
+        instruction:     `Conduci la valutazione dei rischi per i diritti fondamentali in prosa analitica con ### sottotitoli e una tabella markdown obbligatoria.
+### Metodologia di Valutazione
+Breve paragrafo (2-3 frasi) sulla metodologia di analisi applicata: quali fattori sono stati considerati (natura del sistema, categorie di persone interessate, contesto d'uso) e come è stata determinata la probabilità e la gravità dei rischi.
+### Valutazione per Diritto Fondamentale
+Includi OBBLIGATORIAMENTE una tabella markdown che copra tutti i diritti richiesti:
+| Diritto Fondamentale | Probabilità | Gravità | Descrizione del Rischio nel Contesto Specifico |
+| --- | --- | --- | --- |
+| Non discriminazione e parità di trattamento | Alta / Media / Bassa / N.A. | Alta / Media / Bassa / N.A. | [Descrizione concreta del rischio: bias algoritmici, discriminazione per genere/etnia/età nelle decisioni] |
+| Protezione dei dati personali e riservatezza | ... | ... | [Rischi di profilazione, accesso illecito, conservazione eccessiva] |
+| Dignità umana | ... | ... | [Rischi di trattamento degradante, etichettatura automatica stigmatizzante] |
+| Accesso a servizi essenziali e libertà | ... | ... | [Rischi di esclusione da servizi causata da decisioni algoritmiche] |
+| Diritto a un ricorso effettivo | ... | ... | [Rischi che le persone non possano contestare una decisione automatizzata] |
+| [Diritti specifici al settore, se applicabili] | ... | ... | ... |
+Per ogni diritto con probabilità ALTA o gravità ALTA, aggiungi sotto la tabella un breve paragrafo descrittivo che espande il rischio concreto nel contesto aziendale specifico.
+### Livello di Rischio Complessivo
+In prosa (2-3 frasi): sintetizza il livello di rischio complessivo risultante (alto/medio/basso) e i fattori determinanti principali.
+Max 500 parole totali. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown con tabella..." }`,
         maxWords:        500,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['risk_assessments', 'overall_risk_level', 'highest_risk_summary'],
+          required: ['text'],
           properties: {
-            risk_assessments: {
-              type: 'array',
-              items: {
-                type: 'object',
-                required: ['fundamental_right', 'probability', 'severity', 'risk_description'],
-                properties: {
-                  fundamental_right: { type: 'string', description: 'Nome del diritto fondamentale (es: "Non discriminazione", "Protezione dei dati personali", "Dignità umana")' },
-                  probability:       { type: 'string', enum: ['alta', 'media', 'bassa', 'non applicabile'] },
-                  severity:          { type: 'string', enum: ['alta', 'media', 'bassa', 'non applicabile'] },
-                  risk_description:  { type: 'string', description: 'Descrizione concreta del rischio nel contesto specifico — almeno 1 frase per ogni diritto analizzato' },
-                },
-              },
-              description: 'Minimo 5 diritti analizzati, uno per ciascuno dei diritti elencati nell\'istruzione',
-            },
-            overall_risk_level: { type: 'string', enum: ['alto', 'medio', 'basso'], description: 'Livello di rischio complessivo risultante dall\'analisi' },
-            highest_risk_summary: { type: 'string', description: 'Sintesi narrativa dei rischi più elevati identificati (max 2 frasi)' },
+            text: { type: 'string', description: 'Valutazione rischi diritti fondamentali in markdown — include tabella obbligatoria e prosa con ### sottotitoli' },
           },
         },
       },
@@ -605,19 +842,26 @@ export const FRIA_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'oversight_measures',
-        instruction:     "Descrivi le misure di supervisione umana implementate per questo sistema AI, in conformità alle istruzioni d'uso fornite dal fornitore (Art. 26 AI Act): (1) meccanismi concreti di supervisione: chi verifica gli output del sistema, con quale procedura e frequenza, prima che una decisione impatti una persona — sii specifico (es. 'il responsabile HR rivede ogni output prima di comunicarlo al candidato'); (2) capacità di intervento e override umano: come un operatore può ignorare, modificare o annullare la raccomandazione/decisione del sistema AI, e in quali circostanze è obbligatorio farlo; (3) formazione e qualificazione richiesta agli operatori che supervisionano il sistema — specifica il livello minimo; (4) misure specifiche per i casi che coinvolgono i gruppi vulnerabili identificati (es. revisione addizionale obbligatoria, doppio controllo); (5) trasparenza verso gli interessati: come viene comunicato l'uso del sistema AI alle persone coinvolte e come possono richiedere un'interazione umana.",
+        instruction:     `Descrivi le misure di supervisione umana in prosa operativa con ### sottotitoli. Art. 26 AI Act.
+### Meccanismi di Supervisione
+In prosa, descrivi almeno 2 meccanismi concreti: chi verifica gli output, con quale procedura specifica passo-passo (NON "il manager controlla" ma la procedura concreta), e con quale frequenza. Specifica se la supervisione avviene prima o dopo che la decisione impatta una persona.
+### Override e Intervento Umano
+In prosa, descrivi come un operatore può ignorare, modificare o annullare la raccomandazione/decisione del sistema AI, e in quali circostanze specifiche l'override è obbligatorio. Chi ha l'autorità definitiva.
+### Formazione degli Operatori
+In prosa, il livello minimo di formazione richiesto per gli operatori che supervisionano il sistema: conoscenza del funzionamento, sensibilizzazione sui bias, procedure di escalation, frequenza aggiornamento.
+### Misure per Soggetti Vulnerabili
+In prosa: misure aggiuntive specifiche per i gruppi vulnerabili identificati nella sezione precedente (es. revisione addizionale obbligatoria, doppio controllo). Se non applicabile: "Nessun gruppo vulnerabile identificato nel contesto d'uso — non sono previste misure specifiche aggiuntive."
+### Trasparenza verso gli Interessati
+In prosa: come le persone interessate vengono informate dell'utilizzo del sistema AI e come possono richiedere un'interazione umana alternativa.
+Max 350 parole. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown..." }`,
         maxWords:        350,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['supervision_mechanisms', 'override_procedure', 'operator_training', 'vulnerable_groups_measures', 'transparency_to_subjects'],
+          required: ['text'],
           properties: {
-            supervision_mechanisms:    { type: 'array', items: { type: 'string' }, description: 'Almeno 2 meccanismi concreti di supervisione umana' },
-            override_procedure:        { type: 'string', description: 'Come un operatore può annullare o modificare la decisione AI' },
-            operator_training:         { type: 'string', description: 'Formazione minima richiesta per gli operatori del sistema' },
-            vulnerable_groups_measures: { type: 'string', description: 'Misure aggiuntive specifiche per soggetti vulnerabili (o "N/A — nessun gruppo vulnerabile identificato")' },
-            transparency_to_subjects:  { type: 'string', description: 'Come le persone interessate vengono informate dell\'utilizzo del sistema AI' },
+            text: { type: 'string', description: 'Misure di supervisione umana FRIA in markdown con ### sottotitoli e misure concrete' },
           },
         },
       },
@@ -629,39 +873,28 @@ export const FRIA_V1: DocSchema = {
       kind:      'GENERATIVE',
       slot: {
         slotId:          'risk_mitigation',
-        instruction:     "Descrivi le misure di risposta ai rischi e la governance in conformità all'Art. 27(2)(e) AI Act: (1) per ciascun rischio ad alta o media probabilità/gravità identificato nella sezione precedente, definisci: la misura concreta di mitigazione (non generica — azione specifica adatta alla PMI), il ruolo aziendale responsabile dell'attuazione, e un timeframe realistico; (2) meccanismo di reclamo accessibile alle persone interessate (Art. 26(4)): specifica il canale di accesso (es. email dedicata, modulo web, sportello fisico), il ruolo che gestisce i reclami, e il tempo di risposta garantito; (3) struttura di governance interna per la FRIA: chi è responsabile dell'aggiornamento della valutazione, con quale frequenza viene rivista, chi approva le versioni aggiornate; (4) coordinamento con la DPIA GDPR: indica se è stata o sarà condotta una Valutazione d'Impatto sulla Protezione dei Dati (DPIA) separata o congiunta con questa FRIA — la FRIA non sostituisce la DPIA per trattamenti ad alto rischio GDPR. Max 400 parole.",
+        instruction:     `Descrivi le misure di mitigazione, la governance interna e il meccanismo di reclamo in prosa operativa con ### sottotitoli e una tabella markdown. Art. 27(2)(e) AI Act.
+### Misure di Mitigazione dei Rischi
+Includi OBBLIGATORIAMENTE una tabella markdown con le misure di risposta ai rischi ad alta o media probabilità/gravità identificati nella sezione precedente:
+| Diritto Fondamentale / Rischio | Misura di Mitigazione Concreta | Ruolo Responsabile | Scadenza |
+| --- | --- | --- | --- |
+| [Diritto fondamentale] | [Misura specifica e concreta — NON generica, adatta alla PMI] | [Ruolo aziendale] | [Es: "entro 30 giorni dall'adozione della FRIA"] |
+Aggiungi una breve nota narrativa per le misure più critiche.
+### Meccanismo di Reclamo (Art. 26(4))
+In prosa: specifica il canale di accesso al reclamo (es. email: reclami@[nome-azienda].it — da completare con il recapito reale), il ruolo aziendale che gestisce i reclami (es. Responsabile Compliance, DPO), e il tempo di risposta garantito (es. entro 30 giorni lavorativi).
+### Governance della FRIA
+In prosa: chi è responsabile dell'aggiornamento della FRIA, con quale frequenza viene rivista (minimo annuale), chi approva le versioni aggiornate e come viene tracciato il cambiamento.
+### Coordinamento con la DPIA GDPR
+In prosa (3-4 frasi): indica se è stata o sarà condotta una Valutazione d'Impatto sulla Protezione dei Dati (DPIA) separata o congiunta con questa FRIA. Nota importante: la FRIA non sostituisce la DPIA per trattamenti ad alto rischio ai sensi del GDPR.
+Max 400 parole totali. Rispondi SOLO con JSON valido: { "text": "...sezione completa in markdown con tabella..." }`,
         maxWords:        400,
         allowedCitations: 'FROM_CONTEXT_ONLY',
         tone:            'operativo',
         outputSchema: {
           type: 'object',
-          required: ['mitigation_measures', 'complaint_mechanism', 'governance_structure', 'gdpr_coordination'],
+          required: ['text'],
           properties: {
-            mitigation_measures: {
-              type: 'array',
-              items: {
-                type: 'object',
-                required: ['risk_addressed', 'measure', 'responsible_role', 'timeframe'],
-                properties: {
-                  risk_addressed:   { type: 'string', description: 'Diritto fondamentale o rischio a cui si risponde' },
-                  measure:          { type: 'string', description: 'Misura concreta di mitigazione — specifica e adatta alla PMI' },
-                  responsible_role: { type: 'string', description: 'Ruolo aziendale responsabile (non nome proprio)' },
-                  timeframe:        { type: 'string', description: 'Es: "entro 30 giorni dall\'adozione della FRIA", "prima della messa in uso"' },
-                },
-              },
-              description: 'Almeno 1 misura per ogni rischio ad alta o media probabilità/gravità',
-            },
-            complaint_mechanism: {
-              type: 'object',
-              required: ['channel', 'handling_role', 'response_time'],
-              properties: {
-                channel:        { type: 'string', description: 'Canale di accesso al reclamo (es: "email: reclami@[azienda].it — completare con il recapito reale")' },
-                handling_role:  { type: 'string', description: 'Ruolo aziendale che gestisce i reclami (es: Responsabile Compliance, DPO, Responsabile HR)' },
-                response_time:  { type: 'string', description: 'Es: "entro 30 giorni lavorativi dalla ricezione del reclamo"' },
-              },
-            },
-            governance_structure: { type: 'string', description: 'Chi aggiorna la FRIA, con quale frequenza, chi firma la versione aggiornata' },
-            gdpr_coordination:    { type: 'string', description: 'Relazione tra questa FRIA e la DPIA GDPR (se il sistema tratta dati personali)' },
+            text: { type: 'string', description: 'Sezione mitigazione, governance e reclami in markdown — include tabella obbligatoria e prosa con ### sottotitoli' },
           },
         },
       },

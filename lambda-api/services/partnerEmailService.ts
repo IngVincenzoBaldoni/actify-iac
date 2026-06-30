@@ -1,6 +1,258 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
 const BASE_URL       = 'https://official-actify.com';
 const SENDER_EMAIL   = 'noreply@official-actify.com';
+const ADMIN_EMAIL    = 'officialactify@gmail.com';
+
+// ─── Partner access request — admin notification ──────────────────────────────
+
+export async function sendPartnerRequestNotification(params: {
+  rid: string;
+  approveKey: string;
+  email: string;
+  ragioneSociale: string;
+  tipoStudio: string;
+  nClienti: number;
+  messaggio?: string;
+}): Promise<void> {
+  const { rid, approveKey, email, ragioneSociale, tipoStudio, nClienti, messaggio } = params;
+  const approveUrl = `${BASE_URL}/partner-approve?rid=${rid}&key=${approveKey}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#064e3b 0%,#059669 60%,#34d399 100%);padding:28px 40px;">
+            <p style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:-.5px;">Actify — Nuova richiesta partner</p>
+            <p style="margin:5px 0 0;color:rgba(255,255,255,.75);font-size:13px;">Richiesta di accesso al Portal Partner</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 40px;color:#e2e8f0;font-size:15px;line-height:1.75;">
+            <p style="margin:0 0 20px;font-weight:600;color:#f8fafc;">Dettagli della richiesta:</p>
+            <table cellpadding="0" cellspacing="0" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;">
+              <tr><td style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);color:#94a3b8;font-size:13px;width:40%;">Ragione Sociale</td><td style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);color:#f8fafc;font-weight:600;">${ragioneSociale}</td></tr>
+              <tr><td style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);color:#94a3b8;font-size:13px;">Tipo Studio</td><td style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);color:#f8fafc;">${tipoStudio}</td></tr>
+              <tr><td style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);color:#94a3b8;font-size:13px;">N° Clienti stimati</td><td style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);color:#f8fafc;">${nClienti}</td></tr>
+              <tr><td style="padding:12px 18px;${messaggio ? 'border-bottom:1px solid rgba(255,255,255,.06);' : ''}color:#94a3b8;font-size:13px;">Email</td><td style="padding:12px 18px;${messaggio ? 'border-bottom:1px solid rgba(255,255,255,.06);' : ''}color:#34d399;">${email}</td></tr>
+              ${messaggio ? `<tr><td style="padding:12px 18px;color:#94a3b8;font-size:13px;vertical-align:top;">Messaggio</td><td style="padding:12px 18px;color:#f8fafc;font-size:14px;line-height:1.6;">${messaggio}</td></tr>` : ''}
+            </table>
+            <p style="margin:28px 0 20px;">Clicca il pulsante per approvare la richiesta e inviare automaticamente il link di registrazione allo studio:</p>
+            <table cellpadding="0" cellspacing="0"><tr><td>
+              <a href="${approveUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#34d399);color:#fff;padding:15px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:-.2px;">
+                Approva e invia invito →
+              </a>
+            </td></tr></table>
+            <p style="margin:24px 0 0;font-size:12px;color:#64748b;">Oppure copia e incolla nel browser:<br/>
+            <a href="${approveUrl}" style="color:#34d399;word-break:break-all;font-size:12px;">${approveUrl}</a></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#0f172a;padding:18px 40px;border-top:1px solid rgba(255,255,255,.06);">
+            <p style="margin:0;font-size:12px;color:#475569;">© Actify — Admin notification · official-actify.com</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:    'Actify <noreply@official-actify.com>',
+      to:      [ADMIN_EMAIL],
+      subject: `[Actify] Nuova richiesta partner — ${ragioneSociale}`,
+      html,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+}
+
+// ─── Partner access request — studio confirmation ─────────────────────────────
+
+export async function sendPartnerRequestConfirmation(params: {
+  to: string;
+  ragioneSociale: string;
+}): Promise<void> {
+  const { to, ragioneSociale } = params;
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#064e3b 0%,#059669 60%,#34d399 100%);padding:28px 40px;">
+            <p style="margin:0;color:#fff;font-size:24px;font-weight:800;letter-spacing:-.5px;">Actify</p>
+            <p style="margin:5px 0 0;color:rgba(255,255,255,.75);font-size:13px;">EU AI Act Compliance Platform</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;color:#e2e8f0;font-size:15px;line-height:1.75;">
+            <p style="margin:0 0 16px;">Grazie per il tuo interesse ad <strong style="color:#34d399;">Actify</strong>!</p>
+            <p style="margin:0 0 20px;">Abbiamo ricevuto la richiesta di accesso al <strong>Partner Portal</strong> di <strong>${ragioneSociale}</strong>. Il nostro team la esaminerà e riceverai una risposta via email entro <strong>1–2 giorni lavorativi</strong>.</p>
+            <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;">Se hai domande nel frattempo, puoi rispondere a questa email o scrivere a <a href="mailto:info@official-actify.com" style="color:#34d399;text-decoration:none;">info@official-actify.com</a>.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#0f172a;padding:18px 40px;border-top:1px solid rgba(255,255,255,.06);">
+            <p style="margin:0;font-size:12px;color:#475569;">© Actify — AI Act Compliance Platform · official-actify.com</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:    'Actify <noreply@official-actify.com>',
+      to:      [to],
+      subject: 'Actify — Abbiamo ricevuto la tua richiesta Partner',
+      html,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+}
+
+// ─── Partner registration link (after admin approval) ─────────────────────────
+
+export async function sendPartnerRegistrationLink(params: {
+  to: string;
+  ragioneSociale: string;
+  registrationUrl: string;
+}): Promise<void> {
+  const { to, ragioneSociale, registrationUrl } = params;
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#064e3b 0%,#059669 60%,#34d399 100%);padding:28px 40px;">
+            <p style="margin:0;color:#fff;font-size:24px;font-weight:800;letter-spacing:-.5px;">Actify</p>
+            <p style="margin:5px 0 0;color:rgba(255,255,255,.75);font-size:13px;">EU AI Act Compliance Platform</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;color:#e2e8f0;font-size:15px;line-height:1.75;">
+            <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#f8fafc;">Ottima notizia!</p>
+            <p style="margin:0 0 20px;">La richiesta di accesso al <strong>Partner Portal</strong> di <strong style="color:#34d399;">${ragioneSociale}</strong> è stata approvata. Puoi ora completare la registrazione e accedere ad Actify.</p>
+            <p style="margin:0 0 24px;">Clicca il pulsante qui sotto per scegliere la tua password e attivare l'account:</p>
+            <table cellpadding="0" cellspacing="0"><tr><td>
+              <a href="${registrationUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#34d399);color:#fff;padding:15px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:-.2px;">
+                Completa la registrazione →
+              </a>
+            </td></tr></table>
+            <p style="margin:28px 0 0;font-size:12px;color:#64748b;">Il link è valido per 7 giorni. Se non riesci ad aprirlo, copia e incolla nel browser:<br/>
+            <a href="${registrationUrl}" style="color:#34d399;word-break:break-all;font-size:12px;">${registrationUrl}</a></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#0f172a;padding:18px 40px;border-top:1px solid rgba(255,255,255,.06);">
+            <p style="margin:0;font-size:12px;color:#475569;">© Actify — AI Act Compliance Platform · official-actify.com<br/>Questo link è personale e non va condiviso.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:    'Actify <noreply@official-actify.com>',
+      to:      [to],
+      subject: 'Actify — Il tuo link di registrazione Partner è pronto',
+      html,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+}
+
+// ─── Collaborator invite email ────────────────────────────────────────────────
+
+// ─── Collaborator invite email ────────────────────────────────────────────────
+
+export async function sendCollaboratorInviteEmail(params: {
+  to: string;
+  companyName: string;
+  inviterEmail: string;
+  inviteUrl: string;
+}): Promise<void> {
+  const { to, companyName, inviterEmail, inviteUrl } = params;
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#064e3b 0%,#059669 60%,#34d399 100%);padding:32px 40px;">
+            <p style="margin:0;color:#ffffff;font-size:24px;font-weight:800;letter-spacing:-.5px;">Actify</p>
+            <p style="margin:6px 0 0;color:rgba(255,255,255,.75);font-size:13px;">EU AI Act Compliance Platform</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;color:#e2e8f0;font-size:15px;line-height:1.75;">
+            <p style="margin:0 0 20px;">Sei stato invitato a collaborare su <strong style="color:#34d399;">Actify</strong> per gestire la compliance EU AI Act di <strong>${companyName}</strong>.</p>
+            <p style="margin:0 0 28px;color:#94a3b8;font-size:14px;">Invito inviato da <a href="mailto:${inviterEmail}" style="color:#34d399;text-decoration:none;">${inviterEmail}</a></p>
+            <p style="margin:0 0 24px;">Clicca il pulsante qui sotto per creare il tuo account e scegliere la tua password:</p>
+            <table cellpadding="0" cellspacing="0"><tr><td>
+              <a href="${inviteUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#34d399);color:#fff;padding:15px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:-.2px;">
+                Accetta l'invito →
+              </a>
+            </td></tr></table>
+            <p style="margin:28px 0 0;font-size:12px;color:#64748b;">Il link è valido per 7 giorni. Se non ti aspettavi questo invito, puoi ignorare questa email.<br/>
+            Oppure copia e incolla nel browser: <a href="${inviteUrl}" style="color:#34d399;word-break:break-all;">${inviteUrl}</a></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#0f172a;padding:20px 40px;border-top:1px solid rgba(255,255,255,.06);">
+            <p style="margin:0;font-size:12px;color:#475569;">© Actify — AI Act Compliance Platform · official-actify.com<br/>Questo invito è strettamente personale e non va condiviso.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:     'Actify <noreply@official-actify.com>',
+      to:       [to],
+      reply_to: inviterEmail,
+      subject:  `Sei invitato a collaborare su Actify — ${companyName}`,
+      html,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Resend error ${res.status}: ${text}`);
+  }
+}
 
 // ─── Referral invite email ────────────────────────────────────────────────────
 

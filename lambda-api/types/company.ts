@@ -29,7 +29,7 @@ export interface CompanyUser {
   company_id: string;
   user_id: string;
   email: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'collaborator';
   status: 'pending' | 'active';
   invited_by: string | null;
   joined_at: string | null;

@@ -15,30 +15,59 @@ const DOC_TYPE_TITLES: Record<string, string> = {
 };
 
 function slotContentToMarkdown(content: Record<string, unknown>): string {
-  // If content has a "text" string field, use it directly
   if (typeof content['text'] === 'string') return content['text'];
   if (typeof content['content'] === 'string') return content['content'];
 
-  // Otherwise serialize all string values
   const parts: string[] = [];
-  function extract(obj: unknown, depth = 0): void {
+
+  // Arrays of uniform objects → markdown table (preserves structure for DOCX rendering)
+  function isUniformObjectArray(arr: unknown[]): arr is Record<string, unknown>[] {
+    return arr.length > 0 && arr.every(
+      item => item !== null && typeof item === 'object' && !Array.isArray(item),
+    );
+  }
+
+  function objectArrayToMarkdownTable(rows: Record<string, unknown>[]): string {
+    const keys = Object.keys(rows[0]);
+    const header    = `| ${keys.map(k => k.replace(/_/g, ' ')).join(' | ')} |`;
+    const separator = `| ${keys.map(() => '---').join(' | ')} |`;
+    const dataRows  = rows.map(row =>
+      `| ${keys.map(k => {
+        const v = row[k];
+        const s = typeof v === 'string' ? v
+          : Array.isArray(v) ? v.join(', ')
+          : v !== null && typeof v === 'object' ? JSON.stringify(v)
+          : String(v ?? '');
+        return s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+      }).join(' | ')} |`,
+    );
+    return [header, separator, ...dataRows].join('\n');
+  }
+
+  function extract(obj: unknown): void {
     if (typeof obj === 'string' && obj.trim()) {
       parts.push(obj.trim());
       return;
     }
     if (Array.isArray(obj)) {
-      obj.forEach(item => {
-        if (typeof item === 'string') parts.push(`- ${item.trim()}`);
-        else extract(item, depth + 1);
-      });
+      if (isUniformObjectArray(obj)) {
+        parts.push(objectArrayToMarkdownTable(obj));
+      } else {
+        obj.forEach(item => {
+          if (typeof item === 'string') parts.push(`- ${item.trim()}`);
+          else extract(item);
+        });
+      }
       return;
     }
     if (obj && typeof obj === 'object') {
       for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
         if (key === 'title' && typeof val === 'string') {
           parts.push(`**${val}**`);
+        } else if (key === 'role_context') {
+          // metadata field — skip in body, already in context
         } else {
-          extract(val, depth + 1);
+          extract(val);
         }
       }
     }

@@ -85,6 +85,14 @@ export async function getCompanyIdByEmail(email: string): Promise<string | null>
   return item ? (item.company_id as string) : null;
 }
 
+export async function getCompanyUser(companyId: string, userId: string) {
+  const r = await client.send(new GetCommand({
+    TableName: TABLES.users,
+    Key: { company_id: companyId, user_id: userId },
+  }));
+  return r.Item ?? null;
+}
+
 export async function putCompanyUser(item: Record<string, unknown>) {
   await client.send(new PutCommand({ TableName: TABLES.users, Item: item }));
 }

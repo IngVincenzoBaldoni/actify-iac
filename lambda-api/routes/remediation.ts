@@ -3,7 +3,8 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { parseBody } from '../middleware/validator';
 import { extractAuth } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
-import { generatePresignedUrl, getGapType, uploadProofToS3 } from '../services/remediationService';
+import { generatePresignedUrl, getGapType, uploadProofToS3, migrateDocToDocx } from '../services/remediationService';
+import { logEvent } from '../services/auditService';
 import type { Company } from '../types/company';
 import { z } from 'zod';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
@@ -88,7 +89,43 @@ export async function getDocument(event: APIGatewayProxyEventV2WithJWTAuthorizer
   // Attach pre-signed URL for frontend preview/download (valid 1 hour)
   let preview_url: string | undefined;
   if ((doc.status === 'draft' || doc.status === 'final') && doc.s3_key) {
-    preview_url = await generatePresignedUrl(doc.s3_key as string);
+    const DOC_TYPE_SLUGS: Record<string, string> = {
+      TECH_DOC:          'documentazione-tecnica',
+      DISCLOSURE_NOTICE: 'informativa-trasparenza',
+      MONITORING_PLAN:   'piano-monitoraggio',
+      AI_POLICY:         'policy-ai',
+      CONFORMITY_DECL:   'dichiarazione-conformita',
+      FRIA:              'fria',
+    };
+    const slugify = (s: string) =>
+      s.toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    const typeSlug = DOC_TYPE_SLUGS[doc.document_type as string]
+      ?? slugify((doc.document_type as string) ?? 'documento');
+
+    const titleStr = (doc.title as string | undefined) ?? '';
+    const systemPart = titleStr.includes(' — ') ? titleStr.split(' — ').slice(1).join(' — ') : '';
+    const systemSlug = systemPart ? slugify(systemPart) : 'sistema';
+
+    // Lazy migration: if file is a legacy PDF but markdown exists, convert to DOCX now
+    let s3KeyToServe = doc.s3_key as string;
+    if (s3KeyToServe.endsWith('.pdf')) {
+      try {
+        s3KeyToServe = await migrateDocToDocx(doc as Record<string, unknown>);
+      } catch (migErr) {
+        console.warn('[getDocument] PDF→DOCX migration skipped:', (migErr as Error).message);
+        // keep s3KeyToServe as PDF — will still be downloadable
+      }
+    }
+
+    const actualExt = s3KeyToServe.endsWith('.docx') ? '.docx' : '.pdf';
+    const dlFilename = doc.status === 'draft'
+      ? `${typeSlug}-${systemSlug}-bozza${actualExt}`
+      : `${typeSlug}-${systemSlug}${actualExt}`;
+
+    preview_url = await generatePresignedUrl(s3KeyToServe, 3600, dlFilename);
   }
 
   return { statusCode: 200, body: JSON.stringify({ ...doc, preview_url }) };
@@ -116,8 +153,8 @@ export async function finalizeDocument(event: APIGatewayProxyEventV2WithJWTAutho
   return { statusCode: 200, body: JSON.stringify({ success: true }) };
 }
 
-// ─── POST /api/documents/:documentId/reupload  (ricarica versione modificata) ─
-// Accepts a base64-encoded PDF, uploads to S3, keeps status as 'draft'.
+// ─── POST /api/documents/:documentId/reupload  (ricarica versione finalizzata) ─
+// Accepts a base64-encoded PDF or DOCX, uploads to S3, marks document as 'final'.
 export async function reuploadDocument(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth       = extractAuth(event);
   const documentId = event.pathParameters?.documentId;
@@ -135,19 +172,45 @@ export async function reuploadDocument(event: APIGatewayProxyEventV2WithJWTAutho
   const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
   const BUCKET = process.env.DOCUMENTS_BUCKET ?? 'actify-saas-documents';
 
-  const s3Key = (doc.s3_key as string) ?? `documents/${doc.company_id}/${doc.system_id}/${doc.document_type}/${documentId}_v1.pdf`;
+  const filename   = body.filename ?? '';
+  const isDocx     = filename.toLowerCase().endsWith('.docx');
+  const contentType = isDocx
+    ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    : 'application/pdf';
+
+  // Always derive the S3 key from the uploaded file's extension so the
+  // content type and key extension always match (avoids lazy-migration override).
+  const ext = isDocx ? '.docx' : '.pdf';
+  const existingKey = doc.s3_key as string | undefined;
+  const s3Key = existingKey
+    ? existingKey.replace(/\.(pdf|docx)$/, ext)   // swap extension to match upload
+    : `documents/${doc.company_id}/${doc.system_id}/${doc.document_type}/${documentId}_v1${ext}`;
+
   const buffer = Buffer.from(body.content_base64, 'base64');
 
   await s3.send(new PutObjectCommand({
     Bucket:      BUCKET,
     Key:         s3Key,
     Body:        buffer,
-    ContentType: 'application/pdf',
+    ContentType: contentType,
   }));
 
-  // Keep TTL alive: extend by 7 days on re-upload
-  const ttl = Math.floor(Date.now() / 1000) + 7 * 86400;
-  await dynamo.updateDocument(documentId, { s3_key: s3Key, ttl, uploaded_at: new Date().toISOString() });
+  const now = new Date().toISOString();
+
+  // Remove TTL (document is now finalized — no expiry), mark as final
+  await dynamo.updateDocument(documentId, {
+    s3_key:       s3Key,
+    status:       'final',
+    finalized_at: now,
+    uploaded_at:  now,
+    ttl:          null,
+  });
+
+  await logEvent(auth.companyId, 'document_finalized', {
+    document_id:   documentId,
+    document_type: doc.document_type as string,
+    filename,
+  }, auth.email);
 
   return { statusCode: 200, body: JSON.stringify({ success: true, s3_key: s3Key }) };
 }

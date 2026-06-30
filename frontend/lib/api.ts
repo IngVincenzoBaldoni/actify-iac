@@ -39,8 +39,14 @@ export const api = {
     }) => request<{ company_id: string; user_id: string; message: string }>(
       'POST', '/api/auth/register', body, true
     ),
-    invite: (body: { email: string; role: 'admin' | 'member' }) =>
+    invite: (body: { email: string; role: 'admin' | 'collaborator' }) =>
       request<{ message: string }>('POST', '/api/auth/invite', body),
+    validateInvite: (cid: string, t: string) =>
+      request<{ email: string; company_name: string; role: string }>(
+        'GET', `/api/auth/invite/validate?cid=${encodeURIComponent(cid)}&t=${encodeURIComponent(t)}`, undefined, true,
+      ),
+    acceptInvite: (body: { company_id: string; token: string; password: string }) =>
+      request<{ message: string }>('POST', '/api/auth/invite/accept', body, true),
   },
 
   // ─── Company ────────────────────────────────────────────────────────────────
@@ -161,6 +167,18 @@ export const api = {
     }) => request<{ partner_id: string; message: string }>(
       'POST', '/api/partner/request', body, true
     ),
+    requestAccess: (body: {
+      ragione_sociale: string; tipo_studio: string; n_clienti: number;
+      email: string; messaggio?: string;
+    }) => request<{ message: string }>('POST', '/api/partner/request-access', body, true),
+    approveRequest: (body: { rid: string; key: string }) =>
+      request<{ message: string }>('POST', '/api/partner/approve-request', body, true),
+    getRegistrationInfo: (t: string, rid: string) =>
+      request<{ email: string; ragione_sociale: string; tipo_studio: string; n_clienti: number }>(
+        'GET', `/api/partner/registration-info?t=${encodeURIComponent(t)}&rid=${encodeURIComponent(rid)}`, undefined, true,
+      ),
+    completeRegistration: (body: { rid: string; token: string; password: string }) =>
+      request<{ partner_id: string; message: string }>('POST', '/api/partner/complete-registration', body, true),
     getMe: () => request<Record<string, unknown>>('GET', '/api/partner/me'),
     updateMe: (body: Record<string, unknown>) =>
       request<{ message: string }>('PUT', '/api/partner/me', body),

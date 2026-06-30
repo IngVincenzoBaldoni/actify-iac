@@ -49,6 +49,11 @@ const aiSystemSchema = z.object({
     'justice_administration',
   ])).optional(),
   is_safety_component: z.boolean().optional(),
+  // Exposure fields written by frontend sync and syncSystemExposure
+  last_exposure_min:  z.number().optional(),
+  last_exposure_max:  z.number().optional(),
+  compliance_status:  z.enum(['compliant', 'gap_found', 'not_started']).optional(),
+  updated_at:         z.string().optional(),
 });
 
 const aiSystemUpdateSchema = aiSystemSchema.partial();
@@ -142,20 +147,33 @@ export async function updateSystem(event: APIGatewayProxyEventV2WithJWTAuthorize
           estimated_sanction_min?: number; estimated_sanction_max?: number;
         }>;
         const cl = body.compliance_checklist as Record<string, { status?: string } | string>;
-        let newMin = 0, newMax = 0;
+        // Deduplicate by article (same article may appear in multiple gaps)
+        const artMap = new Map<string, { min: number; max: number }>();
         for (const g of gaps) {
           const entry = cl[g.article];
           const entryStatus = typeof entry === 'string' ? entry : entry?.status;
           if (g.status !== 'compliant' && entryStatus !== 'present') {
-            newMin += g.estimated_sanction_min ?? 0;
-            newMax += g.estimated_sanction_max ?? 0;
+            const gMin = g.estimated_sanction_min ?? 0;
+            const gMax = g.estimated_sanction_max ?? 0;
+            if (gMax > 0) {
+              const ex = artMap.get(g.article) ?? { min: 0, max: 0 };
+              if (gMax > ex.max) artMap.set(g.article, { min: gMin, max: gMax });
+            }
           }
+        }
+        const articles_in_gap: Record<string, { min: number; max: number }> = {};
+        let newMin = 0, newMax = 0;
+        for (const [art, v] of artMap) {
+          articles_in_gap[art] = v;
+          newMin += v.min;
+          newMax += v.max;
         }
         await dynamo.appendSanctionSnapshot(auth.companyId, systemId, {
           at: new Date().toISOString(),
           min: newMin,
           max: newMax,
           source: 'checklist',
+          articles_in_gap,
         });
       }
     } catch { /* don't fail the update */ }

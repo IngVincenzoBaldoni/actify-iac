@@ -10,7 +10,7 @@ import { markSvg } from '@/lib/branding';
 
 configureAmplify();
 
-export type PlanTier = 'base' | 'premium' | 'enterprise';
+export type PlanTier = 'trial' | 'base' | 'premium' | 'enterprise';
 
 type FeatureOk = boolean | 'partial';
 
@@ -18,11 +18,32 @@ interface PlanFeature { label: string; value: string | null; ok: FeatureOk; }
 interface Plan {
   tier: PlanTier; name: string; monthly: number; tagline: string;
   color: string; badge: string | null; toolLimit: number;
+  icon: string;
   onHold?: boolean;
   features: PlanFeature[];
 }
 
 const PLANS: Plan[] = [
+  {
+    tier: 'trial',
+    name: 'Trial',
+    monthly: 29,
+    tagline: 'Diagnosi e assessment — scopri dove sei',
+    color: 'plan-card-trial',
+    badge: null,
+    icon: '🔬',
+    toolLimit: 5,
+    features: [
+      { label: 'AIPI — AI Passports Inventory', value: 'Fino a 5 tool AI censiti',    ok: true },
+      { label: 'Gap Analysis',                  value: null,                          ok: true },
+      { label: 'FEB (Fine Board Estimation)',    value: null,                          ok: true },
+      { label: 'Audit Trail',                   value: null,                          ok: true },
+      { label: 'AI Literacy Tracker',           value: null,                          ok: false },
+      { label: 'Document Vault',                value: null,                          ok: false },
+      { label: 'NBA (Next Best Action)',         value: null,                          ok: false },
+      { label: 'Supporto email',                value: 'Risposta entro 5 gg lavorativi', ok: true },
+    ],
+  },
   {
     tier: 'base',
     name: 'Starter',
@@ -30,14 +51,16 @@ const PLANS: Plan[] = [
     tagline: 'Per chi inizia il percorso di compliance',
     color: 'plan-card-base',
     badge: null,
+    icon: '🚀',
     toolLimit: 10,
     features: [
-      { label: 'AIPI — AI Passports Inventory', value: 'Fino a 10 tool',             ok: true },
+      { label: 'AIPI — AI Passports Inventory', value: 'Fino a 10 tool AI censiti',  ok: true },
       { label: 'Gap Analysis',                 value: null,                          ok: true },
       { label: 'FEB (Fine Board Estimation)',   value: null,                          ok: true },
       { label: 'AI Literacy Tracker',          value: null,                          ok: true },
       { label: 'Document Vault',               value: '5 categorie di documenti',    ok: true },
       { label: 'Audit Trail',                  value: null,                          ok: true },
+      { label: 'Team collaborativo',           value: 'Fino a 3 membri',             ok: true },
       { label: 'Supporto email standard',      value: 'Risposta entro 3 gg lavorativi', ok: true },
     ],
   },
@@ -48,6 +71,7 @@ const PLANS: Plan[] = [
     tagline: 'Per aziende che vogliono compliance attiva',
     color: 'plan-card-premium',
     badge: 'Più popolare',
+    icon: '⚡',
     toolLimit: Infinity,
     features: [
       { label: 'AIPI — AI Passports Inventory', value: 'Illimitata',                              ok: true },
@@ -57,6 +81,7 @@ const PLANS: Plan[] = [
       { label: 'AI Literacy Tracker',          value: null,                                      ok: true },
       { label: 'Document Vault',               value: 'Tutte le categorie + FRIA',               ok: true },
       { label: 'Audit Trail',                  value: null,                                      ok: true },
+      { label: 'Team collaborativo',           value: 'Fino a 10 membri',                        ok: true },
       { label: 'Testo AI Act ufficiale',       value: 'navigabile + link dalla Gap Analysis',    ok: true },
       { label: 'Supporto prioritario',         value: '1 gg lavorativo + call mensile 1h',      ok: true },
     ],
@@ -68,6 +93,7 @@ const PLANS: Plan[] = [
     tagline: 'Funzionalità avanzate per grandi organizzazioni',
     color: 'plan-card-enterprise',
     badge: 'Prossimamente',
+    icon: '🏛️',
     toolLimit: Infinity,
     onHold: true,
     features: [
@@ -138,7 +164,11 @@ function PlanContent() {
       </div>
 
       <div className="plan-hero">
-        <h1 className="plan-h1">Scegli il piano giusto<br />per la tua azienda</h1>
+        <div className="plan-pill">
+          <div className="plan-pill-dot" />
+          Reg. UE 2024/1689 · AI Act Compliance
+        </div>
+        <h1 className="plan-h1">Scegli il piano giusto<br /><span className="plan-h1-accent">per la tua azienda</span></h1>
         <p className="plan-sub">
           Conformità EU AI Act senza sorprese. Cambia piano in qualsiasi momento.
         </p>
@@ -187,7 +217,8 @@ function PlanContent() {
                 </div>
               )}
 
-              <div className="plan-card-head">
+              <div className="plan-card-top">
+                <div className="plan-card-icon">{plan.icon}</div>
                 <div className="plan-card-name">{plan.name}</div>
                 <div className="plan-card-tagline">{plan.tagline}</div>
               </div>
@@ -225,8 +256,8 @@ function PlanContent() {
 
               <div className="plan-features" style={isOnHold ? { filter: 'blur(4px)', opacity: 0.4, userSelect: 'none', pointerEvents: 'none' } : undefined}>
                 <div className="plan-feat-title">Cosa include</div>
-                {plan.features.map(f => (
-                  <div key={f.label} className={`plan-feat-row${!f.ok ? ' plan-feat-off' : ''}`}>
+                {plan.features.filter(f => f.ok !== false).map(f => (
+                  <div key={f.label} className="plan-feat-row">
                     <FeatureIcon ok={f.ok} />
                     <span className="plan-feat-label">{f.label}</span>
                     {f.value && <span className="plan-feat-value">{f.value}</span>}
@@ -262,18 +293,26 @@ function PlanContent() {
 
       {error && <div className="plan-error">{error}</div>}
 
+      {/* Trust signals */}
+      <div className="plan-trust-row">
+        <div className="plan-trust-item"><div className="plan-trust-tdot" />Cambia piano quando vuoi</div>
+        <div className="plan-trust-item"><div className="plan-trust-tdot" />Dati in EU · GDPR compliant</div>
+        <div className="plan-trust-item"><div className="plan-trust-tdot" />AWS eu-central-1 (Frankfurt)</div>
+      </div>
+
       <div style={{ maxWidth: 780, margin: '24px auto 8px', padding: '14px 20px', background: 'rgba(100,116,139,.06)', border: '1px solid rgba(100,116,139,.15)', borderRadius: 10, fontSize: 12, color: 'var(--muted)', lineHeight: 1.7 }}>
         <strong style={{ color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Nota sul supporto — tutti i piani</strong>
         Il supporto Actify è un <strong>supporto tecnico sull'utilizzo della piattaforma</strong>: risponde a domande su funzionalità, configurazione e utilizzo degli strumenti. Non include consulenza normativa, pareri legali né interpretazioni vincolanti del Reg. UE 2024/1689.
         Per questioni di natura legale o normativa si raccomanda di rivolgersi a un professionista qualificato in materia di compliance AI.
         <span style={{ display: 'block', marginTop: 6 }}>
-          <strong>Starter:</strong> supporto via email, risposta entro 3 giorni lavorativi, senza garanzia di SLA. &nbsp;|&nbsp;
-          <strong>Professional:</strong> email prioritaria con risposta entro 1 giorno lavorativo + 1 call di 30 minuti al mese con il team Actify.
+          <strong>Trial:</strong> email, risposta entro 5 giorni lavorativi. &nbsp;|&nbsp;
+          <strong>Starter:</strong> email, risposta entro 3 giorni lavorativi, senza garanzia di SLA. &nbsp;|&nbsp;
+          <strong>Professional:</strong> email prioritaria entro 1 giorno lavorativo + 1 call mensile 30 min con il team Actify.
         </span>
       </div>
 
       <div className="plan-footer-note">
-        Nessuna carta di credito richiesta per iniziare. Puoi cambiare o disdire il piano in qualsiasi momento, senza penali.
+        Puoi cambiare o disdire il piano in qualsiasi momento, senza penali.
       </div>
     </div>
   );

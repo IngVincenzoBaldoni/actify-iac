@@ -106,10 +106,28 @@ export const handler = async (event: AssembleContextInput): Promise<GenerationCo
 
   // 4. Fetch article texts from S3 Vectors (key-based)
   const vectorKeys = articleRefToVectorKeys(gap.article);
-  const articleTexts = await fetchArticleTexts(vectorKeys);
+  let articleTexts = await fetchArticleTexts(vectorKeys);
 
+  // Graceful degradation: if article not in KB, build context from gap data
   if (articleTexts.length === 0) {
-    throw new Error(`KB_MISS: no article texts found for keys: ${vectorKeys.join(', ')}`);
+    console.warn(`[assembleContext] KB_MISS for keys: ${vectorKeys.join(', ')} — using gap-derived context`);
+    const artNum = parseInt(gap.article.replace(/\D+/g, ''), 10);
+    articleTexts = [{
+      key:           vectorKeys[0] ?? gap.article,
+      articleNumber: isNaN(artNum) ? undefined : artNum,
+      articleTitle:  gap.requirement,
+      text:          `${gap.requirement}\n\n${gap.description}\n\nAzione richiesta: ${gap.what_to_do}`,
+    }];
+  }
+
+  // For CONFORMITY_DECL, always include Art. 47 and 48 (the declaration articles)
+  // so the validator allows citations to those articles in the generated text
+  if (docType === 'CONFORMITY_DECL') {
+    const extraKeys = ['art_47', 'art_48'].filter(k => !vectorKeys.includes(k));
+    if (extraKeys.length > 0) {
+      const extraTexts = await fetchArticleTexts(extraKeys);
+      articleTexts.push(...extraTexts);
+    }
   }
 
   const articleNums = extractArticleNumbers(articleTexts);

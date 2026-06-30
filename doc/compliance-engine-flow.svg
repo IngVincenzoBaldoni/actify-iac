@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600" viewBox="0 0 1600 600">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arr-dashed" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#CBD5E1"/>
+    </marker>
+  </defs>
+
+  <!-- Sfondo bianco -->
+  <rect width="1600" height="600" fill="#FFFFFF"/>
+
+  <!-- Bordo pagina sottile -->
+  <rect x="1" y="1" width="1598" height="598" rx="4" fill="none" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- ── TITOLO ─────────────────────────────────────────────────────── -->
+  <text x="800" y="38" text-anchor="middle" fill="#0F172A"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="22" font-weight="700">
+    Flusso End-to-End — Motore di Compliance Actify
+  </text>
+  <text x="800" y="60" text-anchor="middle" fill="#64748B"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="13">
+    Dalla richiesta di check al risultato: motore deterministico + RAG + Intelligenza Artificiale Generativa
+  </text>
+
+  <!-- ── BRACKET ESECUZIONE ASINCRONA ─────────────────────────────── -->
+  <rect x="366" y="78" width="1040" height="164" rx="8"
+        fill="none" stroke="#C4B5FD" stroke-width="1.2" stroke-dasharray="6,4"/>
+  <text x="700" y="91" fill="#7C3AED"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600" letter-spacing="0.8">
+    ESECUZIONE ASINCRONA (Lambda self-invoke)
+  </text>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- RIGA 1 — Step 1 → 2 → 3 → 4                                  -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <!-- ── STEP 1: AVVIO CHECK ──────────────────────────────────────── -->
+  <rect x="50" y="95" width="270" height="145" rx="12"
+        fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+  <circle cx="78" cy="123" r="16" fill="#2563EB"/>
+  <text x="78" y="129" text-anchor="middle" fill="#FFFFFF"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">1</text>
+  <!-- Service chip -->
+  <rect x="185" y="108" width="120" height="20" rx="4" fill="#DBEAFE"/>
+  <text x="245" y="122" text-anchor="middle" fill="#1D4ED8"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">API Gateway + Lambda</text>
+  <!-- Titolo -->
+  <text x="185" y="152" text-anchor="middle" fill="#1D4ED8"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700">Avvio Check</text>
+  <!-- Sottotitolo -->
+  <text x="185" y="171" text-anchor="middle" fill="#374151"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11.5">Chiamata sincrona → 202 Accepted</text>
+  <!-- Separatore -->
+  <line x1="65" y1="183" x2="305" y2="183" stroke="#BFDBFE" stroke-width="1"/>
+  <!-- Dettaglio -->
+  <text x="185" y="200" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Status 'in esecuzione' → DynamoDB</text>
+  <text x="185" y="216" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Invocazione asincrona della Lambda</text>
+  <text x="185" y="232" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Polling ogni 4s dal browser</text>
+
+  <!-- ── FRECCIA 1→2 ──────────────────────────────────────────────── -->
+  <line x1="322" y1="168" x2="374" y2="168" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ── STEP 2: MOTORE REGOLE ────────────────────────────────────── -->
+  <rect x="380" y="95" width="270" height="145" rx="12"
+        fill="#F5F3FF" stroke="#7C3AED" stroke-width="2"/>
+  <circle cx="408" cy="123" r="16" fill="#7C3AED"/>
+  <text x="408" y="129" text-anchor="middle" fill="#FFFFFF"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">2</text>
+  <rect x="468" y="108" width="167" height="20" rx="4" fill="#EDE9FE"/>
+  <text x="551" y="122" text-anchor="middle" fill="#6D28D9"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">Deterministico — zero LLM</text>
+  <text x="515" y="152" text-anchor="middle" fill="#5B21B6"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700">Motore Regole</text>
+  <text x="515" y="171" text-anchor="middle" fill="#374151"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11.5">Classifica sistema e articoli applicabili</text>
+  <line x1="395" y1="183" x2="635" y2="183" stroke="#DDD6FE" stroke-width="1"/>
+  <text x="515" y="200" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Tipo, categoria, ruolo, scopo</text>
+  <text x="515" y="216" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Art. 5 · Art. 6-51 · Art. 52 · Art. 99</text>
+  <text x="515" y="232" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Output: lista articoli rilevanti</text>
+
+  <!-- ── FRECCIA 2→3 ──────────────────────────────────────────────── -->
+  <line x1="652" y1="168" x2="704" y2="168" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ── STEP 3: RAG ───────────────────────────────────────────────── -->
+  <rect x="710" y="95" width="270" height="145" rx="12"
+        fill="#ECFEFF" stroke="#0891B2" stroke-width="2"/>
+  <circle cx="738" cy="123" r="16" fill="#0891B2"/>
+  <text x="738" y="129" text-anchor="middle" fill="#FFFFFF"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">3</text>
+  <rect x="800" y="108" width="165" height="20" rx="4" fill="#CFFAFE"/>
+  <text x="882" y="122" text-anchor="middle" fill="#0E7490"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">S3 Vectors + Titan Embeddings</text>
+  <text x="845" y="152" text-anchor="middle" fill="#0E7490"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700">Recupero Normativo</text>
+  <text x="845" y="171" text-anchor="middle" fill="#374151"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11.5">RAG sull'AI Act italiano</text>
+  <line x1="725" y1="183" x2="965" y2="183" stroke="#A5F3FC" stroke-width="1"/>
+  <text x="845" y="200" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Embedding per articolo applicabile</text>
+  <text x="845" y="216" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Ricerca semantica: cosine similarity</text>
+  <text x="845" y="232" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Output: chunk normativi pertinenti</text>
+
+  <!-- ── FRECCIA 3→4 ──────────────────────────────────────────────── -->
+  <line x1="982" y1="168" x2="1034" y2="168" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ── STEP 4: ANALISI LLM ──────────────────────────────────────── -->
+  <rect x="1040" y="95" width="270" height="145" rx="12"
+        fill="#FFF7ED" stroke="#EA580C" stroke-width="2"/>
+  <circle cx="1068" cy="123" r="16" fill="#EA580C"/>
+  <text x="1068" y="129" text-anchor="middle" fill="#FFFFFF"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">4</text>
+  <rect x="1130" y="108" width="165" height="20" rx="4" fill="#FFEDD5"/>
+  <text x="1212" y="122" text-anchor="middle" fill="#C2410C"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">Bedrock Nova Pro · eu-central-1</text>
+  <text x="1175" y="152" text-anchor="middle" fill="#C2410C"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700">Analisi con LLM</text>
+  <text x="1175" y="171" text-anchor="middle" fill="#374151"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11.5">Gap compliance e classificazione rischio</text>
+  <line x1="1055" y1="183" x2="1295" y2="183" stroke="#FED7AA" stroke-width="1"/>
+  <text x="1175" y="200" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Prompt: sistema + articoli + testo normativo</text>
+  <text x="1175" y="216" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Output: gap, urgenza, azione richiesta</text>
+  <text x="1175" y="232" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Validazione strutturata con schema Zod</text>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- CONNETTORE VERTICALE: Step 4 → Step 5                         -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <path d="M 1310,168 L 1430,168 L 1430,348 L 1176,348 L 1176,358"
+        fill="none" stroke="#CBD5E1" stroke-width="2"
+        stroke-dasharray="7,5" marker-end="url(#arr-dashed)"/>
+  <text transform="rotate(-90,1448,268)" x="1448" y="268"
+        text-anchor="middle" fill="#94A3B8"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">
+    Flusso asincrono
+  </text>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- RIGA 2 — Step 5 → 6 → 7 (da destra verso sinistra)           -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+
+  <!-- ── STEP 5: CALCOLO SANZIONI ─────────────────────────────────── -->
+  <rect x="1040" y="360" width="270" height="145" rx="12"
+        fill="#FEF2F2" stroke="#DC2626" stroke-width="2"/>
+  <circle cx="1068" cy="388" r="16" fill="#DC2626"/>
+  <text x="1068" y="394" text-anchor="middle" fill="#FFFFFF"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">5</text>
+  <rect x="1110" y="373" width="185" height="20" rx="4" fill="#FEE2E2"/>
+  <text x="1202" y="387" text-anchor="middle" fill="#B91C1C"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">Art. 99 AI Act — Motore Tier</text>
+  <text x="1175" y="417" text-anchor="middle" fill="#B91C1C"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700">Calcolo Sanzioni</text>
+  <text x="1175" y="436" text-anchor="middle" fill="#374151"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11.5">Esposizione min-max per ogni gap</text>
+  <line x1="1055" y1="448" x2="1295" y2="448" stroke="#FECACA" stroke-width="1"/>
+  <text x="1175" y="465" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">§3 Proibiti: max €35M / 7% fatturato</text>
+  <text x="1175" y="481" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">§4 Alto rischio: max €15M / 3%</text>
+  <text x="1175" y="497" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Riduzione PMI · Art. 100 AI Act</text>
+
+  <!-- ── FRECCIA 5→6 (sinistra) ───────────────────────────────────── -->
+  <line x1="1038" y1="433" x2="986" y2="433" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ── STEP 6: SALVATAGGIO ──────────────────────────────────────── -->
+  <rect x="710" y="360" width="270" height="145" rx="12"
+        fill="#F0FDF4" stroke="#16A34A" stroke-width="2"/>
+  <circle cx="738" cy="388" r="16" fill="#16A34A"/>
+  <text x="738" y="394" text-anchor="middle" fill="#FFFFFF"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">6</text>
+  <rect x="795" y="373" width="165" height="20" rx="4" fill="#DCFCE7"/>
+  <text x="877" y="387" text-anchor="middle" fill="#15803D"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">DynamoDB · 8 tabelle · PITR</text>
+  <text x="845" y="417" text-anchor="middle" fill="#15803D"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700">Salvataggio Risultati</text>
+  <text x="845" y="436" text-anchor="middle" fill="#374151"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11.5">Persistenza su DynamoDB</text>
+  <line x1="725" y1="448" x2="965" y2="448" stroke="#BBF7D0" stroke-width="1"/>
+  <text x="845" y="465" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Risultati completi e gap per sistema</text>
+  <text x="845" y="481" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Timeline sanzioni aggiornata</text>
+  <text x="845" y="497" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Audit trail dell'evento registrato</text>
+
+  <!-- ── FRECCIA 6→7 (sinistra) ───────────────────────────────────── -->
+  <line x1="708" y1="433" x2="656" y2="433" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ── STEP 7: DASHBOARD ────────────────────────────────────────── -->
+  <rect x="380" y="360" width="270" height="145" rx="12"
+        fill="#EEF2FF" stroke="#4338CA" stroke-width="2"/>
+  <circle cx="408" cy="388" r="16" fill="#4338CA"/>
+  <text x="408" y="394" text-anchor="middle" fill="#FFFFFF"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">7</text>
+  <rect x="468" y="373" width="165" height="20" rx="4" fill="#E0E7FF"/>
+  <text x="550" y="387" text-anchor="middle" fill="#3730A3"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10" font-weight="600">Next.js 14 · AWS Amplify</text>
+  <text x="515" y="417" text-anchor="middle" fill="#3730A3"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700">Aggiornamento Dashboard</text>
+  <text x="515" y="436" text-anchor="middle" fill="#374151"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11.5">Risultati visibili all'utente</text>
+  <line x1="395" y1="448" x2="635" y2="448" stroke="#C7D2FE" stroke-width="1"/>
+  <text x="515" y="465" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Polling completato: status ≠ 'running'</text>
+  <text x="515" y="481" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">AI Inventory, Fine Board, Remediation</text>
+  <text x="515" y="497" text-anchor="middle" fill="#6B7280"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10.5">Notifica sanzione stimata disponibile</text>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- FOOTER                                                         -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <line x1="40" y1="525" x2="1560" y2="525" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- KPI centrali -->
+  <text x="800" y="548" text-anchor="middle" fill="#94A3B8"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11" font-weight="600" letter-spacing="0.5">
+    DATI TECNICI
+  </text>
+  <text x="540" y="568" text-anchor="middle" fill="#64748B"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="12">
+    Latenza totale: 25–45 secondi
+  </text>
+  <text x="800" y="568" text-anchor="middle" fill="#64748B"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="12">
+    Costo per check: ~€0.008–0.015
+  </text>
+  <text x="1060" y="568" text-anchor="middle" fill="#64748B"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="12">
+    Regione AWS: eu-central-1 · GDPR compliant
+  </text>
+
+  <!-- Separatori verticali footer -->
+  <line x1="670" y1="556" x2="670" y2="576" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="930" y1="556" x2="930" y2="576" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Branding -->
+  <text x="1540" y="563" text-anchor="end" fill="#CBD5E1"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="13" font-weight="700">ACTIFY</text>
+  <text x="1540" y="578" text-anchor="end" fill="#CBD5E1"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10">AI Act Compliance Platform</text>
+
+  <!-- Tag sinistra -->
+  <text x="60" y="563" fill="#CBD5E1"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10">
+    Reg. UE 2024/1689
+  </text>
+  <text x="60" y="578" fill="#CBD5E1"
+        font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="10">
+    Architettura Tecnica v2.0
+  </text>
+
+</svg>

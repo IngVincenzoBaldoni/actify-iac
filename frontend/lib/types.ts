@@ -140,6 +140,7 @@ export interface ActifyDocument {
   preview_url?:   string;  // pre-signed URL, added by GET /api/documents/:id
   generated_at:   string;
   finalized_at?:  string;
+  uploaded_at?:   string;
   generated_by:   'actify_auto';
 }
 

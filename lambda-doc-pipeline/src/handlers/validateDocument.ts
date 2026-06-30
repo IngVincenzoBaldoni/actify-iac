@@ -84,8 +84,15 @@ function validateSlotSchema(
 
 export const handler = async (event: ValidateDocumentInput): Promise<ValidationResult> => {
   const { slots, context, generationId } = event;
+  const docType = context.schema.docType;
 
-  console.info('[validateDocument] start', { generationId, slotCount: slots.length });
+  console.info('[validateDocument] start', { generationId, slotCount: slots.length, docType });
+
+  // CONFORMITY_DECL by legal definition says "certifica/dichiara/attesta la conformità" —
+  // those phrases are appropriate in this document type and must not be blocked
+  const activeBlacklist = docType === 'CONFORMITY_DECL'
+    ? BLACKLIST.filter(p => !['certifica', 'dichiara', 'attesta'].some(w => p.includes(w)))
+    : BLACKLIST;
 
   const citationViolations: CitationViolation[] = [];
   const schemaViolations:   SchemaViolation[]   = [];
@@ -133,7 +140,7 @@ export const handler = async (event: ValidateDocumentInput): Promise<ValidationR
     }
 
     // ── Blacklist check ─────────────────────────────────────────────────────
-    for (const phrase of BLACKLIST) {
+    for (const phrase of activeBlacklist) {
       if (text.includes(phrase)) {
         blacklistMatches.push({ slotId: slot.slotId, phrase });
       }

@@ -4,7 +4,7 @@ export interface AuthContext {
   companyId: string;
   userId: string;
   email: string;
-  role: 'admin' | 'member' | 'partner';
+  role: 'admin' | 'collaborator' | 'partner';
 }
 
 export function extractAuth(event: APIGatewayProxyEventV2WithJWTAuthorizer): AuthContext {
@@ -14,7 +14,7 @@ export function extractAuth(event: APIGatewayProxyEventV2WithJWTAuthorizer): Aut
   const email = claims['email'] as string;
   const rawRole = claims['custom:role'] as string;
   const role: AuthContext['role'] =
-    rawRole === 'admin' ? 'admin' : rawRole === 'partner' ? 'partner' : 'member';
+    rawRole === 'admin' ? 'admin' : rawRole === 'partner' ? 'partner' : 'collaborator';
 
   if (!companyId || !userId) {
     throw Object.assign(new Error('Missing required JWT claims'), { statusCode: 401 });

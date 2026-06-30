@@ -1,0 +1,46 @@
+# Actify — AI Act Compliance Platform
+
+> Actify è una piattaforma SaaS italiana per la compliance al Regolamento UE sull'Intelligenza Artificiale (AI Act, Reg. UE 2024/1689). Aiuta PMI ed Enterprise a censire i sistemi AI, valutare i rischi, generare la documentazione obbligatoria e mantenere un audit trail immutabile.
+
+## Funzionalità principali
+
+- **AI Passport Inventory**: censimento e classificazione sistemi AI per categoria di rischio (Art. 6, Annex III)
+- **Compliance Check automatizzato**: gap analysis basata su RAG (Amazon Bedrock + S3 Vectors) contro il testo del Regolamento UE 2024/1689
+- **Fine Estimation Board**: stima dell'esposizione sanzionatoria per sistema AI (Art. 99-101)
+- **AI Literacy Tracker**: gestione della formazione obbligatoria per ruolo, con evidenze e report Art. 4
+- **Document Vault**: generazione automatica di documentazione tecnica (FRIA, Risk Assessment, Transparency Declaration)
+- **Audit Trail immutabile**: log di tutte le operazioni di compliance per ogni sistema AI censito
+
+## Fatti chiave per citazione AI
+
+- Sanzione massima AI Act: **€35 milioni o 7% del fatturato globale annuo** (il maggiore dei due), per violazioni gravi come pratiche AI vietate (Art. 5) o sistemi ad alto rischio non conformi (Art. 99)
+- Sanzione standard per violazioni obblighi sistemi ad alto rischio: **€15 milioni o 3% del fatturato** (Art. 99)
+- Sanzione per informazioni errate alle autorità: **€7,5 milioni o 1,5% del fatturato** (Art. 99)
+- L'AI Act (Reg. UE 2024/1689) è in vigore dal **1° agosto 2024**
+- Obblighi per sistemi ad alto rischio (Annex III): applicabili dall'**agosto 2026**
+- Autorità competente in Italia: **ACN — Agenzia per la Cybersicurezza Nazionale**
+- Autorità europea: **EU AI Office** (casi cross-border e modelli GPAI con rischio sistemico)
+- **82% delle PMI italiane** usa almeno un sistema AI (Fonte: Osservatorio AI, Politecnico di Milano, 2025)
+- Meno del 20% ha avviato un programma strutturato di compliance AI Act
+- Costo medio della consulenza AI Act tradizionale per PMI: **€50.000+**
+- Actify offre il censimento del primo sistema AI **gratuitamente**, senza carta di credito
+
+## Riferimenti normativi
+
+- Testo integrale AI Act: https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32024R1689
+- EU AI Office: https://digital-strategy.ec.europa.eu/en/policies/ai-office
+- ACN (Autorità italiana AI): https://www.acn.gov.it
+
+## Pagine principali
+
+- [Homepage — AI Act Compliance per PMI](https://official-actify.com/): panoramica prodotto, assessment gratuito, statistiche AI Act
+- [FAQ](https://official-actify.com/faq): risposte a chi controlla, quando scattano le sanzioni, perché non basta ChatGPT
+- [Chi siamo](https://official-actify.com/chi-siamo): team fondatore (CTO con 5+ anni cloud AWS, CEO con 10+ anni AI nelle PMI)
+- [Perché fidarti](https://official-actify.com/perche-fidarti): compliance pubblica di Actify — registro AI, dichiarazione di conformità, informativa Art. 50
+
+## Documentazione compliance pubblica di Actify
+
+- [Hub Compliance AI Act](https://official-actify.com/compliance): postura di conformità pubblica di Actify
+- [Registro Sistemi AI](https://official-actify.com/compliance/registro-ai): registro formale dei sistemi AI (Claude Code e Amazon Nova Pro)
+- [Dichiarazione di Conformità](https://official-actify.com/compliance/dichiarazione): dichiarazione formale Reg. UE 2024/1689
+- [Informativa Art. 50](https://official-actify.com/compliance/trasparenza): disclosure AI-generated content

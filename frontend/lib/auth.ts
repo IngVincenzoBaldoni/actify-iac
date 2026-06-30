@@ -10,15 +10,15 @@ export async function getAuthClaims(): Promise<{
   companyId: string;
   userId: string;
   email: string;
-  role: 'admin' | 'member' | 'partner';
+  role: 'admin' | 'collaborator' | 'partner';
 } | null> {
   try {
     const session = await fetchAuthSession();
     const payload = session.tokens?.idToken?.payload;
     if (!payload) return null;
     const rawRole = payload['custom:role'] as string;
-    const role: 'admin' | 'member' | 'partner' =
-      rawRole === 'admin' ? 'admin' : rawRole === 'partner' ? 'partner' : 'member';
+    const role: 'admin' | 'collaborator' | 'partner' =
+      rawRole === 'admin' ? 'admin' : rawRole === 'partner' ? 'partner' : 'collaborator';
     return {
       companyId: (payload['custom:company_id'] as string) ?? '',
       userId:    (payload['sub'] as string) ?? '',

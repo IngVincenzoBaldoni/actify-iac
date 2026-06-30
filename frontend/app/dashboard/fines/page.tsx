@@ -224,19 +224,11 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
           artMap.set(art, ex);
         }
       } else {
-        // Legacy snapshot: reconstruct using check snapshot baseline + positional inference.
-        const reconstructed = reconstructArticlesInGap(sys, last.at);
-        if (reconstructed) {
-          for (const [art, val] of Object.entries(reconstructed)) {
-            const ex = artMap.get(art) ?? { min: 0, max: 0 };
-            ex.min = Math.max(ex.min, val.min);
-            ex.max = Math.max(ex.max, val.max);
-            artMap.set(art, ex);
-          }
-        } else {
-          // No check baseline: fall back to snapshot stored min/max
-          artMap.set(`__legacy_${sys.system_id}`, { min: last.min, max: last.max });
-        }
+        // Legacy snapshot (no articles_in_gap): use stored min/max directly.
+        // Reconstruction via current compliance_checklist is not stable — adding
+        // a new same-day resolution shifts the positional-alphabetical inference
+        // and retroactively changes older historical points. Immutability wins.
+        artMap.set(`__legacy_${sys.system_id}`, { min: last.min, max: last.max });
       }
     }
 
@@ -423,6 +415,9 @@ function AggChart({ aggPts, mode, systems, yAxisMax }: { aggPts: AggPoint[]; mod
       }
       if (!last) continue;
       if (last.articles_in_gap !== undefined) {
+        // Stored articles_in_gap is immutable — it reflects the state at write time.
+        // Do NOT filter by current compliance_checklist: that would erase historical
+        // articles from old snapshots whenever a gap is resolved later.
         for (const [art, val] of Object.entries(last.articles_in_gap)) {
           const ex = artMap.get(art) ?? { min: 0, max: 0, tools: [] };
           if (val.max > ex.max) { ex.min = val.min; ex.max = val.max; }
@@ -430,18 +425,9 @@ function AggChart({ aggPts, mode, systems, yAxisMax }: { aggPts: AggPoint[]; mod
           artMap.set(art, ex);
         }
       } else {
-        // Legacy snapshot: reconstruct using check snapshot baseline + positional inference.
-        const reconstructed = reconstructArticlesInGap(sys, last.at);
-        if (reconstructed) {
-          for (const [art, val] of Object.entries(reconstructed)) {
-            const ex = artMap.get(art) ?? { min: 0, max: 0, tools: [] };
-            if (val.max > ex.max) { ex.min = val.min; ex.max = val.max; }
-            if (!ex.tools.includes(sys.tool_name)) ex.tools.push(sys.tool_name);
-            artMap.set(art, ex);
-          }
-        } else {
-          hasLegacy = true; // Only when no check baseline is available
-        }
+        // Legacy snapshot (no articles_in_gap): mark as legacy — same-day positional
+        // reconstruction is not stable and would change historical points retroactively.
+        hasLegacy = true;
       }
     }
     return {
@@ -1015,6 +1001,7 @@ function FineBoardContent() {
   const [systems, setSystems] = useState<SysWithTimeline[]>([]);
   const [company, setCompany] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
+  const isPremium = ['premium', 'enterprise'].includes((company.subscription_tier as string) ?? '');
   const [chartMode, setChartMode] = useState<'max' | 'min'>('max');
 
   useEffect(() => {
@@ -1382,58 +1369,84 @@ function FineBoardContent() {
               </div>
 
               {/* Right: NBA compact vertical */}
-              {nextBestAction && (
-                <div style={{ padding: '20px 22px', borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(34,197,94,0.30)', borderTop: '1px solid rgba(34,197,94,0.50)', boxShadow: '0 0 0 1px rgba(34,197,94,0.04) inset, 0 4px 24px rgba(34,197,94,0.06)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {/* Icon + title + badge */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <div style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 11, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      🎯
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                        <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: -0.5, color: 'var(--text)' }}>Next Best Action</span>
-                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(34,197,94,0.10)', color: 'rgba(34,197,94,0.70)', fontWeight: 600, border: '1px solid rgba(34,197,94,0.20)', flexShrink: 0 }}>
-                          {nextBestAction.tools.length === 1 ? '1 occorrenza' : `${nextBestAction.tools.length} occorrenze`}
-                        </span>
+              {(isPremium ? !!nextBestAction : true) && (
+                <div style={{ padding: '20px 22px', borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: `1px solid ${isPremium ? 'rgba(34,197,94,0.30)' : 'rgba(255,255,255,0.08)'}`, borderTop: `1px solid ${isPremium ? 'rgba(34,197,94,0.50)' : 'rgba(255,255,255,0.14)'}`, boxShadow: isPremium ? '0 0 0 1px rgba(34,197,94,0.04) inset, 0 4px 24px rgba(34,197,94,0.06)' : 'none', display: 'flex', flexDirection: 'column', gap: 14, position: 'relative', overflow: 'hidden', minHeight: 180 }}>
+                  {!isPremium ? (
+                    <>
+                      {/* Blurred preview background */}
+                      <div style={{ filter: 'blur(6px)', opacity: 0.25, userSelect: 'none', pointerEvents: 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+                          <div style={{ width: 42, height: 42, borderRadius: 11, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎯</div>
+                          <div><div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>Next Best Action</div><div style={{ fontSize: 14, fontWeight: 800, marginTop: 4 }}>Risolvi il gap su Art. 13 — risparmia fino a €5.000.000</div></div>
+                        </div>
+                        <div style={{ fontSize: 30, fontWeight: 900, color: '#22C55E' }}>€5.000.000</div>
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', lineHeight: 1.4 }}>
-                        Risolvi il gap su <span style={{ color: '#22C55E', fontWeight: 900 }}>{nextBestAction.art}</span>
+                      {/* Lock overlay */}
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(8,10,18,0.70)', backdropFilter: 'blur(2px)', borderRadius: 16 }}>
+                        <div style={{ fontSize: 26 }}>🔒</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 5 }}>Next Best Action</div>
+                          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 14 }}>Disponibile nel piano Professional</div>
+                          <a href="/plan" style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '8px 18px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.40)', color: '#22C55E', textDecoration: 'none' }}>
+                            Passa a Professional →
+                          </a>
+                        </div>
+                      </div>
+                    </>
+                  ) : nextBestAction && (
+                    <>
+                      {/* Icon + title + badge */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 11, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                          🎯
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: -0.5, color: 'var(--text)' }}>Next Best Action</span>
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(34,197,94,0.10)', color: 'rgba(34,197,94,0.70)', fontWeight: 600, border: '1px solid rgba(34,197,94,0.20)', flexShrink: 0 }}>
+                              {nextBestAction.tools.length === 1 ? '1 occorrenza' : `${nextBestAction.tools.length} occorrenze`}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', lineHeight: 1.4 }}>
+                            Risolvi il gap su <span style={{ color: '#22C55E', fontWeight: 900 }}>{nextBestAction.art}</span>
+                            {nextBestAction.tools.length === 1
+                              ? <> in <span style={{ color: 'rgba(255,255,255,0.65)' }}>{nextBestAction.tools[0]}</span></>
+                              : <> su {nextBestAction.tools.length} tool ({nextBestAction.tools.slice(0, 2).join(', ')}{nextBestAction.tools.length > 2 ? ` +${nextBestAction.tools.length - 2}` : ''})</>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 }}>
                         {nextBestAction.tools.length === 1
-                          ? <> in <span style={{ color: 'rgba(255,255,255,0.65)' }}>{nextBestAction.tools[0]}</span></>
-                          : <> su {nextBestAction.tools.length} tool ({nextBestAction.tools.slice(0, 2).join(', ')}{nextBestAction.tools.length > 2 ? ` +${nextBestAction.tools.length - 2}` : ''})</>
+                          ? `Tra tutti i gap aperti, questo è il più efficiente da chiudere: un solo tool lo viola, quindi risolvere questa lacuna elimina completamente il suo contributo all'esposizione totale — senza dover intervenire su altri sistemi.`
+                          : `Con il minor numero di tool coinvolti tra tutti i gap aperti, questo è il punto di leva più efficace: risolvendolo ottieni la riduzione d'esposizione maggiore per il minore sforzo operativo.`
                         }
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Description */}
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 }}>
-                    {nextBestAction.tools.length === 1
-                      ? `Tra tutti i gap aperti, questo è il più efficiente da chiudere: un solo tool lo viola, quindi risolvere questa lacuna elimina completamente il suo contributo all'esposizione totale — senza dover intervenire su altri sistemi.`
-                      : `Con il minor numero di tool coinvolti tra tutti i gap aperti, questo è il punto di leva più efficace: risolvendolo ottieni la riduzione d'esposizione maggiore per il minore sforzo operativo.`
-                    }
-                  </div>
-
-                  {/* Savings + CTA */}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 'auto' }}>
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', color: 'var(--dim)', marginBottom: 4 }}>Risparmio potenziale</div>
-                      <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: -1.5, color: '#22C55E', lineHeight: 1 }}>{fmtEur(nextBestAction.max)}</div>
-                      {nextBestAction.min > 0 && nextBestAction.min !== nextBestAction.max && (
-                        <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 3 }}>min {fmtEur(nextBestAction.min)}</div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => router.push(`/dashboard/system?id=${nextBestAction.systemIds[0]}`)}
-                      style={{ fontSize: 13, fontWeight: 800, padding: '13px 18px', borderRadius: 12, border: '1px solid rgba(34,197,94,0.40)', cursor: 'pointer', fontFamily: 'inherit', background: 'rgba(34,197,94,0.12)', color: '#22C55E', transition: 'all .18s', lineHeight: 1.35, textAlign: 'center' }}
-                      onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'rgba(34,197,94,0.22)'; b.style.borderColor = 'rgba(34,197,94,0.65)'; b.style.boxShadow = '0 0 16px rgba(34,197,94,0.15)'; }}
-                      onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'rgba(34,197,94,0.12)'; b.style.borderColor = 'rgba(34,197,94,0.40)'; b.style.boxShadow = 'none'; }}
-                    >
-                      Vai al dettaglio AIPI<br/>
-                      <span style={{ fontWeight: 600, opacity: 0.75, fontSize: 11 }}>di {nextBestAction.tools[0]}</span>
-                      {' →'}
-                    </button>
-                  </div>
+                      {/* Savings + CTA */}
+                      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 'auto' }}>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', color: 'var(--dim)', marginBottom: 4 }}>Risparmio potenziale</div>
+                          <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: -1.5, color: '#22C55E', lineHeight: 1 }}>{fmtEur(nextBestAction.max)}</div>
+                          {nextBestAction.min > 0 && nextBestAction.min !== nextBestAction.max && (
+                            <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 3 }}>min {fmtEur(nextBestAction.min)}</div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => router.push(`/dashboard/system?id=${nextBestAction.systemIds[0]}`)}
+                          style={{ fontSize: 13, fontWeight: 800, padding: '13px 18px', borderRadius: 12, border: '1px solid rgba(34,197,94,0.40)', cursor: 'pointer', fontFamily: 'inherit', background: 'rgba(34,197,94,0.12)', color: '#22C55E', transition: 'all .18s', lineHeight: 1.35, textAlign: 'center' }}
+                          onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'rgba(34,197,94,0.22)'; b.style.borderColor = 'rgba(34,197,94,0.65)'; b.style.boxShadow = '0 0 16px rgba(34,197,94,0.15)'; }}
+                          onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'rgba(34,197,94,0.12)'; b.style.borderColor = 'rgba(34,197,94,0.40)'; b.style.boxShadow = 'none'; }}
+                        >
+                          Vai al dettaglio AIPI<br/>
+                          <span style={{ fontWeight: 600, opacity: 0.75, fontSize: 11 }}>di {nextBestAction.tools[0]}</span>
+                          {' →'}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

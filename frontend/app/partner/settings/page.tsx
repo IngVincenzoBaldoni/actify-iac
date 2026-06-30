@@ -26,14 +26,15 @@ function TierWidget({ count }: { count: number }) {
   const progress  = next ? Math.min(100, Math.round(((count - current.min) / (current.max - current.min + 1)) * 100)) : 100;
 
   return (
-    <div style={{ background: 'linear-gradient(135deg, rgba(108,71,255,.08), rgba(79,53,204,.04))', border: '1px solid rgba(108,71,255,.25)', borderRadius: 16, padding: '24px 28px', marginBottom: 24 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #059669, #34d399)', borderRadius: '16px 16px 0 0' }} />
       <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, marginBottom: 16 }}>
         Programma Partner — Livello Attuale
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', marginBottom: 20 }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 36 }}>{current.icon}</div>
-          <div style={{ fontWeight: 800, fontSize: 17, color: '#6C47FF', marginTop: 4 }}>{current.name}</div>
+          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--green)', marginTop: 4 }}>{current.name}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{count} PMI onboarded</div>
         </div>
         <div style={{ flex: 1, minWidth: 180 }}>
@@ -42,7 +43,7 @@ function TierWidget({ count }: { count: number }) {
             <span>{next ? `${current.max} PMI` : '∞'}</span>
           </div>
           <div style={{ height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #6C47FF, #4F35CC)', borderRadius: 4, transition: 'width .4s' }} />
+            <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #059669, #34d399)', borderRadius: 4, transition: 'width .4s' }} />
           </div>
           {next && (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
@@ -50,7 +51,7 @@ function TierWidget({ count }: { count: number }) {
             </div>
           )}
         </div>
-        <div style={{ textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 20px' }}>
+        <div style={{ textAlign: 'center', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 20px' }}>
           <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Revenue Share</div>
           <div style={{ fontWeight: 800, fontSize: 28, color: '#16a34a' }}>{current.revenue_share}%</div>
         </div>
@@ -62,18 +63,26 @@ function TierWidget({ count }: { count: number }) {
           const isPast   = i < tierIdx;
           return (
             <div key={t.name} style={{
-              background: isActive ? 'rgba(108,71,255,.12)' : isPast ? 'rgba(34,197,94,.06)' : 'var(--surface)',
-              border: `1px solid ${isActive ? 'rgba(108,71,255,.4)' : isPast ? 'rgba(34,197,94,.2)' : 'var(--border)'}`,
-              borderRadius: 10, padding: '10px 12px', opacity: !isActive && !isPast ? 0.6 : 1,
+              background: isActive ? 'rgba(34,197,94,.08)' : isPast ? 'rgba(34,197,94,.04)' : 'var(--bg)',
+              border: `1px solid ${isActive ? 'rgba(34,197,94,.35)' : isPast ? 'rgba(34,197,94,.15)' : 'var(--border)'}`,
+              borderRadius: 10, padding: '10px 12px', opacity: !isActive && !isPast ? 0.55 : 1,
             }}>
               <div style={{ fontSize: 16, marginBottom: 3 }}>{t.icon}</div>
-              <div style={{ fontWeight: 600, fontSize: 12, color: isActive ? '#6C47FF' : 'var(--text)' }}>{t.name}</div>
+              <div style={{ fontWeight: 600, fontSize: 12, color: isActive ? 'var(--green)' : 'var(--text)' }}>{t.name}</div>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>{t.min === 0 ? '0' : t.min}–{t.max === Infinity ? '∞' : t.max} PMI</div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#16a34a', marginTop: 2 }}>{t.revenue_share}% share</div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14, marginBottom: 18, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+      {children}
     </div>
   );
 }
@@ -150,47 +159,54 @@ export default function PartnerSettings() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 680 }}>
-        {partner && <TierWidget count={onboardedCount} />}
-        <form onSubmit={handleSave} className="auth-form" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24 }}>
+      {/* Tier widget — full width */}
+      {partner && <TierWidget count={onboardedCount} />}
 
-          <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 16, fontSize: 15 }}>
-            Profilo Studio
-          </div>
+      {/* 2-column grid: form left, info right */}
+      <form onSubmit={handleSave} className="auth-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
 
-          <div className="field">
-            <label>Ragione Sociale</label>
-            <input type="text" value={form.ragione_sociale}
-              onChange={e => update('ragione_sociale', e.target.value)}
-              placeholder="Studio Rossi & Associati" />
-          </div>
+        {/* ── Colonna sinistra ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          <div style={{ fontWeight: 700, color: 'var(--text)', margin: '24px 0 16px', fontSize: 15 }}>
-            White-Label — Email Assessment
-          </div>
-
-          <div className="field">
-            <label>Nome mittente (visualizzato nelle email)</label>
-            <input type="text" value={form.sender_name}
-              onChange={e => update('sender_name', e.target.value)}
-              placeholder="Studio Rossi — AI Compliance" />
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-              Default: ragione sociale se non specificato
+          {/* Profilo Studio */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
+            <SectionHeader>Profilo Studio</SectionHeader>
+            <div className="field">
+              <label>Ragione Sociale</label>
+              <input type="text" value={form.ragione_sociale}
+                onChange={e => update('ragione_sociale', e.target.value)}
+                placeholder="Studio Rossi & Associati" />
             </div>
           </div>
 
-          <div className="field">
-            <label>Reply-to email (risposte dei clienti)</label>
-            <input type="email" value={form.reply_to}
-              onChange={e => update('reply_to', e.target.value)}
-              placeholder="mario@studiorossi.it" />
+          {/* White-Label Email */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
+            <SectionHeader>White-Label — Email Assessment</SectionHeader>
+            <div className="field">
+              <label>Nome mittente (visualizzato nelle email)</label>
+              <input type="text" value={form.sender_name}
+                onChange={e => update('sender_name', e.target.value)}
+                placeholder="Studio Rossi — AI Compliance" />
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                Default: ragione sociale se non specificato
+              </div>
+            </div>
+            <div className="field">
+              <label>Reply-to email (risposte dei clienti)</label>
+              <input type="email" value={form.reply_to}
+                onChange={e => update('reply_to', e.target.value)}
+                placeholder="mario@studiorossi.it" />
+            </div>
           </div>
 
-          <div style={{ fontWeight: 700, color: 'var(--text)', margin: '24px 0 16px', fontSize: 15 }}>
-            Branding Questionario
-          </div>
+        </div>
 
-          <div className="field-row">
+        {/* ── Colonna destra ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Branding */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
+            <SectionHeader>Branding Questionario</SectionHeader>
             <div className="field">
               <label>Colore principale</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -205,46 +221,47 @@ export default function PartnerSettings() {
                   style={{ flex: 1 }} placeholder="#6C47FF" />
               </div>
             </div>
+            <div className="field">
+              <label>URL Logo (link diretto all&apos;immagine)</label>
+              <input type="url" value={form.logo_url}
+                onChange={e => update('logo_url', e.target.value)}
+                placeholder="https://studiorossi.it/logo.png" />
+              {form.logo_url && (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={form.logo_url} alt="logo preview" style={{ height: 40, objectFit: 'contain', border: '1px solid var(--border)', borderRadius: 6, padding: 4 }} />
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>Anteprima logo</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="field">
-            <label>URL Logo (link diretto all&apos;immagine)</label>
-            <input type="url" value={form.logo_url}
-              onChange={e => update('logo_url', e.target.value)}
-              placeholder="https://studiorossi.it/logo.png" />
-            {form.logo_url && (
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={form.logo_url} alt="logo preview" style={{ height: 40, objectFit: 'contain', border: '1px solid var(--border)', borderRadius: 6, padding: 4 }} />
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Anteprima logo</span>
-              </div>
-            )}
+          {/* Info Account */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
+            <SectionHeader>Info Account</SectionHeader>
+            <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 2 }}>
+              <div>Email: <span style={{ color: 'var(--text)' }}>{partner?.email}</span></div>
+              <div>Tipo: <span style={{ color: 'var(--text)' }}>{partner?.tipo_studio}</span></div>
+              {partner?.referral_code && (
+                <div>Codice Referral: <span style={{ color: 'var(--accent)', fontFamily: 'monospace', fontWeight: 700 }}>{partner.referral_code}</span></div>
+              )}
+              <div>Account dal: <span style={{ color: 'var(--text)' }}>
+                {partner?.created_at ? new Date(partner.created_at).toLocaleDateString('it-IT') : 'N/D'}
+              </span></div>
+            </div>
           </div>
 
+          {/* Save */}
           {error && <div className="auth-error">{error}</div>}
           {saved && <div style={{ color: 'var(--green)', fontSize: 13, fontWeight: 600 }}>✓ Impostazioni salvate</div>}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button type="submit" className="inv-btn" disabled={saving}>
               {saving ? 'Salvataggio…' : 'Salva impostazioni'}
             </button>
           </div>
-        </form>
 
-        <div style={{ marginTop: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24 }}>
-          <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 8, fontSize: 15 }}>Info Account</div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.8 }}>
-            <div>Email: <span style={{ color: 'var(--text)' }}>{partner?.email}</span></div>
-            <div>Tipo: <span style={{ color: 'var(--text)' }}>{partner?.tipo_studio}</span></div>
-            {partner?.referral_code && (
-              <div>Codice Referral: <span style={{ color: 'var(--accent)', fontFamily: 'monospace', fontWeight: 700 }}>{partner.referral_code}</span></div>
-            )}
-            <div>Account dal: <span style={{ color: 'var(--text)' }}>
-              {partner?.created_at ? new Date(partner.created_at).toLocaleDateString('it-IT') : 'N/D'}
-            </span></div>
-          </div>
         </div>
-      </div>
+      </form>
     </>
   );
 }

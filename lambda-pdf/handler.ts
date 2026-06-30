@@ -12,6 +12,7 @@ import { uploadReport, writeToDatalake } from "./services/s3Service";
 import { formHtml } from "./services/formHtml";
 import { markReportGenerated } from "./services/otpService";
 import { sendEmail, buildReportEmail } from "./services/resendService";
+import { buildTechDocDocx } from "./services/docxService";
 
 const s3DocClient = new S3Client({ region: process.env.AWS_REGION ?? "eu-central-1" });
 const DOCUMENTS_BUCKET = process.env.DOCUMENTS_BUCKET ?? "actify-saas-documents";
@@ -89,24 +90,34 @@ export async function handler(
     const req = event._docPipelineRenderRequest;
     const now = new Date().toISOString();
 
-    const html = buildDocPipelinePdfHtml({
-      ...req,
-      generatedAt: now,
-    });
-    const pdfBuffer = await htmlToPdf(html);
+    // Tutti i docType della pipeline → .docx Word editabile
+    const DOC_TYPE_TITLES: Record<string, string> = {
+      TECH_DOC:         'Documentazione Tecnica',
+      DISCLOSURE_NOTICE: 'Informativa Trasparenza',
+      MONITORING_PLAN:  'Piano di Monitoraggio',
+      AI_POLICY:        'Policy AI',
+      CONFORMITY_DECL:  'Dichiarazione di Conformità',
+      FRIA:             "Valutazione d'Impatto sui Diritti Fondamentali",
+    };
 
-    const pdfS3Key = `documents/${req.companyId}/${req.systemId}/${req.docType}/${req.generationId}_v1.pdf`;
+    const docxBuffer = await buildTechDocDocx(req.markdownContent, {
+      generationId:  req.generationId,
+      schemaVersion: req.schemaVersion,
+      generatedAt:   now,
+    }, DOC_TYPE_TITLES[req.docType] ?? req.docType);
+
+    const pdfS3Key = `documents/${req.companyId}/${req.systemId}/${req.docType}/${req.generationId}_v1.docx`;
     await s3DocClient.send(new PutObjectCommand({
       Bucket:      DOCUMENTS_BUCKET,
       Key:         pdfS3Key,
-      Body:        pdfBuffer,
-      ContentType: "application/pdf",
+      Body:        docxBuffer,
+      ContentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       Metadata: {
-        generation_id:  req.generationId,
-        company_id:     req.companyId,
-        schema_version: req.schemaVersion,
-        kb_version:     req.kbVersion,
-        is_draft:       req.isDraft ? "true" : "false",
+        generation_id:   req.generationId,
+        company_id:      req.companyId,
+        schema_version:  req.schemaVersion,
+        kb_version:      req.kbVersion,
+        output_format:   "docx",
       },
     }));
 

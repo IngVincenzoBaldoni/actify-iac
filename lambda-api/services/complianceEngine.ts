@@ -92,8 +92,8 @@ const OUTPUT_TEMPLATE = {
     status: "missing|partial|compliant",
     deadline: "YYYY-MM-DD o null",
     urgency: "critical|high|medium|low",
-    description: "Descrizione gap in italiano (max 600 caratteri)",
-    what_to_do: "Azione correttiva specifica in italiano (max 600 caratteri)",
+    description: "Descrizione gap in italiano (max 250 caratteri)",
+    what_to_do: "Azione correttiva specifica in italiano (max 250 caratteri)",
     can_actify_automate: true,
     automation_type: "monitoring_plan",
     source_chunks: ["chunk_id del chunk normativo che supporta questo gap"],
@@ -108,7 +108,7 @@ const OUTPUT_TEMPLATE = {
     action: "Azione prioritaria in italiano",
     rationale: "Motivazione con riferimento articolo e scadenza",
   }],
-  executive_summary: "Sommario esecutivo in italiano (max 600 caratteri)",
+  executive_summary: "Sommario esecutivo in italiano (max 400 caratteri)",
 };
 
 // ─── User message builder ─────────────────────────────────────────────────────
@@ -188,6 +188,8 @@ ISTRUZIONI:
 - Deadline principale AI Act (aggiornata dal Digital Omnibus, 7 maggio 2026): sistemi Annex III autonomi → 2027-12-02; sistemi Annex I (prodotti) → 2028-08-02; Art. 50 per sistemi pre-esistenti → 2026-12-02
 - Per ogni gap includi source_chunks con i chunk_id del contesto normativo che supportano il gap
 - Art. 99 e Art. 100 sono articoli sulle SANZIONI, non requisiti implementativi: NON generare gap con status "missing" per questi articoli — includi al massimo un gap status "compliant" o omettili del tutto
+- Un gap per articolo (il principale): non generare gap multipli sullo stesso articolo
+- description: MAX 250 caratteri. what_to_do: MAX 250 caratteri. executive_summary: MAX 400 caratteri. Sii sintetico e diretto
 - Rispondi ESCLUSIVAMENTE con il JSON con lo schema esatto qui sotto. Zero testo fuori dal JSON.
 
 REGOLA AUTOMATION — imposta can_actify_automate: true e scegli automation_type per:
@@ -413,7 +415,26 @@ export async function runComplianceCheck(
     if (!rawText) throw new Error('Bedrock returned no text output');
 
     let jsonText = rawText.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const parsed = JSON.parse(jsonText);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (parseErr) {
+      if (!(parseErr instanceof SyntaxError)) throw parseErr;
+      // JSON was truncated (hit maxTokens limit) — retry once with stricter conciseness constraints
+      const retryMsg = buildUserMessage(system, company, ragContextText, artCtx)
+        + '\n\nIMPORTANTE: Genera MASSIMO 6 gap (solo i più critici). description e what_to_do: MAX 150 caratteri ciascuno. executive_summary: MAX 250 caratteri. Il JSON deve essere completo e valido.';
+      const retryResponse = await bedrock.send(new ConverseCommand({
+        modelId:  MODEL_ID,
+        system:   [{ text: activeSystemPrompt }],
+        messages: [{ role: 'user', content: [{ text: retryMsg }] }],
+        inferenceConfig: { maxTokens: 5120, temperature: 0 },
+      }));
+      const retryContent = retryResponse.output?.message?.content?.[0];
+      const retryText = retryContent && 'text' in retryContent ? (retryContent.text as string) : undefined;
+      if (!retryText) throw new Error('Bedrock retry returned no text output');
+      jsonText = retryText.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      parsed   = JSON.parse(jsonText);
+    }
     validated    = complianceResultSchema.parse(parsed);
 
     // Always replace LLM-generated gap_ids with server-side UUIDs to guarantee uniqueness.
