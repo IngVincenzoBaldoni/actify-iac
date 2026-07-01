@@ -223,7 +223,20 @@ export default function Page() {
       entries => entries.forEach(e => { if (e.isIntersecting) (e.target as HTMLElement).classList.add('is-visible'); }),
       { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
     );
-    document.querySelectorAll('[data-reveal]').forEach(el => obs.observe(el));
+    const revealEls = document.querySelectorAll('[data-reveal]');
+    revealEls.forEach(el => obs.observe(el));
+    // On large screens everything may already be in the viewport — mark visible immediately
+    requestAnimationFrame(() => {
+      revealEls.forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) {
+          (el as HTMLElement).classList.add('is-visible');
+          el.querySelectorAll('.tl-line-fill,.tl-r-line-fill,.tl-node,.tl-r-node').forEach(c => {
+            (c as HTMLElement).classList.add('ready');
+          });
+        }
+      });
+    });
 
     // ── 2. Cursor glow (RAF lerp) ────────────────────────────────────────
     let mx = window.innerWidth / 2, my = window.innerHeight / 2;
@@ -669,23 +682,27 @@ export default function Page() {
           .prob-toggle-btn:hover .prob-toggle-label { color: rgba(255,255,255,0.7) !important; }
 
           /* Right panel timeline (amber) */
-          .tl-line-base { position: absolute; top: 5px; left: 5px; right: 5px; height: 1px; background: rgba(255,255,255,0.07); }
-          .tl-line-fill { position: absolute; top: 5px; left: 5px; right: 5px; height: 1px; background: linear-gradient(to right, rgba(255,255,255,0.18) 0%, rgba(245,158,11,0.75) 100%); transform: scaleX(0); transform-origin: left center; transition: transform 1.5s cubic-bezier(0.4,0,0.2,1) 0.85s; }
+          .tl-line-base { position: absolute; top: 5px; left: 5px; right: 5px; height: 1px; background: rgba(255,255,255,0.18); }
+          .tl-line-fill { position: absolute; top: 5px; left: 5px; right: 5px; height: 1px; background: linear-gradient(to right, rgba(255,255,255,0.35) 0%, rgba(245,158,11,0.85) 100%); transform: scaleX(0); transform-origin: left center; transition: transform 1.5s cubic-bezier(0.4,0,0.2,1) 0.3s; }
+          .tl-line-fill.ready { transform: scaleX(1); }
           [data-reveal].is-visible .tl-line-fill { transform: scaleX(1); }
           .tl-node { opacity: 0; transform: translateY(6px); }
-          .tl-node-0 { transition: opacity 0.42s ease 0.9s, transform 0.42s ease 0.9s; }
-          .tl-node-1 { transition: opacity 0.42s ease 1.15s, transform 0.42s ease 1.15s; }
-          .tl-node-2 { transition: opacity 0.42s ease 1.4s, transform 0.42s ease 1.4s; }
-          .tl-node-3 { transition: opacity 0.42s ease 1.65s, transform 0.42s ease 1.65s; }
+          .tl-node.ready { opacity: 1; transform: translateY(0); }
+          .tl-node-0 { transition: opacity 0.42s ease 0.35s, transform 0.42s ease 0.35s; }
+          .tl-node-1 { transition: opacity 0.42s ease 0.55s, transform 0.42s ease 0.55s; }
+          .tl-node-2 { transition: opacity 0.42s ease 0.75s, transform 0.42s ease 0.75s; }
+          .tl-node-3 { transition: opacity 0.42s ease 0.95s, transform 0.42s ease 0.95s; }
           [data-reveal].is-visible .tl-node { opacity: 1; transform: translateY(0); }
           /* Left panel timeline (red) */
-          .tl-r-line-fill { position: absolute; top: 5px; left: 5px; right: 5px; height: 1px; background: linear-gradient(to right, rgba(255,255,255,0.12) 0%, rgba(239,68,68,0.7) 100%); transform: scaleX(0); transform-origin: left center; transition: transform 1.5s cubic-bezier(0.4,0,0.2,1) 0.85s; }
+          .tl-r-line-fill { position: absolute; top: 5px; left: 5px; right: 5px; height: 1px; background: linear-gradient(to right, rgba(255,255,255,0.30) 0%, rgba(239,68,68,0.85) 100%); transform: scaleX(0); transform-origin: left center; transition: transform 1.5s cubic-bezier(0.4,0,0.2,1) 0.3s; }
+          .tl-r-line-fill.ready { transform: scaleX(1); }
           [data-reveal].is-visible .tl-r-line-fill { transform: scaleX(1); }
           .tl-r-node { opacity: 0; transform: translateY(6px); }
-          .tl-r-node-0 { transition: opacity 0.42s ease 0.9s, transform 0.42s ease 0.9s; }
-          .tl-r-node-1 { transition: opacity 0.42s ease 1.15s, transform 0.42s ease 1.15s; }
-          .tl-r-node-2 { transition: opacity 0.42s ease 1.4s, transform 0.42s ease 1.4s; }
-          .tl-r-node-3 { transition: opacity 0.42s ease 1.65s, transform 0.42s ease 1.65s; }
+          .tl-r-node.ready { opacity: 1; transform: translateY(0); }
+          .tl-r-node-0 { transition: opacity 0.42s ease 0.35s, transform 0.42s ease 0.35s; }
+          .tl-r-node-1 { transition: opacity 0.42s ease 0.55s, transform 0.42s ease 0.55s; }
+          .tl-r-node-2 { transition: opacity 0.42s ease 0.75s, transform 0.42s ease 0.75s; }
+          .tl-r-node-3 { transition: opacity 0.42s ease 0.95s, transform 0.42s ease 0.95s; }
           [data-reveal].is-visible .tl-r-node { opacity: 1; transform: translateY(0); }
         `}</style>
         <div style={{ position: 'relative', overflow: 'hidden' }}>
@@ -757,7 +774,7 @@ export default function Page() {
                           </defs>
                           {/* Track */}
                           <circle cx="88" cy="88" r={R} fill="none" stroke="rgba(239,68,68,0.10)" strokeWidth="14" />
-                          {/* Animated arc */}
+                          {/* Animated arc — SVG-native transform avoids CSS transformOrigin inconsistencies across browsers/DPI */}
                           <circle
                             cx="88" cy="88" r={R}
                             fill="none"
@@ -767,16 +784,17 @@ export default function Page() {
                             strokeDasharray={`${C}`}
                             strokeDashoffset={pieTriggered ? 0 : C}
                             filter="url(#pieGlow)"
+                            transform="rotate(-90 88 88)"
                             style={{
-                              transform: 'rotate(-90deg)',
-                              transformOrigin: '88px 88px',
                               transition: pieTriggered ? 'stroke-dashoffset 2.6s cubic-bezier(0.16,1,0.3,1)' : 'none',
                             }}
                           />
-                          {/* Center labels */}
-                          <text x="88" y="78" textAnchor="middle" fontSize="10" fontWeight="700" fill="rgba(239,68,68,0.5)" letterSpacing="0.08em">fino a</text>
-                          <text x="88" y="104" textAnchor="middle" fontSize="32" fontWeight="900" fill="#F8FAFC" letterSpacing="-1.5">€35M</text>
-                          <text x="88" y="120" textAnchor="middle" fontSize="8" fontWeight="600" fill="rgba(255,255,255,0.2)" letterSpacing="1.5">SANZIONE MAX</text>
+                          {/* Center labels — anchored to (88,88) so text is always centered in the ring */}
+                          <g transform="translate(88, 88)" textAnchor="middle">
+                            <text y="-21" dominantBaseline="central" fontSize="10" fontWeight="700" fill="rgba(239,68,68,0.5)" letterSpacing="0.08em">fino a</text>
+                            <text y="0" dominantBaseline="central" fontSize="32" fontWeight="900" fill="#F8FAFC" letterSpacing="-1.5">€35M</text>
+                            <text y="21" dominantBaseline="central" fontSize="8" fontWeight="600" fill="rgba(255,255,255,0.2)" letterSpacing="1.5">SANZIONE MAX</text>
+                          </g>
                         </svg>
                       );
                     })()}
@@ -792,9 +810,9 @@ export default function Page() {
 
                 {/* Timeline: GDPR fines history as precedent */}
                 <div style={{ position: 'relative', paddingTop: 2 }}>
-                  <div className="tl-line-base" />
-                  <div className="tl-r-line-fill" />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: 5, left: 0, right: 0, height: 2, background: 'rgba(255,255,255,0.20)', borderRadius: 1, zIndex: 0 }} />
+                  <div style={{ position: 'absolute', top: 5, left: 0, right: 0, height: 2, background: 'linear-gradient(to right, rgba(255,255,255,0.35) 0%, rgba(239,68,68,0.9) 100%)', borderRadius: 1, zIndex: 1, transformOrigin: 'left center' }} className="tl-r-line-fill" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', position: 'relative', zIndex: 2 }}>
                     {[
                       { year: '2019', fine: '€50M', who: 'Google (FR)', note: 'Prima multa GDPR significativa. Il mercato si sveglia.', dotSize: 8, glow: false, align: 'flex-start' as const },
                       { year: '2021', fine: '€225M', who: 'WhatsApp (IE)', note: 'L\'enforcement accelera. Le aziende tech nel mirino.', dotSize: 9, glow: false, align: 'center' as const },
@@ -825,36 +843,67 @@ export default function Page() {
               </button>
 
               {/* Accordion content */}
-              <div style={{ maxHeight: openEnforcement ? '640px' : '0px', overflow: 'hidden', transition: 'max-height 0.48s cubic-bezier(0.4,0,0.2,1)' }}>
-                <div style={{ paddingBottom: 28 }}>
-                  {/* ACN — primary, special treatment */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 0', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.8)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: '#F8FAFC' }}>ACN — Agenzia per la Cybersicurezza Nazionale</span>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(239,68,68,0.85)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 20, padding: '2px 7px', letterSpacing: '.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Primaria</span>
-                      </div>
-                      <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.72)', margin: 0, lineHeight: 1.7 }}>Autorità nazionale di vigilanza AI designata dal decreto attuativo. Conduce ispezioni, emette sanzioni, coordina le altre autorità di settore.</p>
+              <div style={{ maxHeight: openEnforcement ? '820px' : '0px', overflow: 'hidden', transition: 'max-height 0.48s cubic-bezier(0.4,0,0.2,1)' }}>
+                <div style={{ paddingBottom: 28, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+
+                  {/* Chi controlla */}
+                  <div style={{ paddingTop: 18, marginBottom: 18 }}>
+                    <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.16em', marginBottom: 10 }}>Chi controlla</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {[
+                        { flag: '🇮🇹', name: 'ACN Italia', sub: 'NCA italiana', desc: 'Agenzia per la Cybersicurezza Nazionale — supervisore nazionale per il Reg. UE 2024/1689. Conduce ispezioni, emette sanzioni.', primary: true },
+                        { flag: '🇪🇺', name: 'EU AI Office', sub: 'Cross-border', desc: 'Gestisce i casi che coinvolgono più stati membri e i modelli AI di grandi dimensioni (GPAI).', primary: false },
+                      ].map(a => (
+                        <div key={a.name} style={{ background: a.primary ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.03)', border: `1px solid ${a.primary ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 10, padding: '12px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontSize: 14 }}>{a.flag}</span>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: a.primary ? '#fca5a5' : '#F8FAFC' }}>{a.name}</span>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: a.primary ? 'rgba(239,68,68,0.8)' : 'rgba(255,255,255,0.4)', background: a.primary ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)', border: `1px solid ${a.primary ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '.05em' }}>{a.sub}</span>
+                          </div>
+                          <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.6)', margin: 0, lineHeight: 1.65 }}>{a.desc}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  {[
-                    { name: 'Garante per la Protezione dei Dati', role: 'Sistemi AI che trattano dati personali — profiling, raccomandazione, sistemi predittivi', icon: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></> },
-                    { name: 'AGCM', role: 'Pratiche commerciali scorrette, dark pattern, manipolazione algoritmica nei confronti dei consumatori', icon: <><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></> },
-                    { name: 'Banca d\'Italia / Consob', role: 'AI in ambito finanziario: scoring creditizio, trading algoritmico, valutazione del rischio', icon: <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></> },
-                    { name: 'AGENAS / Ministero della Salute', role: 'Dispositivi medici AI, sistemi diagnostici, supporto clinico alle decisioni terapeutiche', icon: <path d="M22 12h-4l-3 9L9 3l-3 9H2"/> },
-                    { name: 'Commissione Europea', role: 'General Purpose AI, modelli frontier e violazioni sistemiche che coinvolgono più Stati membri', icon: <><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></> },
-                  ].map((a) => (
-                    <div key={a.name} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>{a.icon}</svg>
-                      <div>
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: 'rgba(255,255,255,0.88)', display: 'block', marginBottom: 2 }}>{a.name}</span>
-                        <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.58 }}>{a.role}</span>
+
+                  {/* Cosa scatta un'ispezione */}
+                  <div style={{ marginBottom: 18 }}>
+                    <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.16em', marginBottom: 10 }}>Cosa fa scattare un'ispezione</div>
+                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', margin: '0 0 10px', lineHeight: 1.6 }}>Non aspettarti un'ispezione a freddo. I controlli partono da trigger precisi:</p>
+                    {[
+                      { n: '1', title: 'Un incidente documentato', desc: 'Candidato discriminato, credito negato, decisione medica errata. Chi subisce il danno reclama — l\'autorità ti chiede la documentazione.' },
+                      { n: '2', title: 'Un reclamo di terzi', desc: 'Dipendente, concorrente, associazione consumatori. Basta una segnalazione formale per aprire un\'istruttoria.' },
+                      { n: '3', title: 'Sweep settoriali', desc: 'Campagne tematiche su settori ad alto rischio — come il Garante dopo il GDPR. HR, fintech e healthcare saranno i primi.' },
+                      { n: '4', title: 'Verifica database EU', desc: 'Per i sistemi ad alto rischio la registrazione è obbligatoria. L\'autorità la controlla in autonomia, senza incidenti.' },
+                    ].map(t => (
+                      <div key={t.n} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.05)', alignItems: 'flex-start' }}>
+                        <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 9, fontWeight: 800, color: 'rgba(239,68,68,0.8)', marginTop: 1 }}>{t.n}</div>
+                        <div>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.88)', display: 'block', marginBottom: 2 }}>{t.title}</span>
+                          <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{t.desc}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  {/* Quando */}
+                  <div>
+                    <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.16em', marginBottom: 10 }}>Quando</div>
+                    {[
+                      { period: '2025 – 2026', color: 'rgba(255,255,255,0.7)', dot: 'rgba(255,255,255,0.3)', label: 'Le autorità si organizzano. Prime linee guida, nessuna sanzione pesante.' },
+                      { period: '2026 – 2027', color: '#F59E0B', dot: '#F59E0B', label: 'Primi incidenti → prime istruttorie → prime sanzioni sui casi più evidenti.' },
+                      { period: '2027 – 2028', color: '#F87171', dot: '#EF4444', label: 'Enforcement sistematico. Sweep settoriali. Sanzioni routinarie.' },
+                    ].map(r => (
+                      <div key={r.period} style={{ display: 'flex', gap: 10, padding: '7px 0', borderTop: '1px solid rgba(255,255,255,0.05)', alignItems: 'flex-start' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.dot, flexShrink: 0, marginTop: 4 }} />
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: r.color, whiteSpace: 'nowrap' }}>{r.period}</span>
+                          <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.6 }}>{r.label}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -878,9 +927,9 @@ export default function Page() {
 
                 {/* Dynamic timeline 2018 → 2026 */}
                 <div style={{ position: 'relative', paddingTop: 2 }}>
-                  <div className="tl-line-base" />
-                  <div className="tl-line-fill" />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', position: 'relative', paddingTop: 0 }}>
+                  <div style={{ position: 'absolute', top: 5, left: 0, right: 0, height: 2, background: 'rgba(255,255,255,0.20)', borderRadius: 1, zIndex: 0 }} />
+                  <div style={{ position: 'absolute', top: 5, left: 0, right: 0, height: 2, background: 'linear-gradient(to right, rgba(255,255,255,0.35) 0%, rgba(245,158,11,0.9) 100%)', borderRadius: 1, zIndex: 1, transformOrigin: 'left center' }} className="tl-line-fill" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', position: 'relative', zIndex: 2, paddingTop: 0 }}>
                     {[
                       { year: '2018', label: 'GDPR in vigore', note: 'Il mercato non era pronto. Il panico dura 12 mesi.', past: true, align: 'flex-start' as const },
                       { year: '2020', label: 'Standard B2B', note: 'GDPR clausola implicita in ogni contratto enterprise.', past: true, align: 'center' as const },

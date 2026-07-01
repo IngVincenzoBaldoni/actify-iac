@@ -33,6 +33,8 @@ const companyUpdateSchema = z.object({
     has_training:           z.boolean(),
   }).optional(),
   setup_completed:       z.boolean().optional(),
+  // subscription_tier is accepted ONLY during onboarding (pre-Stripe).
+  // Once a company has a stripe_customer_id the field is stripped server-side.
   subscription_tier:     z.enum(['trial', 'base', 'premium', 'enterprise']).optional(),
 });
 
@@ -78,6 +80,16 @@ export async function updateCompany(event: APIGatewayProxyEventV2WithJWTAuthoriz
   const auth = extractAuth(event);
   requireAdmin(auth);
   const body = parseBody(event.body, companyUpdateSchema);
+
+  // subscription_tier is allowed only during onboarding (no Stripe yet).
+  // Once stripe_customer_id is set, the tier is controlled exclusively by the webhook.
+  if (body.subscription_tier) {
+    const existing = await dynamo.getCompany(auth.companyId);
+    if (existing?.stripe_customer_id) {
+      delete body.subscription_tier;
+    }
+  }
+
   const updates = { ...body, updated_at: new Date().toISOString() };
   await dynamo.updateCompany(auth.companyId, updates);
   await logEvent(auth.companyId, 'company_updated', { fields_updated: Object.keys(body) }, auth.email);
@@ -86,6 +98,7 @@ export async function updateCompany(event: APIGatewayProxyEventV2WithJWTAuthoriz
 
 export async function setupWizard(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const auth = extractAuth(event);
+  requireAdmin(auth);
   const body = parseBody(event.body, setupSchema);
   await dynamo.updateCompany(auth.companyId, {
     ai_role:         body.ai_role,

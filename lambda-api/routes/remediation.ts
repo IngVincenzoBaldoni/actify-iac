@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import { S3Client, DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { parseBody } from '../middleware/validator';
 import { extractAuth } from '../middleware/auth';
 import * as dynamo from '../services/dynamoService';
@@ -10,6 +11,8 @@ import { z } from 'zod';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION ?? 'eu-central-1' });
+const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
+const BUCKET = process.env.DOCUMENTS_BUCKET ?? 'actify-saas-documents';
 
 const generateSchema = z.object({ gap_id: z.string().min(1) });
 
@@ -165,12 +168,7 @@ export async function reuploadDocument(event: APIGatewayProxyEventV2WithJWTAutho
     return { statusCode: 404, body: JSON.stringify({ error: 'not_found' }) };
   }
 
-  const body = JSON.parse(event.body ?? '{}') as { content_base64: string; filename?: string };
-  if (!body.content_base64) return { statusCode: 400, body: JSON.stringify({ error: 'content_base64 required' }) };
-
-  const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
-  const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'eu-central-1' });
-  const BUCKET = process.env.DOCUMENTS_BUCKET ?? 'actify-saas-documents';
+  const body = parseBody(event.body, reuploadSchema);
 
   const filename   = body.filename ?? '';
   const isDocx     = filename.toLowerCase().endsWith('.docx');
@@ -240,10 +238,19 @@ export async function listSystemDocuments(event: APIGatewayProxyEventV2WithJWTAu
 // Closes a gap fully: either via self-declaration or by uploading a proof file.
 // For HYBRID gaps this completes the action step after the document was generated.
 
+// Filename validation: block path traversal, allow Unicode (Italian accented chars), require extension
+const SAFE_FILENAME = /^[^/\\<>:"|?*\x00-\x1f\r\n]+\.(pdf|docx|png|jpg|jpeg)$/i;
+const SAFE_DOC_FILENAME = /^[^/\\<>:"|?*\x00-\x1f\r\n]+\.(pdf|docx)$/i;
+
 const closeGapSchema = z.object({
   evidence_note:  z.string().max(500).optional(),
-  proof_base64:   z.string().optional(),       // base64-encoded file (max ~4 MB)
-  proof_filename: z.string().max(200).optional(),
+  proof_base64:   z.string().max(8_000_000).optional(),
+  proof_filename: z.string().regex(SAFE_FILENAME).max(200).optional(),
+});
+
+const reuploadSchema = z.object({
+  content_base64: z.string().max(8_000_000),
+  filename:       z.string().regex(SAFE_DOC_FILENAME).max(200).optional(),
 });
 
 export async function closeGap(event: APIGatewayProxyEventV2WithJWTAuthorizer) {
@@ -391,6 +398,14 @@ export async function deleteDocument(event: APIGatewayProxyEventV2WithJWTAuthori
   const doc = await dynamo.getDocument(documentId);
   if (!doc || doc.company_id !== auth.companyId) {
     return { statusCode: 404, body: JSON.stringify({ error: 'not_found' }) };
+  }
+
+  if (doc.s3_key) {
+    try {
+      await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: doc.s3_key as string }));
+    } catch (err) {
+      console.warn('[deleteDocument] S3 delete failed:', (err as Error).message);
+    }
   }
 
   await dynamo.deleteDocument(documentId);

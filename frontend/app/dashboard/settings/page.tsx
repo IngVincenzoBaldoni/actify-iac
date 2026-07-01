@@ -130,6 +130,16 @@ export default function SettingsPage() {
   const [inviteRole, setInviteRole]   = useState<'admin' | 'collaborator'>('collaborator');
   const [inviting, setInviting]       = useState(false);
   const [inviteMsg, setInviteMsg]     = useState('');
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [planChanged, setPlanChanged] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('changed') === '1') {
+      setPlanChanged(true);
+      window.history.replaceState({}, '', window.location.pathname);
+      setTimeout(() => setPlanChanged(false), 6000);
+    }
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -202,6 +212,16 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleManageBilling() {
+    setPortalLoading(true);
+    try {
+      const { url } = await api.billing.createPortalSession();
+      window.location.href = url;
+    } catch {
+      setPortalLoading(false);
+    }
+  }
+
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
@@ -230,6 +250,24 @@ export default function SettingsPage() {
         <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-.4px' }}>Impostazioni</h1>
         <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Gestisci il profilo aziendale e il tuo piano Actify</div>
       </div>
+
+      {/* Piano cambiato con successo */}
+      {planChanged && (
+        <div style={{
+          marginBottom: 20, padding: '14px 20px',
+          background: 'rgba(34,197,94,.10)', border: '1px solid rgba(34,197,94,.30)',
+          borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="10" cy="10" r="9" fill="rgba(34,197,94,.15)" stroke="rgba(34,197,94,.5)" strokeWidth="1.5"/>
+            <path d="M6 10l3 3 5-6" stroke="#22C55E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#86efac' }}>Piano aggiornato con successo</div>
+            <div style={{ fontSize: 13, color: 'rgba(134,239,172,.75)', marginTop: 2 }}>La prorata sarà applicata nella prossima fattura Stripe.</div>
+          </div>
+        </div>
+      )}
 
       {/* ── PIANO HERO ─────────────────────────────────────────────────── */}
       {company && (
@@ -281,20 +319,41 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-          <a href="/plan" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '13px 26px',
-            background: 'rgba(0,0,0,.28)',
-            border: '1.5px solid rgba(255,255,255,.30)',
-            backdropFilter: 'blur(8px)',
-            color: '#fff', textDecoration: 'none',
-            borderRadius: 12, fontWeight: 700, fontSize: 14,
-            whiteSpace: 'nowrap', flexShrink: 0,
-            position: 'relative',
-            boxShadow: '0 2px 8px rgba(0,0,0,.3)',
-          }}>
-            {tier === 'trial' ? 'Scegli un piano' : 'Cambia piano'} →
-          </a>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, position: 'relative' }}>
+            <a href="/plan" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '13px 26px',
+              background: 'rgba(0,0,0,.28)',
+              border: '1.5px solid rgba(255,255,255,.30)',
+              backdropFilter: 'blur(8px)',
+              color: '#fff', textDecoration: 'none',
+              borderRadius: 12, fontWeight: 700, fontSize: 14,
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(0,0,0,.3)',
+            }}>
+              {tier === 'trial' ? 'Scegli un piano' : 'Cambia piano'} →
+            </a>
+            {!!company?.stripe_customer_id && (
+              <button
+                onClick={handleManageBilling}
+                disabled={portalLoading}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '10px 20px',
+                  background: 'rgba(255,255,255,.06)',
+                  border: '1px solid rgba(255,255,255,.18)',
+                  backdropFilter: 'blur(8px)',
+                  color: 'rgba(255,255,255,.75)',
+                  borderRadius: 10, fontWeight: 600, fontSize: 13,
+                  whiteSpace: 'nowrap', cursor: portalLoading ? 'wait' : 'pointer',
+                  opacity: portalLoading ? 0.6 : 1,
+                  transition: 'opacity .15s',
+                }}
+              >
+                {portalLoading ? 'Apertura…' : 'Gestisci abbonamento'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

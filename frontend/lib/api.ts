@@ -247,4 +247,14 @@ export const api = {
     export: (opts?: { from?: string; to?: string; systemNames?: string[] }) =>
       request<{ document_id: string; title: string }>('POST', '/api/audit-trail/export', opts),
   },
+
+  // ─── Billing (Stripe) ─────────────────────────────────────────────────────
+  billing: {
+    createCheckoutSession: (body: { tier: string; billing_cycle: string; email?: string }) =>
+      request<{ url: string }>('POST', '/api/billing/checkout', body),
+    createPortalSession: () =>
+      request<{ url: string }>('POST', '/api/billing/portal'),
+    changePlan: (body: { tier: string; billing_cycle: string }) =>
+      request<{ ok: boolean }>('POST', '/api/billing/change-plan', body),
+  },
 };

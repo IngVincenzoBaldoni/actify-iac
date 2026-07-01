@@ -20,7 +20,7 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    tier: 'trial', name: 'Trial', monthly: 29, tagline: 'Diagnosi e assessment — scopri dove sei',
+    tier: 'trial', name: 'Trial', monthly: 19.9, tagline: 'Diagnosi e assessment — scopri dove sei',
     highlight: false, badge: null, icon: '🔬',
     features: [
       { label: 'AIPI — AI Passports Inventory', value: 'Fino a 5 tool AI censiti',     ok: true  },
@@ -33,7 +33,7 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    tier: 'base', name: 'Starter', monthly: 79, tagline: 'Per chi inizia il percorso di compliance',
+    tier: 'base', name: 'Starter', monthly: 59.9, tagline: 'Per chi inizia il percorso di compliance',
     highlight: false, badge: null, icon: '🚀',
     features: [
       { label: 'AIPI — AI Passports Inventory', value: 'Fino a 10 tool AI censiti',     ok: true },
@@ -47,7 +47,7 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    tier: 'premium', name: 'Professional', monthly: 129, tagline: 'Per aziende che vogliono compliance attiva',
+    tier: 'premium', name: 'Professional', monthly: 99.9, tagline: 'Per aziende che vogliono compliance attiva',
     highlight: true, badge: 'Più popolare', icon: '⚡',
     features: [
       { label: 'AIPI — AI Passports Inventory', value: 'Illimitata',                            ok: true },
@@ -118,6 +118,10 @@ const SIZES = [
   { value: '251-1000', label: '251–1.000 (Grande)' },
   { value: '1000+', label: '1.000+ (Enterprise)' },
 ];
+
+function fmtP(n: number): string {
+  return n % 1 === 0 ? String(n) : n.toFixed(2).replace('.', ',');
+}
 
 function RegisterPageInner() {
   const router       = useRouter();
@@ -190,8 +194,13 @@ function RegisterPageInner() {
       const result = await doSignIn(form.email, form.password);
       if (result.isSignedIn) {
         setSessionCookie();
-        if (selectedPlan) {
-          await api.company.update({ subscription_tier: selectedPlan }).catch(() => {});
+        if (selectedPlan && selectedPlan !== 'enterprise') {
+          const billingCycle = annual ? 'annual' : 'monthly';
+          const { url } = await api.billing.createCheckoutSession({
+            tier: selectedPlan, billing_cycle: billingCycle, email: form.email,
+          });
+          window.location.href = url;
+          return;
         }
         router.push('/dashboard/inventory');
       }
@@ -353,6 +362,23 @@ function RegisterPageInner() {
               <div className="acct-feat-item">
                 <div className="acct-feat-icon">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 13l2.5-4 2 2.5L9 6l2.5 4L14 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <span className="acct-feat-label">Fine Board Est.</span>
+              </div>
+              <div className="acct-feat-item">
+                <div className="acct-feat-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2a2 2 0 100 4 2 2 0 000-4z" stroke="currentColor" strokeWidth="1.4"/>
+                    <path d="M3 14c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <span className="acct-feat-label">AI Literacy</span>
+              </div>
+              <div className="acct-feat-item">
+                <div className="acct-feat-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <path d="M4 2h8a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4"/>
                     <path d="M5.5 6h5M5.5 8.5h5M5.5 11h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                   </svg>
@@ -367,6 +393,26 @@ function RegisterPageInner() {
                   </svg>
                 </div>
                 <span className="acct-feat-label">Audit Trail</span>
+              </div>
+              <div className="acct-feat-item">
+                <div className="acct-feat-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M13 5l-5 5-2-2-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M10 5h3v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <span className="acct-feat-label">Next Best Action</span>
+              </div>
+              <div className="acct-feat-item">
+                <div className="acct-feat-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="6" cy="5" r="2" stroke="currentColor" strokeWidth="1.4"/>
+                    <circle cx="11" cy="5" r="2" stroke="currentColor" strokeWidth="1.4"/>
+                    <path d="M1 13c0-2.21 2.24-4 5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    <path d="M9 10c.6-.26 1.27-.4 2-.4 2.76 0 5 1.79 5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <span className="acct-feat-label">Collaborative Team</span>
               </div>
             </div>
           </div>
@@ -527,10 +573,11 @@ function RegisterPageInner() {
 
         <div className="plan-cards reg-plan-cards">
           {PLANS.map((plan, planIdx) => {
-            const yearlyPrice   = plan.monthly * 10;
-            const basePrice     = annual ? Math.round(yearlyPrice / 12) : plan.monthly;
-            const displayPrice  = referralCode ? Math.round(basePrice * 0.8) : basePrice;
-            const saving        = plan.monthly * 2;
+            const yearlyPrice    = plan.monthly * 10;
+            const annualMonthly  = Math.round((yearlyPrice / 12) * 100) / 100;
+            const displayPrice   = annual ? annualMonthly : plan.monthly;
+            const saving         = Math.round(plan.monthly * 2);
+            const refPrice       = Math.round(displayPrice * 0.8 * 100) / 100;
             const isOnHold      = !!plan.onHold;
 
             return (
@@ -583,11 +630,13 @@ function RegisterPageInner() {
                 <div className="plan-price-wrap">
                   {referralCode && !isOnHold && (
                     <span style={{ fontSize: 14, color: 'var(--muted)', textDecoration: 'line-through', marginRight: 6, alignSelf: 'flex-end', paddingBottom: 4 }}>
-                      €{basePrice}
+                      €{fmtP(plan.monthly)}
                     </span>
                   )}
                   <span className="plan-price-currency">€</span>
-                  <span className="plan-price-amount" style={referralCode && !isOnHold ? { color: '#16a34a' } : undefined}>{displayPrice}</span>
+                  <span className="plan-price-amount" style={referralCode && !isOnHold ? { color: '#16a34a' } : undefined}>
+                    {(() => { const p = referralCode && !isOnHold ? fmtP(refPrice) : fmtP(displayPrice); const [int, dec] = p.split(','); return <>{int}{dec && <span className="plan-price-cents">,{dec}</span>}</>; })()}
+                  </span>
                   <span className="plan-price-period">/mese</span>
                 </div>
 
@@ -677,7 +726,7 @@ function RegisterPageInner() {
         </div>
 
         <p className="plan-footer-note">
-          Nessuna carta di credito richiesta. Puoi cambiare piano in qualsiasi momento.
+          Puoi cambiare piano in qualsiasi momento.
         </p>
       </div>
     );
@@ -713,11 +762,11 @@ function RegisterPageInner() {
               <span className="reg-plan-chip-price">
                 {referralCode ? (
                   <>
-                    <span style={{ textDecoration: 'line-through', color: 'var(--muted)', marginRight: 4 }}>€{planInfo.monthly}</span>
-                    <span style={{ color: '#16a34a', fontWeight: 700 }}>€{Math.round(planInfo.monthly * 0.8)}/mese</span>
+                    <span style={{ textDecoration: 'line-through', color: 'var(--muted)', marginRight: 4 }}>€{fmtP(planInfo.monthly)}</span>
+                    <span style={{ color: '#16a34a', fontWeight: 700 }}>€{fmtP(Math.round(planInfo.monthly * 0.8 * 100) / 100)}/mese</span>
                   </>
                 ) : (
-                  `€${planInfo.monthly}/mese${annual ? ` · €${planInfo.monthly * 10}/anno` : ''}`
+                  `€${fmtP(planInfo.monthly)}/mese${annual ? ` · €${planInfo.monthly * 10}/anno` : ''}`
                 )}
               </span>
               {referralCode && (

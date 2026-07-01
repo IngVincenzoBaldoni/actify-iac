@@ -51,6 +51,7 @@ data "aws_iam_policy_document" "api_permissions" {
       aws_dynamodb_table.doc_generations.arn,
       "${aws_dynamodb_table.doc_generations.arn}/index/*",
       aws_dynamodb_table.doc_schemas.arn,
+      aws_dynamodb_table.audit.arn,
     ]
   }
 

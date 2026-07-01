@@ -282,7 +282,7 @@ const updatePartnerSchema = z.object({
   sender_name:     z.string().max(100).optional(),
   reply_to:        z.string().email().optional(),
   primary_color:   z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-  logo_url:        z.string().url().optional(),
+  logo_url:        z.string().url().refine(u => u.startsWith('https://'), { message: 'logo_url deve usare HTTPS' }).optional(),
 });
 
 export async function updatePartnerMe(event: APIGatewayProxyEventV2WithJWTAuthorizer) {

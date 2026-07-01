@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 import { configureAmplify } from '@/lib/amplify';
 import { isAuthenticated } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -27,7 +26,7 @@ const PLANS: Plan[] = [
   {
     tier: 'trial',
     name: 'Trial',
-    monthly: 29,
+    monthly: 19.9,
     tagline: 'Diagnosi e assessment — scopri dove sei',
     color: 'plan-card-trial',
     badge: null,
@@ -47,7 +46,7 @@ const PLANS: Plan[] = [
   {
     tier: 'base',
     name: 'Starter',
-    monthly: 79,
+    monthly: 59.9,
     tagline: 'Per chi inizia il percorso di compliance',
     color: 'plan-card-base',
     badge: null,
@@ -67,7 +66,7 @@ const PLANS: Plan[] = [
   {
     tier: 'premium',
     name: 'Professional',
-    monthly: 129,
+    monthly: 99.9,
     tagline: 'Per aziende che vogliono compliance attiva',
     color: 'plan-card-premium',
     badge: 'Più popolare',
@@ -128,14 +127,33 @@ function FeatureIcon({ ok }: { ok: boolean | 'partial' }) {
   );
 }
 
+function fmtP(n: number): string {
+  return n % 1 === 0 ? String(n) : n.toFixed(2).replace('.', ',');
+}
+
 function PlanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const onboard = searchParams.get('onboard') === '1';
+  const onboard  = searchParams.get('onboard')  === '1';
+  const expired  = searchParams.get('expired')  === '1';
 
   const [annual, setAnnual] = useState(false);
   const [selecting, setSelecting] = useState<PlanTier | null>(null);
   const [error, setError] = useState('');
+  const [currentTier, setCurrentTier] = useState<string | null>(null);
+  const [hasStripe, setHasStripe] = useState(false);
+
+  useEffect(() => {
+    if (onboard) return;
+    isAuthenticated().then(ok => {
+      if (!ok) return;
+      api.company.get().then((c: unknown) => {
+        const co = c as Record<string, unknown>;
+        setCurrentTier((co.subscription_tier as string) ?? null);
+        setHasStripe(!!co.stripe_subscription_id);
+      }).catch(() => {});
+    });
+  }, [onboard]);
 
   async function selectPlan(tier: PlanTier) {
     setError('');
@@ -143,6 +161,21 @@ function PlanContent() {
     try {
       const ok = await isAuthenticated();
       if (!ok) { router.push('/login'); return; }
+
+      const billingCycle = annual ? 'annual' : 'monthly';
+
+      if (expired && tier !== 'enterprise') {
+        const { url } = await api.billing.createCheckoutSession({ tier, billing_cycle: billingCycle });
+        window.location.href = url;
+        return;
+      }
+
+      if (hasStripe && tier !== 'enterprise') {
+        await api.billing.changePlan({ tier, billing_cycle: billingCycle });
+        router.push('/dashboard/settings?changed=1');
+        return;
+      }
+
       await api.company.update({ subscription_tier: tier });
       router.push(onboard ? '/dashboard/setup' : '/dashboard/settings');
     } catch (e: unknown) {
@@ -162,6 +195,24 @@ function PlanContent() {
           <a href="/dashboard/settings" className="plan-back-link">← Torna alle impostazioni</a>
         )}
       </div>
+
+      {expired && (
+        <div style={{
+          margin: '0 auto 0', maxWidth: 900, padding: '14px 24px',
+          background: 'rgba(239,68,68,.10)', border: '1px solid rgba(239,68,68,.30)',
+          borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12,
+          marginBottom: 0,
+        }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="10" cy="10" r="9" stroke="rgba(239,68,68,.7)" strokeWidth="1.5"/>
+            <path d="M10 6v5M10 14v.5" stroke="#EF4444" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#fca5a5' }}>Il tuo abbonamento è scaduto</div>
+            <div style={{ fontSize: 13, color: 'rgba(252,165,165,.75)', marginTop: 2 }}>Scegli un piano per riprendere l&apos;accesso ad Actify.</div>
+          </div>
+        </div>
+      )}
 
       <div className="plan-hero">
         <div className="plan-pill">
@@ -198,11 +249,20 @@ function PlanContent() {
 
       <div className="plan-cards">
         {PLANS.map(plan => {
-          const yearlyPrice  = plan.monthly * 10;
-          const displayPrice = annual ? Math.round(yearlyPrice / 12) : plan.monthly;
-          const saving       = plan.monthly * 2;
+          const yearlyPrice    = plan.monthly * 10;
+          const annualMonthly  = Math.round((yearlyPrice / 12) * 100) / 100;
+          const displayPrice   = annual ? annualMonthly : plan.monthly;
+          const saving         = Math.round(plan.monthly * 2);
           const isBusy       = selecting === plan.tier;
           const isOnHold     = !!plan.onHold;
+          const isCurrent    = !onboard && !expired && hasStripe && currentTier === plan.tier;
+          const ctaLabel     = isCurrent
+            ? 'Piano attuale'
+            : hasStripe && !expired && plan.tier !== 'enterprise'
+              ? currentTier && ['trial','base','premium'].indexOf(plan.tier) > ['trial','base','premium'].indexOf(currentTier)
+                ? `Passa a ${plan.name} →`
+                : `Passa a ${plan.name} →`
+              : `Inizia con ${plan.name} →`;
 
           return (
             <div
@@ -225,7 +285,12 @@ function PlanContent() {
 
               <div className="plan-price-wrap">
                 <span className="plan-price-currency">€</span>
-                <span className="plan-price-amount">{displayPrice}</span>
+                <span className="plan-price-amount">
+                  {fmtP(displayPrice).split(',')[0]}
+                  {fmtP(displayPrice).includes(',') && (
+                    <span className="plan-price-cents">,{fmtP(displayPrice).split(',')[1]}</span>
+                  )}
+                </span>
                 <span className="plan-price-period">/mese</span>
               </div>
 
@@ -248,9 +313,10 @@ function PlanContent() {
                 <button
                   className={`plan-cta${plan.badge === 'Più popolare' ? ' plan-cta-featured' : ''}`}
                   onClick={() => selectPlan(plan.tier)}
-                  disabled={!!selecting}
+                  disabled={!!selecting || isCurrent}
+                  style={isCurrent ? { opacity: 0.45, cursor: 'default', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.6)' } : undefined}
                 >
-                  {isBusy ? <span className="plan-cta-spin" /> : `Inizia con ${plan.name} →`}
+                  {isBusy ? <span className="plan-cta-spin" /> : ctaLabel}
                 </button>
               )}
 

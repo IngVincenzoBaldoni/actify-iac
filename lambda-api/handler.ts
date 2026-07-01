@@ -25,7 +25,7 @@ import {
   generateConsolidatedArt4Report,
 } from './routes/literacy';
 import {
-  registerPartner, getPartnerMe, updatePartnerMe,
+  getPartnerMe, updatePartnerMe,
   listPMI, addPMI, importPMICSV, getPMI, deletePMI, updatePMIStatus,
   sendAssessment, sendReferralEmail, sendOnboardingEmail, generatePMIPdf,
   getAssessmentForm, submitAssessmentForm,
@@ -39,6 +39,8 @@ import {
 } from './routes/partnerInventory';
 import { getArticleText } from './routes/articles';
 import { listAuditTrail, exportAuditTrail } from './routes/auditTrail';
+import { createCheckoutSession, createPortalSession, changePlan } from './routes/billing';
+import { handleWebhook } from './routes/stripeWebhook';
 
 const CORS = {
   'Content-Type': 'application/json',
@@ -89,13 +91,14 @@ export const handler = async (
     }
 
     // ── Public routes ──────────────────────────────────────────────────────
-    if (method === 'POST' && path === '/api/auth/register') {
-      const r = await register(ev as unknown as APIGatewayProxyEventV2);
+    // ── Stripe webhook — public, no JWT, raw body needed for signature verification
+    if (method === 'POST' && path === '/api/stripe/webhook') {
+      const r = await handleWebhook(ev as unknown as APIGatewayProxyEventV2);
       return { ...r, headers: CORS };
     }
 
-    if (method === 'POST' && path === '/api/partner/request') {
-      const r = await registerPartner(ev as unknown as APIGatewayProxyEventV2);
+    if (method === 'POST' && path === '/api/auth/register') {
+      const r = await register(ev as unknown as APIGatewayProxyEventV2);
       return { ...r, headers: CORS };
     }
 
@@ -320,6 +323,14 @@ export const handler = async (
       return { ...await listAuditTrail(ev), headers: CORS };
     if (method === 'POST' && path === '/api/audit-trail/export')
       return { ...await exportAuditTrail(ev), headers: CORS };
+
+    // ── Billing ────────────────────────────────────────────────────────────
+    if (method === 'POST' && path === '/api/billing/checkout')
+      return { ...await createCheckoutSession(ev), headers: CORS };
+    if (method === 'POST' && path === '/api/billing/portal')
+      return { ...await createPortalSession(ev), headers: CORS };
+    if (method === 'POST' && path === '/api/billing/change-plan')
+      return { ...await changePlan(ev), headers: CORS };
 
     // /api/articles/{num} — public, returns full AI Act article text from knowledge base
     if (method === 'GET' && /^\/api\/articles\/\d+$/.test(path))

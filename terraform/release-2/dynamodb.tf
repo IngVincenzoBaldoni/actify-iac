@@ -251,6 +251,42 @@ resource "aws_dynamodb_table" "partner_pmi" {
   }
 }
 
+# ─── audit ────────────────────────────────────────────────────────────────────
+# PK: company_id, SK: event_id = "<ISO_timestamp>#<uuid>" (cronologico nativo)
+# IMPORTANT: table may already exist — run `terraform import aws_dynamodb_table.audit actify-saas-audit` before apply
+resource "aws_dynamodb_table" "audit" {
+  name         = local.table_audit
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "company_id"
+  range_key    = "event_id"
+
+  attribute {
+    name = "company_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "event_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = {
+    Name = local.table_audit
+  }
+}
+
 # ─── compliance-checks ────────────────────────────────────────────────────────
 # PK: "company_id#system_id", SK: "YYYYMMDDHHMMSS-uuid" (cronologico nativo)
 resource "aws_dynamodb_table" "compliance_checks" {

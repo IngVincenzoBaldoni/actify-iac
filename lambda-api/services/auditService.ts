@@ -22,7 +22,9 @@ export type AuditEventType =
   | 'literacy_evidence_added'
   | 'literacy_report_generated'
   | 'user_invited'
-  | 'user_deleted';
+  | 'user_deleted'
+  | 'subscription_activated'
+  | 'subscription_canceled';
 
 const EVENT_LABELS: Record<AuditEventType, string> = {
   account_created:             'Account creato',
@@ -46,7 +48,11 @@ const EVENT_LABELS: Record<AuditEventType, string> = {
   literacy_report_generated:   'Report Art. 4 generato',
   user_invited:                'Utente invitato',
   user_deleted:                'Utente rimosso',
+  subscription_activated:      'Abbonamento attivato',
+  subscription_canceled:       'Abbonamento cancellato',
 };
+
+const TWO_YEARS_S = 2 * 365 * 24 * 3600;
 
 export async function logEvent(
   companyId: string,
@@ -64,5 +70,6 @@ export async function logEvent(
     details,
     actor_email: actorEmail ?? null,
     timestamp:   now,
+    ttl_epoch:   Math.floor(Date.now() / 1000) + TWO_YEARS_S,
   }).catch(e => console.error('[AUDIT LOG ERROR]', e));
 }

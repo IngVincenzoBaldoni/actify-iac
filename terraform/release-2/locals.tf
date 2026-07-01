@@ -31,6 +31,7 @@ locals {
   table_literacy           = "${local.project}-literacy"
   table_partners           = "${local.project}-partners"
   table_partner_pmi        = "${local.project}-partner-pmi"
+  table_audit              = "${local.project}-audit"
 
   # ─── S3 — Document Vault ────────────────────────────────────────────────────
   s3_documents_bucket_name = "${local.project}-documents"

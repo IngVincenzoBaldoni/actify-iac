@@ -1,6 +1,7 @@
 import {
   BedrockRuntimeClient,
   ConverseCommand,
+  type ConverseCommandOutput,
 } from '@aws-sdk/client-bedrock-runtime';
 import { v4 as uuidv4 } from 'uuid';
 import { systemPrompt } from './systemPrompt';
@@ -15,6 +16,28 @@ import type { Company } from '../types/company';
 const bedrock   = new BedrockRuntimeClient({ region: process.env.BEDROCK_REGION ?? 'eu-central-1' });
 const MODEL_ID  = process.env.BEDROCK_MODEL_ID ?? 'eu.amazon.nova-pro-v1:0';
 const RAG_ENABLED = process.env.RAG_ENABLED !== 'false' && !!process.env.S3_VECTORS_BUCKET;
+
+// Bedrock call with exponential backoff on ThrottlingException (2s → 4s → 8s)
+async function callBedrock(params: ConstructorParameters<typeof ConverseCommand>[0]): Promise<ConverseCommandOutput> {
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await bedrock.send(new ConverseCommand(params));
+    } catch (err: unknown) {
+      const isThrottle =
+        (err as { name?: string }).name === 'ThrottlingException' ||
+        (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 429;
+      if (isThrottle && attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt + 1) * 1000; // 2s, 4s
+        console.warn(`[Bedrock] ThrottlingException — retry ${attempt + 1}/${maxRetries - 1} in ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Bedrock: max retries exceeded');
+}
 
 // ─── Article metadata ─────────────────────────────────────────────────────────
 
@@ -403,12 +426,12 @@ export async function runComplianceCheck(
       executive_summary: 'Tutti i requisiti applicabili risultano soddisfatti.',
     };
   } else {
-    const response = await bedrock.send(new ConverseCommand({
+    const response = await callBedrock({
       modelId:  MODEL_ID,
       system:   [{ text: activeSystemPrompt }],
       messages: [{ role: 'user', content: [{ text: buildUserMessage(system, company, ragContextText, artCtx) }] }],
       inferenceConfig: { maxTokens: 5120, temperature: 0 },
-    }));
+    });
 
     const firstContent = response.output?.message?.content?.[0];
     const rawText = firstContent && 'text' in firstContent ? (firstContent.text as string) : undefined;
@@ -423,12 +446,12 @@ export async function runComplianceCheck(
       // JSON was truncated (hit maxTokens limit) — retry once with stricter conciseness constraints
       const retryMsg = buildUserMessage(system, company, ragContextText, artCtx)
         + '\n\nIMPORTANTE: Genera MASSIMO 6 gap (solo i più critici). description e what_to_do: MAX 150 caratteri ciascuno. executive_summary: MAX 250 caratteri. Il JSON deve essere completo e valido.';
-      const retryResponse = await bedrock.send(new ConverseCommand({
+      const retryResponse = await callBedrock({
         modelId:  MODEL_ID,
         system:   [{ text: activeSystemPrompt }],
         messages: [{ role: 'user', content: [{ text: retryMsg }] }],
         inferenceConfig: { maxTokens: 5120, temperature: 0 },
-      }));
+      });
       const retryContent = retryResponse.output?.message?.content?.[0];
       const retryText = retryContent && 'text' in retryContent ? (retryContent.text as string) : undefined;
       if (!retryText) throw new Error('Bedrock retry returned no text output');

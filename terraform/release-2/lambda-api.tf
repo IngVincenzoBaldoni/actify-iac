@@ -42,6 +42,7 @@ resource "aws_lambda_function" "saas_api" {
       DYNAMODB_LITERACY_TABLE    = aws_dynamodb_table.literacy.name
       DYNAMODB_PARTNERS_TABLE    = aws_dynamodb_table.partners.name
       DYNAMODB_PARTNER_PMI_TABLE = aws_dynamodb_table.partner_pmi.name
+      DYNAMODB_AUDIT_TABLE       = aws_dynamodb_table.audit.name
       RESEND_API_KEY             = var.resend_api_key
       DOCUMENTS_BUCKET           = aws_s3_bucket.actify_documents.bucket
       LAMBDA_PDF_ARN             = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.lambda_pdf_name}"
