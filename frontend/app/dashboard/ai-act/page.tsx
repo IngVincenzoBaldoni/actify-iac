@@ -52,7 +52,7 @@ export default function DashboardAiActPage() {
           <a
             href="/dashboard/settings"
             style={{ display: 'inline-block', padding: '12px 32px', background: 'var(--green)', color: '#fff', borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: 'none', cursor: 'pointer' }}>
-            Passa a Professional — €149/mese
+            Passa a Professional — €99,90/mese
           </a>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>Upgrade immediato · Nessun vincolo</span>
         </div>

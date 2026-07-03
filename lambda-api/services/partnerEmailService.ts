@@ -99,7 +99,7 @@ export async function sendPartnerRequestConfirmation(params: {
           <td style="padding:40px;color:#e2e8f0;font-size:15px;line-height:1.75;">
             <p style="margin:0 0 16px;">Grazie per il tuo interesse ad <strong style="color:#34d399;">Actify</strong>!</p>
             <p style="margin:0 0 20px;">Abbiamo ricevuto la richiesta di accesso al <strong>Partner Portal</strong> di <strong>${ragioneSociale}</strong>. Il nostro team la esaminerà e riceverai una risposta via email entro <strong>1–2 giorni lavorativi</strong>.</p>
-            <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;">Se hai domande nel frattempo, puoi rispondere a questa email o scrivere a <a href="mailto:info@official-actify.com" style="color:#34d399;text-decoration:none;">info@official-actify.com</a>.</p>
+            <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;">Se hai domande nel frattempo, puoi rispondere a questa email o scrivere a <a href="mailto:officialactify@gmail.com" style="color:#34d399;text-decoration:none;">officialactify@gmail.com</a>.</p>
           </td>
         </tr>
         <tr>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { ComplianceCheck, ComplianceGap, ComplianceResult, ChecklistEntry } from '@/lib/types';
@@ -160,156 +160,78 @@ function SanctionOverview({ result }: { result: ComplianceResult }) {
   );
 }
 
-// ─── Compliance Checklist (read-only interactive) ─────────────────────────────
+// ─── Compliance Checklist — SOLA LETTURA per il partner ──────────────────────
+
+function ArticleBtn({ article }: { article: string }) {
+  const num = articleNumFromLabel(article);
+  if (!num) return null;
+  return (
+    <a
+      href={`/partner/ai-act?article=${num}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Leggi il testo completo dell'articolo nell'AI Act Reader"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        background: 'rgba(108,71,255,.1)', border: '1px solid rgba(108,71,255,.25)',
+        borderRadius: 6, color: '#a78bfa', fontSize: 11, padding: '2px 8px',
+        marginLeft: 8, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
+        fontFamily: 'inherit', cursor: 'pointer',
+      }}
+    >
+      ⚖️ Leggi Art. {num}
+    </a>
+  );
+}
 
 function ComplianceChecklist({
   gaps,
   checklist,
-  onSetEntry,
-  saving,
 }: {
-  gaps:       ComplianceGap[];
-  checklist:  Record<string, ChecklistEntry>;
-  onSetEntry: (article: string, entry: ChecklistEntry | null) => void;
-  saving:     boolean;
+  gaps:      ComplianceGap[];
+  checklist: Record<string, ChecklistEntry>;
 }) {
-  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
-
   const getStatus = (article: string) => normalizeEntry(checklist[article]).status;
 
-  const llmCompliant = gaps.filter(g => g.status === 'compliant' && !checklist[g.article]);
-  const userPresent  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'present');
-  const userPartial  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial');
-  const stillMissing = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'missing');
-
-  function handleMark(article: string, status: 'present' | 'partial') {
-    const existing = checklist[article] ?? {};
-    const entry: ChecklistEntry = {
-      ...(typeof existing === 'object' ? existing : {}),
-      status,
-      ...(status === 'present' ? { addressed_at: new Date().toISOString().split('T')[0] } : {}),
-    };
-    onSetEntry(article, entry);
-    setNoteDrafts(prev => ({ ...prev, [article]: (existing as ChecklistEntry).evidence_note ?? '' }));
-  }
-
-  function handleUnmark(article: string) {
-    onSetEntry(article, null);
-    setNoteDrafts(prev => { const n = { ...prev }; delete n[article]; return n; });
-  }
-
-  function handleNoteBlur(article: string) {
-    const note = (noteDrafts[article] ?? '').trim();
-    const existing = checklist[article];
-    if (!existing) return;
-    const entry = normalizeEntry(existing);
-    onSetEntry(article, { ...entry, evidence_note: note || undefined });
-  }
-
-  const GapActions = ({ gap }: { gap: ComplianceGap }) => {
-    const st = getStatus(gap.article);
-    return (
-      <div className="cl-gap-actions">
-        <button
-          className={`ci-mark-btn ci-mark-present${st === 'present' ? ' active' : ''}`}
-          onClick={() => st === 'present' ? handleUnmark(gap.article) : handleMark(gap.article, 'present')}>
-          ✓ Ho già questo
-        </button>
-        <button
-          className={`ci-mark-btn ci-mark-partial${st === 'partial' ? ' active' : ''}`}
-          onClick={() => st === 'partial' ? handleUnmark(gap.article) : handleMark(gap.article, 'partial')}>
-          ⟳ In lavorazione
-        </button>
-        {(st === 'present' || st === 'partial') && (
-          <button className="ci-mark-btn ci-mark-missing" onClick={() => handleUnmark(gap.article)}>✗ Annulla</button>
-        )}
-      </div>
-    );
-  };
-
-  const EvidenceInput = ({ gap }: { gap: ComplianceGap }) => (
-    <div className="cl-evidence-wrap">
-      <textarea
-        className="cl-evidence-input"
-        placeholder="Opzionale: link a documento, data completamento, descrizione azione… (max 300 caratteri)"
-        maxLength={300}
-        rows={2}
-        value={noteDrafts[gap.article] ?? normalizeEntry(checklist[gap.article]).evidence_note ?? ''}
-        onChange={e => setNoteDrafts(prev => ({ ...prev, [gap.article]: e.target.value }))}
-        onBlur={() => handleNoteBlur(gap.article)}
-      />
-    </div>
-  );
-
-  function ArticleBtn({ article }: { article: string }) {
-    const num = articleNumFromLabel(article);
-    if (!num) return null;
-    return (
-      <a
-        href={`/partner/ai-act?article=${num}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Leggi il testo completo dell'articolo nell'AI Act Reader"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          background: 'rgba(108,71,255,.1)', border: '1px solid rgba(108,71,255,.25)',
-          borderRadius: 6, color: '#a78bfa', fontSize: 11, padding: '2px 8px',
-          marginLeft: 8, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
-          fontFamily: 'inherit', cursor: 'pointer',
-        }}
-      >
-        ⚖️ Leggi Art. {num}
-      </a>
-    );
-  }
+  const compliant   = gaps.filter(g => g.status === 'compliant' || getStatus(g.article) === 'present');
+  const inProgress  = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'partial');
+  const missing     = gaps.filter(g => g.status !== 'compliant' && getStatus(g.article) === 'missing');
 
   return (
-    <>
     <div className="fcard">
       <div className="cl-header-row">
-        <h3>Stato Compliance AI Act</h3>
-        {saving && <span className="cl-saving-indicator">Salvataggio…</span>}
+        <h3>Gap Analysis AI Act</h3>
+        <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>Sola lettura</span>
       </div>
       <div className="cl-hint">
-        Dichiara quali requisiti sono già implementati: il calcolo sanzionatorio si aggiorna in tempo reale.
+        Stato dei requisiti normativi rilevati dall'analisi AI. Per aggiornare lo stato dei gap, accedere con l'account PMI.
       </div>
       <div className="cl-counts">
-        <span className="cl-count-ok">✓ {llmCompliant.length + userPresent.length} conformi</span>
-        {userPartial.length > 0 && <span className="cl-count-partial">⟳ {userPartial.length} in lavorazione</span>}
-        <span className="cl-count-miss">✗ {stillMissing.length} da completare</span>
-        {userPresent.length > 0 && <span className="cl-count-user">☑ {userPresent.length} dichiarati</span>}
+        <span className="cl-count-ok">✓ {compliant.length} conformi</span>
+        {inProgress.length > 0 && <span className="cl-count-partial">⟳ {inProgress.length} in lavorazione</span>}
+        <span className="cl-count-miss">✗ {missing.length} da completare</span>
       </div>
 
-      {userPresent.length > 0 && (
+      {compliant.length > 0 && (
         <div className="cl-section">
-          <div className="cl-section-title cl-user-title">☑ Già implementati (dichiarato)</div>
-          {userPresent.map(gap => {
-            const entry = normalizeEntry(checklist[gap.article]);
-            return (
-              <div key={gap.gap_id} className="cl-item cl-item-user">
-                <div className="cl-item-head">
-                  <span className="cl-art">{gap.article}</span>
-                  <span className="cl-req">{gap.requirement}</span>
-                  <span className="cl-status-user">Già implementato</span>
-                  <ArticleBtn article={gap.article} />
-                </div>
-                {entry.addressed_at && <div className="cl-addressed-date">📅 Addressato il {entry.addressed_at}</div>}
-                {entry.evidence_note && <div className="cl-evidence-note">📎 {entry.evidence_note}</div>}
-                <EvidenceInput gap={gap} />
-                <div className="cl-user-row">
-                  <span className="cl-user-note">Escluso dal calcolo sanzionatorio</span>
-                  <button className="cl-undo-btn" onClick={() => handleUnmark(gap.article)}>Annulla</button>
-                </div>
+          <div className="cl-section-title cl-ok-title">✓ Conformi</div>
+          {compliant.map(gap => (
+            <div key={gap.gap_id} className="cl-item cl-item-ok">
+              <div className="cl-item-head">
+                <span className="cl-art">{gap.article}</span>
+                <span className="cl-req">{gap.requirement}</span>
+                <span className="cl-status-ok">Conforme</span>
+                <ArticleBtn article={gap.article} />
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
-      {userPartial.length > 0 && (
+      {inProgress.length > 0 && (
         <div className="cl-section">
           <div className="cl-section-title cl-partial-title">⟳ In lavorazione</div>
-          {userPartial.map(gap => {
+          {inProgress.map(gap => {
             const entry = normalizeEntry(checklist[gap.article]);
             return (
               <div key={gap.gap_id} className="cl-item cl-item-partial">
@@ -320,31 +242,22 @@ function ComplianceChecklist({
                   <ArticleBtn article={gap.article} />
                 </div>
                 {entry.evidence_note && <div className="cl-evidence-note">📎 {entry.evidence_note}</div>}
-                <EvidenceInput gap={gap} />
-                <GapActions gap={gap} />
+                <p className="cl-desc">{gap.description}</p>
+                <div className="cl-manual-card">
+                  <div className="cl-manual-header"><span className="cl-manual-icon">📋</span><strong>Procedura richiesta</strong></div>
+                  <p className="cl-manual-steps">{gap.what_to_do}</p>
+                  {gap.deadline && <div className="cl-deadline">📅 Scadenza: <strong>{gap.deadline}</strong></div>}
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      {llmCompliant.length > 0 && (
+      {missing.length > 0 && (
         <div className="cl-section">
-          <div className="cl-section-title cl-ok-title">✓ Già presenti (analisi AI)</div>
-          {llmCompliant.map(gap => (
-            <div key={gap.gap_id} className="cl-item cl-item-ok">
-              <span className="cl-art">{gap.article}</span>
-              <span className="cl-req">{gap.requirement}</span>
-              <span className="cl-status-ok">Conforme</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {stillMissing.length > 0 && (
-        <div className="cl-section">
-          <div className="cl-section-title cl-miss-title">✗ Da completare</div>
-          {stillMissing.map(gap => (
+          <div className="cl-section-title cl-miss-title">✗ Gap da colmare</div>
+          {missing.map(gap => (
             <div key={gap.gap_id} className="cl-item cl-item-miss">
               <div className="cl-item-head">
                 <span className="cl-art">{gap.article}</span>
@@ -358,12 +271,8 @@ function ComplianceChecklist({
                 <ArticleBtn article={gap.article} />
               </div>
               <p className="cl-desc">{gap.description}</p>
-              <GapActions gap={gap} />
               <div className="cl-manual-card">
-                <div className="cl-manual-header">
-                  <span className="cl-manual-icon">📋</span>
-                  <strong>Procedura richiesta</strong>
-                </div>
+                <div className="cl-manual-header"><span className="cl-manual-icon">📋</span><strong>Procedura richiesta</strong></div>
                 <p className="cl-manual-steps">{gap.what_to_do}</p>
                 {gap.deadline && <div className="cl-deadline">📅 Scadenza: <strong>{gap.deadline}</strong></div>}
               </div>
@@ -372,7 +281,6 @@ function ComplianceChecklist({
         </div>
       )}
     </div>
-    </>
   );
 }
 
@@ -385,11 +293,8 @@ export default function PartnerSystemDetailPage({ pmiId, systemId }: { pmiId: st
   const [system, setSystem]   = useState<Record<string, unknown> | null>(null);
   const [check, setCheck]     = useState<ComplianceCheck | null>(null);
   const [loading, setLoading] = useState(true);
-  const [triggering, setTriggering] = useState(false);
 
   const [checklist, setChecklist] = useState<Record<string, ChecklistEntry>>({});
-  const [saving, setSaving]       = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     if (!pmiId || !systemId) return;
@@ -451,51 +356,6 @@ export default function PartnerSystemDetailPage({ pmiId, systemId }: { pmiId: st
     };
   }, [result, effectiveGaps]);
 
-  function handleSetEntry(article: string, entry: ChecklistEntry | null) {
-    const next = { ...checklist };
-    if (entry === null) delete next[article];
-    else next[article] = entry;
-    setChecklist(next);
-    setSaving(true);
-
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      try {
-        const payload: Record<string, unknown> = { compliance_checklist: next };
-        if (gaps.length > 0) {
-          const effNow = gaps.map(g => {
-            const e = next[g.article];
-            return e?.status === 'present'
-              ? { ...g, status: 'compliant' as const, estimated_sanction_max: 0, estimated_sanction_min: 0 }
-              : g;
-          });
-          const nonC = effNow.filter(g => g.status !== 'compliant');
-          payload.last_exposure_min = nonC.reduce((s, g) => s + (g.estimated_sanction_min ?? 0), 0);
-          payload.last_exposure_max = nonC.reduce((s, g) => s + (g.estimated_sanction_max ?? 0), 0);
-          payload.compliance_status = (payload.last_exposure_max as number) === 0 ? 'compliant' : 'gap_found';
-        }
-        await api.partnerInventory.updateSystem(pmiId, systemId, payload);
-      } catch {
-        /* silent */
-      } finally {
-        setSaving(false);
-      }
-    }, 600);
-  }
-
-  async function handleTrigger() {
-    setTriggering(true);
-    try {
-      await api.partnerInventory.triggerCheck(pmiId, systemId);
-      setCheck(prev => prev ? { ...prev, status: 'running' } : null);
-      setTimeout(load, 4000);
-    } catch (err: unknown) {
-      alert((err as { message?: string }).message ?? 'Errore');
-    } finally {
-      setTriggering(false);
-    }
-  }
-
   if (loading) return <div className="db-loading"><div className="spin"></div></div>;
   if (!system) return <div className="inv-page"><p>Sistema non trovato.</p></div>;
 
@@ -509,13 +369,6 @@ export default function PartnerSystemDetailPage({ pmiId, systemId }: { pmiId: st
           <h1 className="inv-title">{system.tool_name as string}</h1>
           <p className="inv-sub">{system.vendor as string} · {system.category as string} · {system.role as string}</p>
         </div>
-        <button
-          className="sys-check-btn lg"
-          disabled={check?.status === 'running' || triggering}
-          onClick={handleTrigger}
-        >
-          {check?.status === 'running' || triggering ? '⟳ Analisi in corso…' : '▶ Avvia Compliance Check'}
-        </button>
       </div>
 
       {check?.status === 'running' && (
@@ -540,9 +393,6 @@ export default function PartnerSystemDetailPage({ pmiId, systemId }: { pmiId: st
                   <span className="rag-fallback-reason">{effectiveResult.rag_metadata.rag_fallback_reason}</span>
                 )}
               </div>
-              <button className="rag-fallback-cta" onClick={handleTrigger} disabled={triggering}>
-                {triggering ? '⟳' : 'Rianalizza ora'}
-              </button>
             </div>
           )}
           <SanctionOverview result={effectiveResult} />
@@ -554,8 +404,6 @@ export default function PartnerSystemDetailPage({ pmiId, systemId }: { pmiId: st
           <ComplianceChecklist
             gaps={gaps}
             checklist={checklist}
-            onSetEntry={handleSetEntry}
-            saving={saving}
           />
         </>
       )}
@@ -576,8 +424,8 @@ export default function PartnerSystemDetailPage({ pmiId, systemId }: { pmiId: st
       {!effectiveResult && check?.status !== 'running' && check?.status !== 'failed' && (
         <div className="inv-empty">
           <div className="empty-icon">📋</div>
-          <h3>Nessun check eseguito</h3>
-          <p>Avvia un Compliance Check per analizzare questo sistema rispetto all'AI Act.</p>
+          <h3>Nessuna analisi disponibile</h3>
+          <p>La PMI non ha ancora avviato un Compliance Check per questo sistema.</p>
         </div>
       )}
     </div>

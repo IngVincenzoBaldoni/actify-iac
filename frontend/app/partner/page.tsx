@@ -240,30 +240,65 @@ export default function PartnerDashboard() {
       {/* Stats row */}
       <div className="pmi-stat-row">
         <div className="pmi-stat">
-          <div className="pmi-stat-bar" style={{ background: 'rgba(148,163,184,.4)' }} />
+          <div className="pmi-stat-bar" style={{ background: 'linear-gradient(90deg,#94a3b8,#64748b)' }} />
+          <div className="pmi-stat-glow" style={{ background: '#94a3b8' }} />
+          <span className="pmi-stat-icon">🏢</span>
           <div className="pmi-stat-val">{stats.total}</div>
           <div className="pmi-stat-label">PMI nel pipeline</div>
+          <div className="pmi-stat-sub">aziende monitorate</div>
         </div>
         <div className="pmi-stat">
-          <div className="pmi-stat-bar" style={{ background: '#0ea5e9' }} />
-          <div className="pmi-stat-val" style={{ color: '#0ea5e9' }}>{stats.assessed}</div>
+          <div className="pmi-stat-bar" style={{ background: 'linear-gradient(90deg,#0ea5e9,#38bdf8)' }} />
+          <div className="pmi-stat-glow" style={{ background: '#0ea5e9' }} />
+          <span className="pmi-stat-icon">📋</span>
+          <div className="pmi-stat-val" style={{ color: '#38bdf8' }}>{stats.assessed}</div>
           <div className="pmi-stat-label">Assessment completati</div>
+          <div className="pmi-stat-sub">profilo AI Act analizzato</div>
         </div>
         <div className="pmi-stat">
-          <div className="pmi-stat-bar" style={{ background: '#16a34a' }} />
-          <div className="pmi-stat-val" style={{ color: 'var(--green)' }}>{stats.onboarded}</div>
+          <div className="pmi-stat-bar" style={{ background: 'linear-gradient(90deg,#16a34a,#22c55e)' }} />
+          <div className="pmi-stat-glow" style={{ background: '#22c55e' }} />
+          <span className="pmi-stat-icon">✅</span>
+          <div className="pmi-stat-val" style={{ color: '#4ade80' }}>{stats.onboarded}</div>
           <div className="pmi-stat-label">Onboarded su Actify</div>
+          <div className="pmi-stat-sub">account attivi sulla piattaforma</div>
         </div>
       </div>
 
       {/* Pipeline legend */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--muted)', marginRight: 4 }}>Pipeline:</span>
-        {(['todo','pending','completato','onboarding','onboarded'] as PartnerPMI['status'][]).map(s => (
-          <span key={s} style={{ ...STATUS_CONFIG[s], fontSize: 11, fontWeight: 500, borderRadius: 6, padding: '2px 8px', border: `1px solid ${STATUS_CONFIG[s].border}` }}>
-            {STATUS_CONFIG[s].label} ({pmiList.filter(p => p.status === s).length})
-          </span>
-        ))}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24, alignItems: 'center' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginRight: 4, whiteSpace: 'nowrap' }}>Pipeline</span>
+        {(['todo','pending','completato','onboarding','onboarded'] as PartnerPMI['status'][]).map(s => {
+          const cfg = STATUS_CONFIG[s];
+          const count = pmiList.filter(p => p.status === s).length;
+          return (
+            <div key={s} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '8px 16px', borderRadius: 12,
+              background: count > 0 ? cfg.bg : 'rgba(255,255,255,.03)',
+              border: `1.5px solid ${count > 0 ? cfg.border : 'rgba(255,255,255,.07)'}`,
+              transition: 'all .15s',
+              cursor: 'default',
+            }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                background: count > 0 ? cfg.color : 'var(--dim)',
+                boxShadow: count > 0 ? `0 0 6px ${cfg.color}` : 'none',
+              }} />
+              <span style={{ fontSize: 13, fontWeight: 500, color: count > 0 ? cfg.color : 'var(--dim)', whiteSpace: 'nowrap' }}>
+                {cfg.label}
+              </span>
+              <span style={{
+                fontSize: 12, fontWeight: 800, lineHeight: 1,
+                background: count > 0 ? cfg.color : 'rgba(255,255,255,.12)',
+                color: count > 0 ? '#0a0a0a' : 'var(--dim)',
+                borderRadius: 6, padding: '2px 7px', minWidth: 20, textAlign: 'center',
+              }}>
+                {count}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* PMI Grid */}
@@ -472,28 +507,32 @@ export default function PartnerDashboard() {
       {/* Add PMI Modal */}
       {showAdd && (
         <div className="modal-backdrop" onClick={() => setShowAdd(false)}>
-          <div className="modal-box" style={{ width: 440 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-head">
-              <div className="modal-title">Aggiungi PMI</div>
+          <div className="modal-box" style={{ width: 460 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head" style={{ padding: '22px 24px 18px' }}>
+              <div>
+                <div className="modal-title" style={{ fontSize: 17 }}>Aggiungi cliente PMI</div>
+                <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>Il cliente riceverà il link al free assessment via email.</div>
+              </div>
+              <button className="modal-close-btn" type="button" onClick={() => setShowAdd(false)} aria-label="Chiudi">✕</button>
             </div>
-            <form onSubmit={handleAddPMI} style={{ padding: '20px 24px' }}>
+            <form onSubmit={handleAddPMI} style={{ padding: '20px 24px 0' }}>
               <div className="field">
-                <label>Nome Azienda *</label>
+                <label>Nome Azienda</label>
                 <input type="text" value={addForm.company_name}
                   onChange={e => setAddForm(f => ({ ...f, company_name: e.target.value }))}
-                  placeholder="Rossi S.r.l." required />
+                  placeholder="es. Rossi & Associati S.r.l." required autoFocus />
               </div>
               <div className="field">
-                <label>Email di contatto *</label>
+                <label>Email di contatto</label>
                 <input type="email" value={addForm.contact_email}
                   onChange={e => setAddForm(f => ({ ...f, contact_email: e.target.value }))}
-                  placeholder="info@rossi.it" required />
+                  placeholder="es. info@rossi.it" required />
               </div>
-              {addError && <div className="auth-error">{addError}</div>}
-              <div className="modal-foot">
+              {addError && <div className="auth-error" style={{ marginBottom: 12 }}>{addError}</div>}
+              <div className="modal-foot" style={{ marginTop: 8 }}>
                 <button type="button" className="btn-ghost" onClick={() => setShowAdd(false)}>Annulla</button>
                 <button type="submit" className="inv-btn" disabled={addLoading}>
-                  {addLoading ? 'Creando…' : 'Aggiungi PMI'}
+                  {addLoading ? 'Aggiunta in corso…' : '+ Aggiungi PMI'}
                 </button>
               </div>
             </form>

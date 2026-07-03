@@ -33,13 +33,8 @@ export async function getInventoryOverview(event: APIGatewayProxyEventV2WithJWTA
   const referredIds = (partner.referred_pmi_ids as string[]) ?? [];
   if (referredIds.length === 0) return { statusCode: 200, body: JSON.stringify([]) };
 
-  const companies = await dynamo.getCompaniesBatch(referredIds);
-  const companyMap = new Map<string, Record<string, unknown>>(
-    companies.map(c => [c.company_id as string, c])
-  );
-
   const summaries = await Promise.all(referredIds.map(async cid => {
-    const company = companyMap.get(cid);
+    const company = await dynamo.getCompany(cid).catch(() => null);
     if (!company) return null;
 
     const systems = await dynamo.getSystemsByCompany(cid).catch(() => []);
