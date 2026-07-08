@@ -1102,18 +1102,18 @@ export default function Page() {
             }
           }
           @keyframes hiw-desc-1 {
-            0%, 22%   { max-height: 180px; opacity: 1; margin-top: 16px; }
-            29%, 100% { max-height: 0; opacity: 0; margin-top: 0; }
+            0%, 22%   { opacity: 1; }
+            29%, 100% { opacity: 0; }
           }
           @keyframes hiw-desc-2 {
-            0%, 29%   { max-height: 0; opacity: 0; margin-top: 0; }
-            31%, 56%  { max-height: 180px; opacity: 1; margin-top: 16px; }
-            63%, 100% { max-height: 0; opacity: 0; margin-top: 0; }
+            0%, 29%   { opacity: 0; }
+            31%, 56%  { opacity: 1; }
+            63%, 100% { opacity: 0; }
           }
           @keyframes hiw-desc-3 {
-            0%, 61%   { max-height: 0; opacity: 0; margin-top: 0; }
-            63%, 88%  { max-height: 180px; opacity: 1; margin-top: 16px; }
-            94%, 100% { max-height: 0; opacity: 0; margin-top: 0; }
+            0%, 61%   { opacity: 0; }
+            63%, 88%  { opacity: 1; }
+            94%, 100% { opacity: 0; }
           }
         `}</style>
         <div data-reveal style={{ maxWidth: 1200, margin: '0 auto', padding: '36px 40px 80px' }}>
@@ -1202,7 +1202,7 @@ export default function Page() {
                   <h3 style={{ fontSize: 18, fontWeight: 700, color: '#F8FAFC', margin: 0, letterSpacing: '-.4px', lineHeight: 1.25 }}>{s.title}</h3>
 
                   {/* Collapsible: separator + description */}
-                  <div style={{ animation: `${s.descAnim} 20s ease-in-out infinite`, overflow: 'hidden' }}>
+                  <div style={{ animation: `${s.descAnim} 20s ease-in-out infinite`, marginTop: 16, minHeight: 130, overflow: 'hidden' }}>
                     <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.08)', marginBottom: 12 }} />
                     <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.38)', lineHeight: 1.78, margin: 0 }}>{s.desc}</p>
                   </div>
@@ -1743,6 +1743,96 @@ export default function Page() {
           <a href="/" className="btn-restart" style={{display:'inline-block',textDecoration:'none',textAlign:'center',marginTop:16}}>Torna alla home</a>
         </div>
       </div>
+
+      {/* ═══ FOOTER ═══ */}
+      <footer style={{
+        borderTop: '1px solid rgba(255,255,255,.07)',
+        background: 'rgba(0,0,0,.35)',
+        backdropFilter: 'blur(12px)',
+        padding: '56px 24px 32px',
+        marginTop: 0,
+      }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          {/* Top grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.4fr', gap: '40px 48px', marginBottom: 52 }}>
+
+            {/* Col 1 — Brand */}
+            <div>
+              <div style={{ marginBottom: 16 }} dangerouslySetInnerHTML={{ __html: logoSvg(110, 31) }} />
+              <p style={{ fontSize: 13, color: 'rgba(148,163,184,.7)', lineHeight: 1.75, maxWidth: 260, margin: '0 0 20px' }}>
+                La piattaforma italiana per la compliance all&apos;AI Act europeo.<br />
+                Analisi AI-powered, documentazione automatica, audit trail immutabile.
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(34,197,94,.8)', background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 6, padding: '3px 10px', letterSpacing: .5 }}>EU AI Act 2024/1689</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(99,102,241,.9)', background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 6, padding: '3px 10px', letterSpacing: .5 }}>AWS eu-central-1</span>
+              </div>
+            </div>
+
+            {/* Col 2 — Navigazione */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.35)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 18 }}>Piattaforma</div>
+              {[
+                { href: '/#come-funziona', label: 'Come funziona' },
+                { href: '/plan', label: 'Prezzi' },
+                { href: '/faq', label: 'FAQ' },
+                { href: '/perche-fidarti', label: 'Perché fidarti' },
+              ].map(l => (
+                <a key={l.href} href={l.href} style={{ display: 'block', fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', marginBottom: 11, transition: 'color .2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(148,163,184,.75)')}>
+                  {l.label}
+                </a>
+              ))}
+            </div>
+
+            {/* Col 3 — Legale */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.35)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 18 }}>Legale</div>
+              {[
+                { href: '/privacy', label: 'Privacy Policy' },
+                { href: '/terms', label: 'Termini di Servizio' },
+                { href: '/security', label: 'Sicurezza & Trust' },
+              ].map(l => (
+                <a key={l.href} href={l.href} style={{ display: 'block', fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', marginBottom: 11, transition: 'color .2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(148,163,184,.75)')}>
+                  {l.label}
+                </a>
+              ))}
+            </div>
+
+            {/* Col 4 — Contatti */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.35)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 18 }}>Contatti</div>
+              <a href="mailto:officialactify@gmail.com" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', marginBottom: 12 }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(148,163,184,.75)')}>
+                <span style={{ fontSize: 14 }}>✉</span> officialactify@gmail.com
+              </a>
+              <div style={{ fontSize: 12, color: 'rgba(100,116,139,.8)', lineHeight: 1.8 }}>
+                BD TR S.R.L.<br />
+                Via Santa Tecla 4, 20122<br />
+                Milano, Italia<br />
+                P.IVA 14777710964
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,.06)', marginBottom: 28 }} />
+
+          {/* Bottom bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <p style={{ fontSize: 12, color: 'rgba(100,116,139,.7)', margin: 0 }}>
+              © {new Date().getFullYear()} BD TR S.R.L. — Actify è un marchio registrato. Tutti i diritti riservati.
+            </p>
+            <p style={{ fontSize: 11, color: 'rgba(100,116,139,.5)', margin: 0 }}>
+              Made in Italy · AWS eu-central-1 · GDPR compliant
+            </p>
+          </div>
+        </div>
+      </footer>
 
       {/* Inject API URL before wizard.js loads */}
       <script dangerouslySetInnerHTML={{ __html: `window.ACTIFY_API_URL='${API_URL}';` }} />

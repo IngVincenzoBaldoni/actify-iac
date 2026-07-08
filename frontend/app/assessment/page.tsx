@@ -40,6 +40,7 @@ const DECISION_DOMAINS = [
   { v: 'law_enforcement',      l: 'Forze dell\'ordine, biometria' },
   { v: 'content_moderation',   l: 'Moderazione contenuti' },
   { v: 'other_decisions',      l: 'Altre decisioni su persone fisiche' },
+  { v: 'none',                 l: 'Nessuno — Non applicabile', isNone: true },
 ];
 
 const DATA_TYPES = [
@@ -50,6 +51,7 @@ const DATA_TYPES = [
   { v: 'location',             l: 'Geolocalizzazione o movimenti' },
   { v: 'personal_identifiers', l: 'Identificatori personali (CF, email)' },
   { v: 'sensitive_categories', l: 'Categorie speciali GDPR (etnia, religione)' },
+  { v: 'none',                 l: 'Nessun dato sensibile trattato', isNone: true },
 ];
 
 const TARGET_USERS = [
@@ -84,6 +86,7 @@ const VULNERABLE_GROUPS = [
   { v: 'disabled',         l: 'Persone con disabilità' },
   { v: 'economic_hardship', l: 'Persone in difficoltà economica' },
   { v: 'emotional_distress', l: 'Persone in difficoltà emotiva / psicologica' },
+  { v: 'none',             l: 'Nessuno — Non applicabile', isNone: true },
 ];
 
 const ANNEX_III_OPTIONS = [
@@ -148,6 +151,12 @@ function SystemFields({ item, onChange }: {
     return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
   }
 
+  function togExclusive(arr: string[], v: string): string[] {
+    if (v === 'none') return arr.includes('none') ? [] : ['none'];
+    const without = arr.filter(x => x !== 'none');
+    return without.includes(v) ? without.filter(x => x !== v) : [...without, v];
+  }
+
   return (
     <div className="dec-section">
       <div className="dec-title">Configurazione &amp; Accesso</div>
@@ -196,13 +205,13 @@ function SystemFields({ item, onChange }: {
         ))}
       </div>
 
-      <div className="dec-sub">Soggetti Vulnerabili Coinvolti</div>
+      <div className="dec-sub">Soggetti Vulnerabili Coinvolti <span style={{ color: '#ef4444', fontSize: 11 }}>*</span></div>
       <div className="check-list cl-2col">
         {VULNERABLE_GROUPS.map(g => (
-          <label key={g.v} className="check-row">
+          <label key={g.v} className="check-row" style={g.isNone ? { borderTop: '1px solid rgba(0,0,0,.08)', marginTop: 6, paddingTop: 6 } : undefined}>
             <input type="checkbox" checked={item.vulnerable_groups.includes(g.v)}
-              onChange={() => onChange('vulnerable_groups', tog(item.vulnerable_groups, g.v))} />
-            <span>{g.l}</span>
+              onChange={() => onChange('vulnerable_groups', togExclusive(item.vulnerable_groups, g.v))} />
+            <span style={g.isNone ? { color: '#6b7280', fontStyle: 'italic' } : undefined}>{g.l}</span>
           </label>
         ))}
       </div>
@@ -251,13 +260,13 @@ function SystemFields({ item, onChange }: {
         ))}
       </div>
 
-      <div className="dec-sub">Ambiti di Decisione</div>
+      <div className="dec-sub">Ambiti di Decisione <span style={{ color: '#ef4444', fontSize: 11 }}>*</span></div>
       <div className="check-list cl-2col">
         {DECISION_DOMAINS.map(d => (
-          <label key={d.v} className="check-row">
+          <label key={d.v} className="check-row" style={d.isNone ? { borderTop: '1px solid rgba(0,0,0,.08)', marginTop: 6, paddingTop: 6 } : undefined}>
             <input type="checkbox" checked={item.decision_domains.includes(d.v)}
-              onChange={() => onChange('decision_domains', tog(item.decision_domains, d.v))} />
-            <span>{d.l}</span>
+              onChange={() => onChange('decision_domains', togExclusive(item.decision_domains, d.v))} />
+            <span style={d.isNone ? { color: '#6b7280', fontStyle: 'italic' } : undefined}>{d.l}</span>
           </label>
         ))}
       </div>
@@ -309,10 +318,10 @@ function SystemFields({ item, onChange }: {
       <div className="dec-title">Dati Trattati</div>
       <div className="check-list cl-2col">
         {DATA_TYPES.map(d => (
-          <label key={d.v} className="check-row">
+          <label key={d.v} className="check-row" style={d.isNone ? { borderTop: '1px solid rgba(0,0,0,.08)', marginTop: 6, paddingTop: 6 } : undefined}>
             <input type="checkbox" checked={item.data_types.includes(d.v)}
-              onChange={() => onChange('data_types', tog(item.data_types, d.v))} />
-            <span>{d.l}</span>
+              onChange={() => onChange('data_types', togExclusive(item.data_types, d.v))} />
+            <span style={d.isNone ? { color: '#6b7280', fontStyle: 'italic' } : undefined}>{d.l}</span>
           </label>
         ))}
       </div>
@@ -584,6 +593,22 @@ function AssessmentContent() {
       setSubmitErr('Descrivi l\'utilizzo per ogni strumento AI.');
       return;
     }
+    for (let i = 0; i < systems.length; i++) {
+      const s = systems[i];
+      const label = systems.length > 1 ? `Strumento ${i + 1}: ` : '';
+      if (s.vulnerable_groups.length === 0) {
+        setSubmitErr(`${label}Indica i soggetti vulnerabili coinvolti, oppure seleziona "Nessuno — Non applicabile".`);
+        return;
+      }
+      if (s.decision_domains.length === 0) {
+        setSubmitErr(`${label}Indica gli ambiti di decisione, oppure seleziona "Nessuno — Non applicabile".`);
+        return;
+      }
+      if (s.data_types.length === 0) {
+        setSubmitErr(`${label}Indica le tipologie di dati trattati, oppure seleziona "Nessun dato sensibile trattato".`);
+        return;
+      }
+    }
     const exactNum = companyProfile.annual_revenue_exact ? parseFloat(companyProfile.annual_revenue_exact) : null;
     const profilePayload: Record<string, unknown> = {
       sector:          companyProfile.sector,
@@ -610,13 +635,13 @@ function AssessmentContent() {
         ...(s.access_mode              ? { access_mode:               s.access_mode }              : {}),
         ...(s.customizations.length    ? { customizations:            s.customizations }           : {}),
         ...(s.target_users.length      ? { target_users:              s.target_users }             : {}),
-        ...(s.vulnerable_groups.length ? { vulnerable_groups:         s.vulnerable_groups,
-                                           affects_vulnerable_groups: true }                        : {}),
+        ...(s.vulnerable_groups.some(v => v !== 'none') ? { vulnerable_groups:         s.vulnerable_groups.filter(v => v !== 'none'),
+                                                             affects_vulnerable_groups: true }       : {}),
         ...(s.users_aware_of_ai        ? { users_aware_of_ai:         true }                       : {}),
         ...(s.makes_automated_decisions ? { makes_automated_decisions: true }                      : {}),
         ...(s.human_oversight_level !== 'na' ? { human_oversight_level: s.human_oversight_level } : {}),
-        ...(s.decision_domains.length  ? { decision_domains:          s.decision_domains }         : {}),
-        ...(s.data_types.length        ? { data_types:                s.data_types }               : {}),
+        ...(s.decision_domains.filter(v => v !== 'none').length ? { decision_domains: s.decision_domains.filter(v => v !== 'none') } : {}),
+        ...(s.data_types.filter(v => v !== 'none').length        ? { data_types:       s.data_types.filter(v => v !== 'none') }        : {}),
         ...(s.annex_iii_domains.length ? { annex_iii_domains:         s.annex_iii_domains }        : {}),
         ...(s.is_safety_component      ? { is_safety_component:       true }                       : {}),
       })), profilePayload);

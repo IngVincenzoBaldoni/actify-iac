@@ -40,6 +40,7 @@ const DECISION_DOMAINS = [
   { v: 'law_enforcement',      l: "Forze dell'ordine, biometria" },
   { v: 'content_moderation',   l: 'Moderazione contenuti' },
   { v: 'other_decisions',      l: 'Altre decisioni su persone fisiche' },
+  { v: 'none',                 l: 'Nessuno — Non applicabile', isNone: true },
 ];
 
 const DATA_TYPES = [
@@ -50,6 +51,7 @@ const DATA_TYPES = [
   { v: 'location',             l: 'Geolocalizzazione o movimenti' },
   { v: 'personal_identifiers', l: 'Identificatori personali (CF, email)' },
   { v: 'sensitive_categories', l: 'Categorie speciali GDPR (etnia, religione)' },
+  { v: 'none',                 l: 'Nessun dato sensibile trattato', isNone: true },
 ];
 
 const TARGET_USERS = [
@@ -84,6 +86,7 @@ const VULNERABLE_GROUPS = [
   { v: 'disabled',         l: 'Persone con disabilità' },
   { v: 'economic_hardship',l: 'Persone in difficoltà economica' },
   { v: 'emotional_distress',l: 'Persone in difficoltà emotiva / psicologica' },
+  { v: 'none',             l: 'Nessuno — Non applicabile', isNone: true },
 ];
 
 const ANNEX_III_OPTIONS = [
@@ -154,6 +157,7 @@ function SetupContent() {
   const [contextNotes, setCtx]      = useState('');
   const [submitting, setSubmitting]  = useState(false);
   const [error, setError]           = useState('');
+  const [stepError, setStepError]   = useState('');
   const [companyName, setCompanyName] = useState('');
 
   useEffect(() => {
@@ -188,6 +192,12 @@ function SetupContent() {
     return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
   }
 
+  function togExclusive(arr: string[], v: string): string[] {
+    if (v === 'none') return arr.includes('none') ? [] : ['none'];
+    const without = arr.filter(x => x !== 'none');
+    return without.includes(v) ? without.filter(x => x !== v) : [...without, v];
+  }
+
   function buildPayload() {
     return {
       tool_name:                 sys.tool_name.trim() || (sys.is_llm ? sys.llm_preset : 'Sistema AI'),
@@ -198,14 +208,14 @@ function SetupContent() {
       target_users:              sys.target_users,
       makes_automated_decisions: sys.makes_automated_decisions,
       human_oversight_level:     sys.human_oversight_level,
-      decision_domains:          sys.decision_domains,
-      affects_vulnerable_groups: sys.vulnerable_groups.length > 0,
-      data_types:                sys.data_types,
+      decision_domains:          sys.decision_domains.filter(v => v !== 'none'),
+      affects_vulnerable_groups: sys.vulnerable_groups.some(v => v !== 'none'),
+      data_types:                sys.data_types.filter(v => v !== 'none'),
       ...(sys.department?.trim()                   ? { department:          sys.department.trim() }          : {}),
       ...(sys.headcount && Number(sys.headcount) > 0 ? { headcount:         Number(sys.headcount) }           : {}),
       ...(sys.output_type                           ? { output_type:        sys.output_type }                 : {}),
       ...(sys.access_mode                           ? { access_mode:        sys.access_mode }                 : {}),
-      ...(sys.vulnerable_groups.length > 0          ? { vulnerable_groups:  sys.vulnerable_groups }          : {}),
+      ...(sys.vulnerable_groups.some(v => v !== 'none') ? { vulnerable_groups: sys.vulnerable_groups.filter(v => v !== 'none') } : {}),
       ...(sys.customizations.length > 0             ? { customizations:     sys.customizations }              : {}),
       ...(sys.annex_iii_domains.length > 0          ? { annex_iii_domains:  sys.annex_iii_domains }          : {}),
       ...(sys.is_safety_component                   ? { is_safety_component: sys.is_safety_component }       : {}),
@@ -237,7 +247,20 @@ function SetupContent() {
     return acc;
   }, {} as Record<string, typeof ANNEX_III_OPTIONS>);
 
-  const canProceed1 = !!(sys.tool_name.trim() || (sys.is_llm && sys.llm_preset && sys.llm_preset !== 'other'));
+  const canProceed1 = !!(sys.tool_name.trim() || (sys.is_llm && sys.llm_preset && sys.llm_preset !== 'other'))
+    && !!sys.purpose.trim();
+
+  function validateStep2(): string {
+    if (!sys.output_type) return 'Seleziona il tipo di output prodotto dal sistema.';
+    if (sys.role === 'deployer' && !sys.access_mode) return 'Seleziona la modalità di accesso al sistema.';
+    if (sys.vulnerable_groups.length === 0) return 'Indica i soggetti vulnerabili coinvolti, oppure seleziona "Nessuno — Non applicabile".';
+    return '';
+  }
+
+  function validateStep3(): string {
+    if (sys.data_types.length === 0) return 'Indica le tipologie di dati trattati, oppure seleziona "Nessun dato sensibile trattato".';
+    return '';
+  }
 
   return (
     <div className="setup-page">
@@ -375,7 +398,10 @@ function SetupContent() {
             </div>
 
             <div className="setup-nav">
-              <button className="btn-next" onClick={() => setStep(2)} disabled={!canProceed1}>
+              {!canProceed1 && (sys.tool_name.trim() || (sys.is_llm && sys.llm_preset)) && !sys.purpose.trim() && (
+                <div style={{ fontSize: 12, color: '#EF4444', fontWeight: 500 }}>Descrivi come usi il sistema per continuare.</div>
+              )}
+              <button className="btn-next" onClick={() => { setStepError(''); setStep(2); }} disabled={!canProceed1}>
                 Avanti →
               </button>
             </div>
@@ -496,13 +522,13 @@ function SetupContent() {
                 ))}
               </div>
 
-              <div className="dec-sub">Soggetti vulnerabili coinvolti</div>
+              <div className="dec-sub">Soggetti vulnerabili coinvolti <span style={{ color: 'var(--red, #EF4444)', fontSize: 11 }}>*</span></div>
               <div className="check-list cl-2col" style={{ marginBottom: 16 }}>
                 {VULNERABLE_GROUPS.map(g => (
-                  <label key={g.v} className="check-row">
+                  <label key={g.v} className="check-row" style={g.isNone ? { borderTop: '1px solid rgba(255,255,255,.07)', marginTop: 6, paddingTop: 6 } : undefined}>
                     <input type="checkbox" checked={sys.vulnerable_groups.includes(g.v)}
-                      onChange={() => update('vulnerable_groups', tog(sys.vulnerable_groups, g.v))} />
-                    <span>{g.l}</span>
+                      onChange={() => update('vulnerable_groups', togExclusive(sys.vulnerable_groups, g.v))} />
+                    <span style={g.isNone ? { color: 'var(--muted)', fontStyle: 'italic' } : undefined}>{g.l}</span>
                   </label>
                 ))}
               </div>
@@ -520,8 +546,16 @@ function SetupContent() {
             </div>
 
             <div className="setup-nav">
-              <button className="btn-back" onClick={() => setStep(1)}>← Indietro</button>
-              <button className="btn-next" onClick={() => setStep(3)}>Avanti →</button>
+              <button className="btn-back" onClick={() => { setStepError(''); setStep(1); }}>← Indietro</button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                {stepError && <div style={{ fontSize: 12, color: '#EF4444', fontWeight: 500, textAlign: 'right', maxWidth: 320 }}>{stepError}</div>}
+                <button className="btn-next" onClick={() => {
+                  const err = validateStep2();
+                  if (err) { setStepError(err); return; }
+                  setStepError('');
+                  setStep(3);
+                }}>Avanti →</button>
+              </div>
             </div>
           </>
         )}
@@ -567,34 +601,42 @@ function SetupContent() {
                 ))}
               </div>
 
-              <div className="dec-sub" style={{ marginTop: 20 }}>Ambiti di Decisione (se applicabile)</div>
+              <div className="dec-sub" style={{ marginTop: 20 }}>Ambiti di Decisione</div>
               <div className="check-list cl-2col">
                 {DECISION_DOMAINS.map(d => (
-                  <label key={d.v} className="check-row">
+                  <label key={d.v} className="check-row" style={d.isNone ? { borderTop: '1px solid rgba(255,255,255,.07)', marginTop: 6, paddingTop: 6 } : undefined}>
                     <input type="checkbox" checked={sys.decision_domains.includes(d.v)}
-                      onChange={() => update('decision_domains', tog(sys.decision_domains, d.v))} />
-                    <span>{d.l}</span>
+                      onChange={() => update('decision_domains', togExclusive(sys.decision_domains, d.v))} />
+                    <span style={d.isNone ? { color: 'var(--muted)', fontStyle: 'italic' } : undefined}>{d.l}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <div className="fcard">
-              <h3>Tipologie di Dati Trattati</h3>
+              <h3>Tipologie di Dati Trattati <span style={{ color: '#EF4444', fontSize: 12 }}>*</span></h3>
               <div className="check-list cl-2col">
                 {DATA_TYPES.map(d => (
-                  <label key={d.v} className="check-row">
+                  <label key={d.v} className="check-row" style={d.isNone ? { borderTop: '1px solid rgba(255,255,255,.07)', marginTop: 6, paddingTop: 6 } : undefined}>
                     <input type="checkbox" checked={sys.data_types.includes(d.v)}
-                      onChange={() => update('data_types', tog(sys.data_types, d.v))} />
-                    <span>{d.l}</span>
+                      onChange={() => update('data_types', togExclusive(sys.data_types, d.v))} />
+                    <span style={d.isNone ? { color: 'var(--muted)', fontStyle: 'italic' } : undefined}>{d.l}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <div className="setup-nav">
-              <button className="btn-back" onClick={() => setStep(2)}>← Indietro</button>
-              <button className="btn-next" onClick={() => setStep(4)}>Avanti →</button>
+              <button className="btn-back" onClick={() => { setStepError(''); setStep(2); }}>← Indietro</button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                {stepError && <div style={{ fontSize: 12, color: '#EF4444', fontWeight: 500, textAlign: 'right', maxWidth: 320 }}>{stepError}</div>}
+                <button className="btn-next" onClick={() => {
+                  const err = validateStep3();
+                  if (err) { setStepError(err); return; }
+                  setStepError('');
+                  setStep(4);
+                }}>Avanti →</button>
+              </div>
             </div>
           </>
         )}
@@ -712,7 +754,7 @@ function SetupContent() {
 
             {error && <div className="alert-err show">{error}</div>}
             <div className="setup-nav">
-              <button className="btn-back" onClick={() => setStep(3)}>← Indietro</button>
+              <button className="btn-back" onClick={() => { setStepError(''); setStep(3); }}>← Indietro</button>
               <button className="btn-submit" onClick={handleSubmit} disabled={submitting}>
                 {submitting ? 'Salvataggio…' : '✓ Aggiungi all\'Inventory →'}
               </button>

@@ -35,6 +35,7 @@ export const api = {
     register: (body: {
       email: string; password: string; company_name: string;
       sector: string; employees_range: string; country: string;
+      terms_version: string;
       referral_code?: string; pmi_id?: string;
     }) => request<{ company_id: string; user_id: string; message: string }>(
       'POST', '/api/auth/register', body, true

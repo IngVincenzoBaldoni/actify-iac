@@ -20,6 +20,7 @@ const registerSchema = z.object({
   sede_legale:     z.string().optional(),
   referral_code:   z.string().max(20).optional(),
   pmi_id:          z.string().uuid().optional(),
+  terms_version:   z.string().min(1),
 });
 
 const inviteSchema = z.object({
@@ -34,23 +35,25 @@ export async function register(event: APIGatewayProxyEventV2) {
 
   // Create company record in DynamoDB
   await dynamo.putCompany({
-    company_id:       companyId,
-    name:             body.company_name,
-    sector:           body.sector,
-    employees_range:  body.employees_range,
-    country:          body.country,
-    sede_legale:      body.sede_legale ?? body.country,
-    ai_role:          'unknown',
-    context_notes:    '',
+    company_id:         companyId,
+    name:               body.company_name,
+    sector:             body.sector,
+    employees_range:    body.employees_range,
+    country:            body.country,
+    sede_legale:        body.sede_legale ?? body.country,
+    ai_role:            'unknown',
+    context_notes:      '',
     governance: {
       has_dpo: false, dpo_status: 'none', has_ai_inventory: false,
       has_impact_assessment: false, has_human_oversight: false,
       has_incident_procedure: false, has_ai_policy: false, has_training: false,
     },
-    subscription_tier: 'trial',
-    setup_completed:   false,
-    created_at:        now,
-    updated_at:        now,
+    subscription_tier:  'trial',
+    setup_completed:    false,
+    terms_version:      body.terms_version,
+    terms_accepted_at:  now,
+    created_at:         now,
+    updated_at:         now,
   });
 
   // Create Cognito user (admin role, permanent password)
@@ -113,10 +116,12 @@ export async function register(event: APIGatewayProxyEventV2) {
   }
 
   await logEvent(companyId, 'account_created', {
-    company_name: body.company_name,
-    sector:       body.sector,
-    country:      body.country,
-    email:        body.email,
+    company_name:      body.company_name,
+    sector:            body.sector,
+    country:           body.country,
+    email:             body.email,
+    terms_version:     body.terms_version,
+    terms_accepted_at: now,
   }, body.email);
   return {
     statusCode: 201,

@@ -154,8 +154,9 @@ function RegisterPageInner() {
   });
   const [partnerRequestSent, setPartnerRequestSent] = useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }));
@@ -170,6 +171,8 @@ function RegisterPageInner() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  const TERMS_VERSION = '2026-07-08';
+
   async function handlePMISubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -178,6 +181,7 @@ function RegisterPageInner() {
     if (form.sector === 'Altro - specifica' && !sectorCustom.trim()) {
       setError('Specifica il tuo settore nel campo di testo.'); return;
     }
+    if (!termsAccepted) { setError('Devi accettare i Termini e Condizioni e la Privacy Policy per continuare.'); return; }
     setLoading(true);
     try {
       await api.auth.register({
@@ -187,6 +191,7 @@ function RegisterPageInner() {
         sector:          form.sector === 'Altro - specifica' ? sectorCustom.trim() : form.sector,
         employees_range: form.employees_range,
         country:         form.country,
+        terms_version:   TERMS_VERSION,
         ...(referralCode ? { referral_code: referralCode } : {}),
         ...(pmiId ? { pmi_id: pmiId } : {}),
       });
@@ -828,8 +833,25 @@ function RegisterPageInner() {
                 placeholder="Ripeti la password" required autoComplete="new-password" />
             </div>
           </div>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '14px 0 2px' }}>
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={e => { setTermsAccepted(e.target.checked); if (error) setError(''); }}
+              style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: '#22C55E', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.55 }}>
+              Ho letto e accetto i{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>Termini e Condizioni</a>
+              {', '}la{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>Privacy Policy</a>
+              {' '}e la{' '}
+              <a href="/security" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>Informativa sulla Sicurezza</a>
+              {' '}di Actify.
+            </span>
+          </label>
           {error && <div className="auth-error">{error}</div>}
-          <button type="submit" className="auth-btn" disabled={loading}>
+          <button type="submit" className="auth-btn" disabled={loading || !termsAccepted}>
             {loading ? 'Registrazione in corso…' : `Crea Account con piano ${planInfo?.name ?? ''} →`}
           </button>
         </form>

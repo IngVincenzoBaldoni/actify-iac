@@ -373,7 +373,7 @@ function PlanContent() {
         <span style={{ display: 'block', marginTop: 6 }}>
           <strong>Trial:</strong> email, risposta entro 5 giorni lavorativi. &nbsp;|&nbsp;
           <strong>Starter:</strong> email, risposta entro 3 giorni lavorativi, senza garanzia di SLA. &nbsp;|&nbsp;
-          <strong>Professional:</strong> email prioritaria entro 1 giorno lavorativo + 1 call mensile 30 min con il team Actify.
+          <strong>Professional:</strong> email prioritaria entro 1 giorno lavorativo + 1 call mensile da 1h con il team Actify.
         </span>
       </div>
 
