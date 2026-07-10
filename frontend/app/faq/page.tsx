@@ -749,7 +749,7 @@ export default function FaqPage() {
         </div>{/* /faq-acc-list */}
 
         <div className="faq-more-note">
-          Hai altre domande? <a href="/contattaci">Scrivici a officialactify@gmail.com</a> &mdash; rispondiamo a tutti entro 24 ore lavorative.
+          Hai altre domande? <a href="/contattaci">Scrivici a info@official-actify.com</a> &mdash; rispondiamo a tutti entro 24 ore lavorative.
         </div>
       </div>
     </div>

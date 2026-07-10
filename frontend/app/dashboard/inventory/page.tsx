@@ -311,7 +311,7 @@ function DynamicWidget({ systems }: { systems: AISystem[] }) {
           </div>
         )}
 
-        {/* ── Slide 1: FBE summary ── */}
+        {/* ── Slide 1: FEB summary ── */}
         {slide === 1 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--dim)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 14 }}>
@@ -929,9 +929,9 @@ export default function InventoryPage() {
                     className="sys-detail-btn"
                     style={{ flex: 1, fontSize: 12, padding: '8px 0', fontWeight: 700 }}
                     onClick={() => router.push(`/dashboard/system?id=${sys.system_id}&view=fines`)}
-                    title="Vedi esposizione sanzionatoria in FBE"
+                    title="Vedi esposizione sanzionatoria in FEB"
                   >
-                    📈 FBE
+                    📈 FEB
                   </button>
                   <button
                     className="sys-detail-btn sys-detail-btn-full"

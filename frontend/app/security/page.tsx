@@ -200,7 +200,7 @@ export default function SecurityPage() {
           <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, maxWidth: 440, margin: '0 auto 24px' }}>
             Prendiamo la sicurezza molto sul serio. Se hai trovato una potenziale vulnerabilità, ti chiediamo di segnalarcela in modo responsabile prima di divulgarla pubblicamente.
           </p>
-          <a href="mailto:officialactify@gmail.com?subject=Security%20Disclosure" style={{
+          <a href="mailto:info@official-actify.com?subject=Security%20Disclosure" style={{
             display: 'inline-block',
             padding: '12px 28px',
             background: '#22C55E',
@@ -213,7 +213,7 @@ export default function SecurityPage() {
             Segnala un problema di sicurezza
           </a>
           <p style={{ fontSize: 12, color: '#334155', margin: '16px 0 0' }}>
-            officialactify@gmail.com — risposta garantita entro 48 ore
+            info@official-actify.com — risposta garantita entro 48 ore
           </p>
         </div>
 

@@ -46,7 +46,7 @@ export default function PrivacyPage() {
             <strong>BD TR S.R.L.</strong><br />
             Via Santa Tecla 4, 20122 Milano (MI), Italia<br />
             P.IVA: 14777710964<br />
-            Email: <a href="mailto:officialactify@gmail.com" style={{ color: '#22C55E' }}>officialactify@gmail.com</a>
+            Email: <a href="mailto:info@official-actify.com" style={{ color: '#22C55E' }}>info@official-actify.com</a>
           </InfoBox>
         </LegalSection>
 
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
             <li><strong>Opposizione (Art. 21):</strong> opporsi al trattamento basato su legittimo interesse</li>
           </ul>
           <p>
-            Per esercitare questi diritti, scrivi a <a href="mailto:officialactify@gmail.com" style={{ color: '#22C55E' }}>officialactify@gmail.com</a>. Risponderemo entro 30 giorni.
+            Per esercitare questi diritti, scrivi a <a href="mailto:info@official-actify.com" style={{ color: '#22C55E' }}>info@official-actify.com</a>. Risponderemo entro 30 giorni.
           </p>
           <p>
             Hai inoltre il diritto di proporre reclamo al <strong>Garante per la protezione dei dati personali</strong> (<a href="https://www.garanteprivacy.it" style={{ color: '#22C55E' }} target="_blank" rel="noopener noreferrer">garanteprivacy.it</a>).
@@ -155,7 +155,7 @@ export default function PrivacyPage() {
         <LegalSection title="10. Contatti">
           <InfoBox>
             Per qualsiasi domanda relativa al trattamento dei tuoi dati personali:<br /><br />
-            <a href="mailto:officialactify@gmail.com" style={{ color: '#22C55E' }}>officialactify@gmail.com</a><br />
+            <a href="mailto:info@official-actify.com" style={{ color: '#22C55E' }}>info@official-actify.com</a><br />
             BD TR S.R.L. — Via Santa Tecla 4, 20122 Milano (MI)
           </InfoBox>
         </LegalSection>

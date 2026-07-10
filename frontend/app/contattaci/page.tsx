@@ -3,7 +3,7 @@ import { markSvg } from '@/lib/branding';
 
 export const metadata: Metadata = {
   title: 'Contattaci — Actify',
-  description: 'Hai domande sulla compliance AI Act o su Actify? Scrivici a officialactify@gmail.com — ti rispondiamo entro 24 ore.',
+  description: 'Hai domande sulla compliance AI Act o su Actify? Scrivici a info@official-actify.com — ti rispondiamo entro 24 ore.',
   alternates: { canonical: '/contattaci' },
   openGraph: {
     title: 'Contattaci — Actify',
@@ -54,10 +54,10 @@ export default function ContattaciPage() {
             Scrivi al team Actify
           </div>
           <a
-            href="mailto:officialactify@gmail.com"
+            href="mailto:info@official-actify.com"
             style={{ display: 'inline-block', fontSize: 22, fontWeight: 800, color: '#fff', textDecoration: 'none' }}
           >
-            officialactify@gmail.com
+            info@official-actify.com
           </a>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', marginTop: 12, marginBottom: 0 }}>
             Rispondiamo a ogni messaggio entro <strong style={{ color: 'rgba(255,255,255,.75)' }}>24 ore lavorative</strong>.

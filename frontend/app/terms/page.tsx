@@ -156,7 +156,7 @@ export default function TermsPage() {
             Per le modalità di trattamento dei dati personali, si rimanda alla <a href="/privacy" style={{ color: '#22C55E' }}>Privacy Policy</a> di Actify, che costituisce parte integrante dei presenti Termini.
           </p>
           <p>
-            Nella misura in cui Actify tratta dati personali per conto del Cliente, le parti stipulano un accordo di trattamento dei dati (DPA) conforme all&apos;Art. 28 GDPR. Il DPA è disponibile su richiesta scrivendo a <a href="mailto:officialactify@gmail.com" style={{ color: '#22C55E' }}>officialactify@gmail.com</a>.
+            Nella misura in cui Actify tratta dati personali per conto del Cliente, le parti stipulano un accordo di trattamento dei dati (DPA) conforme all&apos;Art. 28 GDPR. Il DPA è disponibile su richiesta scrivendo a <a href="mailto:info@official-actify.com" style={{ color: '#22C55E' }}>info@official-actify.com</a>.
           </p>
         </LegalSection>
 
@@ -192,7 +192,7 @@ export default function TermsPage() {
         <LegalSection title="13. Contatti">
           <InfoBox>
             Per domande sui presenti Termini:<br /><br />
-            <a href="mailto:officialactify@gmail.com" style={{ color: '#22C55E' }}>officialactify@gmail.com</a><br />
+            <a href="mailto:info@official-actify.com" style={{ color: '#22C55E' }}>info@official-actify.com</a><br />
             BD TR S.R.L. — Via Santa Tecla 4, 20122 Milano (MI) — P.IVA 14777710964
           </InfoBox>
         </LegalSection>

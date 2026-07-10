@@ -1805,10 +1805,10 @@ export default function Page() {
             {/* Col 4 — Contatti */}
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.35)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 18 }}>Contatti</div>
-              <a href="mailto:officialactify@gmail.com" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', marginBottom: 12 }}
+              <a href="mailto:info@official-actify.com" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', marginBottom: 12 }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'rgba(148,163,184,.75)')}>
-                <span style={{ fontSize: 14 }}>✉</span> officialactify@gmail.com
+                <span style={{ fontSize: 14 }}>✉</span> info@official-actify.com
               </a>
               <div style={{ fontSize: 12, color: 'rgba(100,116,139,.8)', lineHeight: 1.8 }}>
                 BD TR S.R.L.<br />

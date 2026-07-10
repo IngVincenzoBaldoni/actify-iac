@@ -263,7 +263,7 @@ function buildAggTimeline(systems: SysWithTimeline[]): AggPoint[] {
 
 // ── Aggregate step-line chart ─────────────────────────────────────────────────
 
-function AggChart({ aggPts, mode, systems, yAxisMax }: { aggPts: AggPoint[]; mode: 'max' | 'min'; systems: SysWithTimeline[]; yAxisMax?: number }) {
+function AggChart({ aggPts, mode, systems }: { aggPts: AggPoint[]; mode: 'max' | 'min'; systems: SysWithTimeline[] }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [panOffset, setPanOffset] = useState(0);
   const dragRef        = useRef<{ startX: number; startOffset: number } | null>(null);
@@ -335,11 +335,9 @@ function AggChart({ aggPts, mode, systems, yAxisMax }: { aggPts: AggPoint[]; mod
   }
   function onSvgEnd() { dragRef.current = null; }
 
-  // Y-axis ceiling: 35% of turnover (passed from page) or data max as fallback
   const dataMax = Math.max(...aggPts.map(p => Math.max(p.sumMax, p.sumMin)), 1);
-  const absMax  = yAxisMax ? Math.max(yAxisMax, dataMax) : dataMax;
-  const yTicks = niceYTicks(absMax);
-  const yMax   = (yTicks[yTicks.length - 1] ?? absMax) * 1.0;
+  const yTicks = niceYTicks(dataMax);
+  const yMax   = (yTicks[yTicks.length - 1] ?? dataMax) * 1.0;
 
   const sy  = (v: number) => MT + PH - Math.min(v / yMax, 1) * PH;
   const f   = (n: number) => n.toFixed(1);
@@ -1014,10 +1012,6 @@ function FineBoardContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  const chartYAxisMax = useMemo(() => {
-    const t = estimateTurnoverFE(company);
-    return t > 0 ? t * 0.35 : undefined;
-  }, [company]);
 
   const systemsForCards = useMemo(
     () => systems.filter(s => s.last_article_sanctions),
@@ -1194,7 +1188,7 @@ function FineBoardContent() {
     <div className="inv-page">
       <div className="inv-header">
         <div>
-          <h1 className="inv-title">FBE — Fine Estimation Board</h1>
+          <h1 className="inv-title">FEB — Fine Estimation Board</h1>
           <p className="inv-sub">Stima esposizione sanzionatoria AI Act · aggregata e per tool</p>
         </div>
         <a href="/dashboard/inventory" style={{ fontSize: 12, color: 'var(--dim)', fontWeight: 600, textDecoration: 'none', alignSelf: 'center' }}>
@@ -1244,7 +1238,7 @@ function FineBoardContent() {
                 <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                   {/* Chart — grows to fill available width */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <AggChart aggPts={aggTimeline} mode={chartMode} systems={systems} yAxisMax={chartYAxisMax}/>
+                    <AggChart aggPts={aggTimeline} mode={chartMode} systems={systems}/>
                   </div>
 
                   {/* Right sidebar: 3 info cards */}

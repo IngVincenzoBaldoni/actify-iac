@@ -84,7 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const nav = [
     { href: '/dashboard/inventory',   label: 'AIPI - AI Passports Inventory', icon: '🛂', badge: showInventoryBadge, callout: 'Aggiungi i tuoi AI Passport', premium: false, starterOnly: false, adminOnly: false },
-    { href: '/dashboard/fines',       label: 'FBE - Fine Estimation Board',   icon: '📈', badge: false, callout: '', premium: false, starterOnly: false, adminOnly: false },
+    { href: '/dashboard/fines',       label: 'FEB - Fine Estimation Board',   icon: '📈', badge: false, callout: '', premium: false, starterOnly: false, adminOnly: false },
     { href: '/dashboard/literacy',    label: 'AI Literacy',    icon: '🎓', badge: false, callout: '', premium: false, starterOnly: true,  adminOnly: false },
     { href: '/dashboard/documents',   label: 'Document Vault', icon: '⊟',  badge: false, callout: '', premium: false, starterOnly: true,  adminOnly: false },
     { href: '/dashboard/audit-trail', label: 'Audit Trail',    icon: '🔒', badge: false, callout: '', premium: false, starterOnly: false, adminOnly: false },

@@ -726,7 +726,7 @@ function RegisterPageInner() {
           Il supporto Actify è un <strong>supporto tecnico sull&apos;utilizzo della piattaforma</strong>: risponde a domande su funzionalità, configurazione e utilizzo degli strumenti. Non include consulenza normativa, pareri legali né interpretazioni vincolanti del Reg. UE 2024/1689.
           <span style={{ display: 'block', marginTop: 6 }}>
             <strong>Starter:</strong> email standard, risposta entro 3 gg lavorativi, senza SLA. &nbsp;|&nbsp;
-            <strong>Professional:</strong> email prioritaria entro 1 gg lavorativo + 1 call mensile di 30 min con il team.
+            <strong>Professional:</strong> email prioritaria entro 1 gg lavorativo + 1 call mensile da 1h con il team.
           </span>
         </div>
 
