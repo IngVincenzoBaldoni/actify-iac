@@ -112,7 +112,7 @@ aws s3 sync out/ s3://actify-saas-frontend --delete --region eu-central-1
 
 # OBBLIGATORIO dopo ogni sync: ripristina il video demo (la copia permanente è in actify-saas-documents)
 # AWS CLI v1 non protegge i file S3-only dal --delete anche con --exclude, quindi lo ricopiamo sempre
-aws s3 cp s3://actify-saas-documents/media/actify-demo.mov \
+aws s3 cp "s3://actify-saas-documents/media/0708.mov" \
   s3://actify-saas-frontend/media/actify-demo.mov \
   --region eu-central-1 \
   --content-type "video/quicktime" \
@@ -130,7 +130,7 @@ Il video `actify-demo.mov` ha due copie S3:
 - **Copia permanente** (mai toccata dai deploy): `s3://actify-saas-documents/media/actify-demo.mov`
 - **Copia servita da CloudFront**: `s3://actify-saas-frontend/media/actify-demo.mov` → `https://official-actify.com/media/actify-demo.mov`
 
-Per aggiornare il video: carica la nuova versione su `actify-saas-documents/media/` (il nome sorgente attuale è `0708(2).mov`), aggiorna il comando cp di conseguenza, poi esegui il deploy frontend normale.
+Per aggiornare il video: carica la nuova versione su `actify-saas-documents/media/` (il nome sorgente attuale è `0708.mov`), aggiorna il comando cp di conseguenza, poi esegui il deploy frontend normale.
 
 ### Test Lambda localmente (invoke diretto)
 
