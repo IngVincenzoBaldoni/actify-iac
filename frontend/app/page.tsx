@@ -12,6 +12,75 @@ const w = (fn: string) => () => { (window as unknown as Record<string, () => voi
 
 type DemoTab = 'inventory' | 'compliance' | 'literacy' | 'report';
 
+/* ─── Video Section ───────────────────────────────────────────────────────── */
+// Per attivare: carica il file su S3 poi imposta VIDEO_SRC = '/media/actify-demo.mp4'
+const VIDEO_SRC = '';  // ← inserisci '/media/actify-demo.mp4' dopo l'upload su S3
+
+function VideoSection() {
+  const isReady = !!VIDEO_SRC;
+  return (
+    <div id="video" data-reveal style={{ scrollMarginTop: 72, maxWidth: 1100, margin: '0 auto', padding: '96px 40px' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: 52 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 700, color: '#4ADE80', textTransform: 'uppercase', letterSpacing: '.1em', background: 'rgba(34,197,94,.09)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+          Demo prodotto
+        </div>
+        <h2 style={{ fontSize: 'clamp(32px, 4vw, 54px)', fontWeight: 900, color: '#fff', margin: '0 0 18px', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+          Vedi Actify<br/>
+          <span style={{ color: '#22C55E' }}>in azione</span>
+        </h2>
+        <p style={{ fontSize: 17, color: '#64748B', maxWidth: 480, margin: '0 auto', lineHeight: 1.75 }}>
+          Dall&apos;inventario AI alla gap analysis, dalla stima sanzionatoria alla documentazione — tutto in meno di 5 minuti.
+        </p>
+      </div>
+
+      {/* Video container */}
+      <div style={{ position: 'relative', maxWidth: 900, margin: '0 auto' }}>
+        {/* Glow esterno */}
+        <div style={{ position: 'absolute', inset: -1, borderRadius: 24, background: 'linear-gradient(135deg, rgba(34,197,94,.35) 0%, rgba(34,197,94,.05) 50%, rgba(34,197,94,.15) 100%)', filter: 'blur(1px)', zIndex: 0 }} />
+        {/* Frame */}
+        <div style={{ position: 'relative', zIndex: 1, borderRadius: 22, overflow: 'hidden', background: '#0C1014', border: '1px solid rgba(34,197,94,.22)', boxShadow: '0 0 0 1px rgba(255,255,255,.06) inset, 0 32px 80px rgba(0,0,0,.7), 0 0 60px rgba(34,197,94,.08)' }}>
+          {/* Barra titolo stile macOS */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 16px', background: 'rgba(255,255,255,.04)', borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+            <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#FF5F57' }} />
+            <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#FEBC2E' }} />
+            <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#28C840' }} />
+            <div style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,.28)', letterSpacing: 0.3 }}>official-actify.com — demo</div>
+          </div>
+          {/* Ratio 16:9 */}
+          <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#080C0F' }}>
+            {isReady ? (
+              <video
+                src={VIDEO_SRC}
+                controls
+                playsInline
+                preload="metadata"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+              />
+            ) : (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="#22C55E"><path d="M8 5v14l11-7L8 5z"/></svg>
+                </div>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,.35)', margin: 0 }}>Video in arrivo</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA sotto il video */}
+      <div style={{ textAlign: 'center', marginTop: 40 }}>
+        <a href="/register" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: 'linear-gradient(135deg, #059669, #34d399)', boxShadow: '0 0 0 1px rgba(34,197,94,.3), 0 4px 20px rgba(5,150,105,.35)', color: '#fff', textDecoration: 'none', borderRadius: 12, fontWeight: 700, fontSize: 15 }}>
+          Prova gratis — senza carta di credito →
+        </a>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,.25)', marginTop: 10 }}>Primo sistema AI censito in 5 minuti</p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Dashboard Demo sub-components ──────────────────────────────────────── */
 
 function InventoryDemo() {
@@ -1212,6 +1281,9 @@ export default function Page() {
           </div>
           </div>{/* /hiw-grid-wrapper */}
         </div>
+
+        {/* ─── VIDEO SECTION ─────────────────────────────────────────────── */}
+        <VideoSection />
 
         {/* ─── MACBOOK IMAGE SECTION ─────────────────────────────────────── */}
         <div id="features" style={{ scrollMarginTop: 72 }} />

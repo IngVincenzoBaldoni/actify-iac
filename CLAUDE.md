@@ -108,7 +108,7 @@ aws lambda wait function-updated --function-name actify-saas-pdf-generator --reg
 ```bash
 cd frontend && npm run build
 
-aws s3 sync out/ s3://actify-saas-frontend --delete --region eu-central-1
+aws s3 sync out/ s3://actify-saas-frontend --delete --exclude "media/*" --region eu-central-1
 
 aws cloudfront create-invalidation \
   --distribution-id E2LIJKND7AI4TL \
@@ -536,7 +536,7 @@ cd ..
 
 # 3. Build + deploy frontend
 cd frontend && npm run build
-aws s3 sync out/ s3://actify-saas-frontend --delete --region eu-central-1
+aws s3 sync out/ s3://actify-saas-frontend --delete --exclude "media/*" --region eu-central-1
 aws cloudfront create-invalidation --distribution-id E2LIJKND7AI4TL --paths "/*" --region us-east-1
 cd ..
 
