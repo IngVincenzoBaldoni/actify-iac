@@ -53,6 +53,7 @@ function VideoSection() {
             {isReady ? (
               <video
                 src={VIDEO_SRC}
+                poster="/media/actify-poster.png"
                 controls
                 playsInline
                 preload="metadata"
