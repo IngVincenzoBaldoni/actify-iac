@@ -71,13 +71,6 @@ function VideoSection() {
         </div>
       </div>
 
-      {/* CTA sotto il video */}
-      <div style={{ textAlign: 'center', marginTop: 40 }}>
-        <a href="/register" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: 'linear-gradient(135deg, #059669, #34d399)', boxShadow: '0 0 0 1px rgba(34,197,94,.3), 0 4px 20px rgba(5,150,105,.35)', color: '#fff', textDecoration: 'none', borderRadius: 12, fontWeight: 700, fontSize: 15 }}>
-          Prova gratis — senza carta di credito →
-        </a>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,.25)', marginTop: 10 }}>Primo sistema AI censito in 5 minuti</p>
-      </div>
     </div>
   );
 }
