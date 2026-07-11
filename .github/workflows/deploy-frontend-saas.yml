@@ -47,6 +47,17 @@ jobs:
       - name: Sync to S3
         run: aws s3 sync frontend/out/ s3://${{ secrets.AWS_S3_BUCKET }} --delete
 
+      - name: Restore media assets (video + poster — stored permanently in actify-saas-documents)
+        run: |
+          aws s3 cp "s3://actify-saas-documents/media/0708.mov" \
+            s3://${{ secrets.AWS_S3_BUCKET }}/media/actify-demo.mov \
+            --content-type "video/quicktime" \
+            --cache-control "public, max-age=31536000, immutable"
+          aws s3 cp "s3://actify-saas-documents/media/actify_thumb_B2.png" \
+            s3://${{ secrets.AWS_S3_BUCKET }}/media/actify-poster.png \
+            --content-type "image/png" \
+            --cache-control "public, max-age=31536000, immutable"
+
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
