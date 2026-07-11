@@ -14,7 +14,7 @@ type DemoTab = 'inventory' | 'compliance' | 'literacy' | 'report';
 
 /* ─── Video Section ───────────────────────────────────────────────────────── */
 // Per attivare: carica il file su S3 poi imposta VIDEO_SRC = '/media/actify-demo.mp4'
-const VIDEO_SRC = '';  // ← inserisci '/media/actify-demo.mp4' dopo l'upload su S3
+const VIDEO_SRC = '/media/actify-demo.mov';
 
 function VideoSection() {
   const isReady = !!VIDEO_SRC;
