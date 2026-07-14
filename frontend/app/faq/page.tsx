@@ -1,6 +1,104 @@
 import type { Metadata } from 'next';
 import { markSvg } from '@/lib/branding';
 
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: "Chi controlla la compliance all'AI Act in Italia e quando?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "In Italia l'autorità competente per il Reg. UE 2024/1689 (AI Act) è l'ACN — Agenzia per la Cybersicurezza Nazionale, designata come National Competent Authority (NCA). A livello europeo opera l'EU AI Office per i casi cross-border e i modelli GPAI con rischio sistemico. I controlli scattano da quattro trigger: un incidente documentato (candidato discriminato, credito negato ingiustamente), un reclamo di terzi (dipendenti, concorrenti, associazioni consumatori), sweep settoriali su HR, fintech e healthcare, o verifica autonoma del database EU per sistemi ad alto rischio. Timeline attesa: 2025-2026 fase organizzativa delle autorità, 2026-2027 prime sanzioni sui casi più evidenti, 2027-2028 enforcement sistematico. Avere documentazione che dimostra la buona fede è la difesa più forte davanti all'autorità: riduce drasticamente la sanzione, spesso la trasforma in un warning.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Tanto da me non ci vengono mai a controllare sull'AI Act.",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Il Garante è l'ultimo anello della catena. Prima arrivano quattro pressioni concrete: (1) Un dipendente o candidato scontento può fare un esposto online con un click, senza ispezioni proattive. (2) I clienti enterprise stanno già inserendo clausole di AI compliance nei contratti con i fornitori — chi non ha documentazione perde il contratto. (3) Banche e assicurazioni valutano la AI governance nei processi di underwriting e credito: nessuna documentazione significa rischio più alto, premi più alti o credito più difficile. (4) Un incidente interno con un sistema AI che prende decisioni sbagliate può generare cause civili senza bisogno dell'intervento del Garante. La compliance AI Act serve per proteggersi da tutto questo, non solo dall'autorità di vigilanza.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Non posso chiedere a ChatGPT se sono conforme all'AI Act?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "ChatGPT non conosce la tua azienda: non sa quali sistemi AI usi, come li usi, il tuo settore, se sei provider o deployer. Risponderà con informazioni generiche sull'AI Act, le stesse che trovi su Google. Per una valutazione seria bisogna distinguere tra provider e deployer, identificare la categoria di rischio del sistema, capire gli obblighi specifici articolo per articolo — questa è competenza specialistica, non prompting. Actify guida con un form strutturato che raccoglie il profilo d'uso reale di ogni sistema AI, lo mappa sugli obblighi del Reg. UE 2024/1689 incluse le sanzioni applicabili (fino al 7% del fatturato globale), e genera automaticamente i documenti obbligatori mancanti. ChatGPT spiega l'AI Act in modo generico. Actify valuta la tua situazione specifica, stima la tua esposizione sanzionatoria e automatizza tutto ciò che può automatizzare.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Quali sistemi AI rientrano nell'AI Act? Il mio è coinvolto?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "L'AI Act si applica a qualsiasi sistema basato su machine learning, logica e metodi statistici che genera output — predizioni, decisioni, raccomandazioni, contenuti — capaci di influenzare ambienti reali o virtuali. Sistemi ad alto rischio (Allegato III): tool di screening CV e scoring candidati, sistemi di valutazione performance, rilevamento presenze con analisi comportamentale (HR); scoring creditizio, valutazione rischio assicurativo, rilevamento frodi ML, raccomandazioni investimento automatizzate (finanza). A rischio limitato con obblighi di disclosure (Art. 50): chatbot e assistenti virtuali che interagiscono con clienti, sistemi di personalizzazione marketing. Non puoi sapere se sei coinvolto finché non mappi cosa usi e come. Il primo passo è un AI Inventory: censire ogni sistema AI dell'azienda, classificarlo per ruolo (provider o deployer) e livello di rischio.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Cosa significa essere 'Provider' o 'Deployer' nell'AI Act? Cambia qualcosa per me?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Sì, cambia moltissimo. È una delle distinzioni fondamentali del Reg. UE 2024/1689. Provider: sviluppi e commercializzi il sistema AI. Deployer: usi un sistema AI sviluppato da altri nel tuo contesto operativo (es. ChatGPT, un CRM con AI, tool HR acquistati). Il Provider ha gli obblighi più pesanti: documentazione tecnica completa, gestione dei rischi, registrazione nel database EU per sistemi ad alto rischio, marcatura CE, supervisione post-mercato, notifica incidenti all'autorità. Il Deployer ha obblighi più limitati ma reali: supervisione umana, uso conforme alle istruzioni del provider, formazione del personale in materia di AI (Art. 4 — AI Literacy obbligatoria dal 2 agosto 2026), comunicazione incidenti al provider. La maggior parte delle PMI italiane sono Deployer. Actify classifica automaticamente ogni sistema come Provider o Deployer e mostra gli obblighi specifici per ogni ruolo, articolo per articolo.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Quanto costano le sanzioni AI Act? Sono rischi reali per una PMI?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Le sanzioni previste dal Reg. UE 2024/1689: 35 milioni di euro o 7% del fatturato globale annuo per sistemi AI vietati come social scoring o manipolazione subliminale (Art. 5); 15 milioni di euro o 3% del fatturato per obblighi sistemi ad alto rischio non rispettati (Art. 99); 7,5 milioni di euro o 1% del fatturato per informazioni false o incomplete all'autorità. Per una PMI, i rischi concreti sono: warning con obbligo di adeguamento in 30-60 giorni (caso più frequente per chi non ha documentazione ma non ha causato danni); sanzione proporzionata al fatturato (per una PMI da 5 milioni di euro, il 3% significa 150.000 euro); perdita di contratti con clienti enterprise che richiedono documentazione AI governance. La Fine Estimation Board di Actify calcola l'esposizione sanzionatoria reale articolo per articolo, con cifre specifiche per la tua situazione.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Actify sostituisce un avvocato o un consulente specializzato in AI Act?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "No. Actify è uno strumento operativo, non un servizio di consulenza legale. Actify fa: censimento e classificazione sistemi AI per livello di rischio, mappatura gap rispetto agli obblighi del Reg. UE 2024/1689, generazione automatica documenti (FRIA, Risk Assessment, Registro Sistemi AI, Report Art. 4 Literacy), calcolo esposizione sanzionatoria estimata, tracciamento formazione personale (AI Literacy Art. 4). Actify non fa: pareri legali vincolanti, rappresentanza davanti all'autorità in caso di istruttoria, interpretazione del Regolamento in casi legalmente ambigui, garanzie sull'esito di procedimenti sanzionatori. Il modello più efficace: Actify gestisce il 90% del lavoro operativo sistematico; il consulente interviene sui casi critici con ambiguità classificatorie o procedimenti già aperti. Usare Actify riduce il costo della consulenza: si pagano ore di analisi strategica, non di raccolta dati.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Ho letto che l'AI Act è stato rinviato al 2027: posso aspettare?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "No. Il rinvio esiste ma riguarda solo una parte degli obblighi. Il pacchetto Digital Omnibus (maggio 2026) sposta solo gli obblighi più pesanti sui sistemi ad alto rischio: obblighi per sistemi AI autonomi ad alto rischio (Allegato III) al 2 dicembre 2027, obblighi per AI integrata in prodotti regolati (Allegato I) al 2 agosto 2028. Non è stato rinviato: Art. 5 pratiche AI vietate (in vigore dal 2 febbraio 2025, con nuovi divieti dal 2 dicembre 2026); Art. 4 AI Literacy, la formazione obbligatoria del personale che usa AI (in vigore dal 2 agosto 2026); Art. 50 obblighi di trasparenza per chatbot e contenuti AI generati (in vigore dal 2 agosto 2026). Per una PMI che usa AI di terzi come Deployer, gli obblighi diretti non sono stati rinviati. Il rinvio al 2027-2028 riguarda chi sviluppa sistemi ad alto rischio.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "Actify è una garanzia contro le sanzioni AI Act?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "No. Actify non è uno studio legale e non può garantire l'esito di un procedimento sanzionatorio. Può però cambiare radicalmente la posizione dell'azienda se succede qualcosa. Actify costruisce il fascicolo documentale: inventario sistemi AI, classificazioni motivate articolo per articolo, evidenze di formazione del personale, log aggiornamenti — prove tangibili della buona fede davanti all'autorità. Prepara le evidenze da esibire: attestati di compliance, dichiarazioni di trasparenza Art. 50, piano di gestione rischi, report Art. 4 AI Literacy. Monitora continuativamente i gap aperti. La differenza tra chi subisce una sanzione pesante e chi riceve un warning spesso non è la gravità della violazione, ma quanto si ha da mostrare. Situazioni in cui serve anche un legale: sistemi ad alto rischio con classificazioni ambigue, procedimenti sanzionatori già aperti, contratti enterprise con garanzie legali richieste, operazioni M&A con due diligence AI.",
+      },
+    },
+  ],
+};
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: 'https://official-actify.com/',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'FAQ — AI Act e Actify',
+      item: 'https://official-actify.com/faq',
+    },
+  ],
+};
+
 export const metadata: Metadata = {
   title: 'FAQ — Domande Frequenti su AI Act e Actify',
   description: "Risposte alle domande più comuni su chi controlla l'AI Act in Italia, quando scattano le sanzioni, cosa verificano le autorità e perché non basta ChatGPT per valutare la compliance.",
@@ -42,6 +140,9 @@ function FaqItem({
 export default function FaqPage() {
   const mark = markSvg(28);
   return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
     <div className="doc-page">
       <nav className="doc-page-nav">
         <a href="/" className="doc-back">
@@ -753,5 +854,6 @@ export default function FaqPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

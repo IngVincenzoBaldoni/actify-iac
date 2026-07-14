@@ -1,0 +1,270 @@
+# Actify — AI Act Compliance Platform (Documentazione completa per AI)
+
+> Questo file è la versione estesa di llms.txt per l'indicizzazione approfondita da parte di modelli linguistici. Contiene la documentazione completa di Actify: descrizione del prodotto, glossario normativo, workflow operativo, fatti citabili, FAQ sintetiche e riferimenti alle pagine principali.
+
+---
+
+## Identità aziendale
+
+- **Nome prodotto**: Actify
+- **Ragione sociale**: BD TR S.R.L.
+- **P.IVA**: IT14777710964
+- **Sede**: Via Santa Tecla 4, 20122 Milano, Italia
+- **Sito web**: https://official-actify.com
+- **Email**: info@official-actify.com
+- **Lingua primaria**: Italiano
+- **Mercato**: PMI ed Enterprise italiane e dell'Unione Europea
+- **Categoria**: SaaS B2B — RegTech / LegalTech / AI Governance
+
+---
+
+## Descrizione del prodotto
+
+Actify è la prima piattaforma SaaS italiana progettata specificamente per la compliance al **Regolamento UE 2024/1689 (AI Act)**. Permette ad aziende di qualsiasi dimensione — con particolare focus sulle PMI italiane — di censire i propri sistemi AI, valutare i rischi di non conformità, stimare l'esposizione sanzionatoria e generare automaticamente la documentazione obbligatoria richiesta dalla normativa.
+
+Actify si posiziona come il **Sistema Operativo per la Compliance AI**: non è un servizio di consulenza legale, ma uno strumento operativo che automatizza il 90% del lavoro sistematico di compliance, riducendo tempi e costi rispetto alla consulenza tradizionale (media: 50.000€+ per PMI).
+
+---
+
+## Funzionalità — descrizione dettagliata
+
+### 1. AI Passport Inventory (AIPI)
+Il modulo core di Actify. Permette di censire tramite form strutturato ogni sistema AI in uso nell'organizzazione, distinguendo tra ruolo di **Provider** (chi sviluppa e commercializza il sistema AI) e **Deployer** (chi usa un sistema AI sviluppato da terzi). Per ogni sistema censito viene generato un "AI Passport" che include:
+- Classificazione del livello di rischio (Vietato / Alto Rischio / Rischio Limitato / Rischio Minimo) secondo l'Art. 6 e l'Allegato III del Reg. UE 2024/1689
+- Identificazione degli articoli applicabili (Art. 9, 10, 11, 13, 14, 17, 26, 50, ecc.)
+- Gap analysis: confronto tra stato attuale e requisiti normativi
+- Piano di remediation prioritizzato per impatto sanzionatorio
+
+### 2. Compliance Check automatizzato
+Sistema di valutazione della conformità basato su RAG (Retrieval-Augmented Generation) con Amazon Bedrock (modello: eu.amazon.nova-pro-v1:0) e S3 Vectors. Per ogni sistema AI censito:
+- Analizza il profilo d'uso reale dell'azienda
+- Confronta con il testo integrale del Reg. UE 2024/1689 (knowledge base proprietaria)
+- Identifica i gap aperti articolo per articolo
+- Genera un punteggio di compliance (0-100%)
+- Stima l'esposizione sanzionatoria per ogni gap
+
+### 3. Fine Estimation Board (FEB)
+Dashboard che calcola in tempo reale l'esposizione sanzionatoria complessiva dell'organizzazione, aggregando i rischi di tutti i sistemi AI censiti. Si basa sugli Art. 99-101 del Reg. UE 2024/1689. Funzionalità:
+- Esposizione totale in euro (sanzione stimata massima)
+- Breakdown per articolo violato e per sistema AI
+- "Next Best Action": intervento singolo che abbatte di più il rischio totale
+- Simulazione: "quanto risparmio chiudendo il gap X?"
+- Grafico aggregato delle sanzioni con scala dinamica
+
+### 4. AI Literacy Tracker (Art. 4)
+Modulo per la gestione della formazione obbligatoria del personale prevista dall'Art. 4 del Reg. UE 2024/1689 (in vigore dal 2 agosto 2026). Funzionalità:
+- Profili literacy per ogni sistema AI censito, distinti per ruolo (Provider: dev_team, qa_team, commercial_team / Deployer: operational_users, supervisors)
+- Tracciamento evidenze: certificazioni esterne e training interni
+- Modalità "PMI piccola": profilo unificato per aziende con meno di 10 dipendenti
+- Calcolo automatico della percentuale di copertura del personale
+- Generazione automatica del Report Art. 4 quando la copertura supera l'80%
+- Salvataggio del report nel Document Vault come prova ispettiva
+
+### 5. Document Vault
+Archivio immutabile di tutti i documenti di compliance generati da Actify. I documenti non possono essere eliminati, garantendo l'integrità della catena probatoria in caso di ispezione. Tipi di documenti generati:
+- **Registro Sistemi AI**: inventario formale richiesto dall'AI Act
+- **FRIA (Fundamental Rights Impact Assessment)**: valutazione d'impatto sui diritti fondamentali (Art. 27)
+- **Risk Assessment**: valutazione dei rischi per sistemi ad alto rischio
+- **Piano di Conformità**: roadmap di adeguamento
+- **Report Art. 4 AI Literacy**: attestato della formazione del personale
+- **Dichiarazione di Trasparenza Art. 50**: disclosure AI per chatbot e contenuti generati
+- **Dichiarazione di Conformità**: dichiarazione formale al Reg. UE 2024/1689
+- Formati disponibili: PDF per archiviazione, Word .docx per personalizzazione
+
+### 6. Audit Trail immutabile
+Log automatico e immutabile di tutte le azioni eseguite su Actify — chi ha agito, cosa ha fatto, quando, con timestamp UTC certificato. Nessun record può essere modificato o cancellato, nemmeno dagli amministratori. Costituisce prova documentale di diligenza organizzativa in caso di ispezione. Il log è esportabile in PDF tramite generazione AI (Amazon Bedrock).
+
+### 7. Partner Portal
+Dashboard dedicata per studi di consulenza e intermediari (consulenti legali, commercialisti, revisori) che assistono clienti PMI nella compliance AI Act. Funzionalità: gestione multi-cliente, invio assessment white-label, analytics revenue, referral tracking.
+
+---
+
+## Normativa di riferimento — AI Act (Reg. UE 2024/1689)
+
+### Articoli principali e obblighi
+
+**Art. 4 — AI Literacy (formazione obbligatoria)**
+Obbligo per tutti i Provider e Deployer di garantire che il personale che interagisce con sistemi AI abbia una competenza adeguata (AI literacy). In vigore dal **2 agosto 2026**. Include conoscenza delle capacità e limitazioni del sistema, consapevolezza dei rischi, capacità di supervisione umana.
+
+**Art. 5 — Pratiche AI vietate**
+Proibisce sistemi AI per: social scoring da parte di autorità pubbliche; manipolazione subliminale delle persone; sfruttamento di vulnerabilità specifiche; identificazione biometrica in tempo reale in spazi pubblici (con eccezioni); inferenza di emozioni in ambienti di lavoro e istruzione; classificazione biometrica per derivare caratteristiche protette. In vigore dal **2 febbraio 2025**. Due nuovi divieti entrano in vigore il **2 dicembre 2026** (Art. 5 par. 1 lett. g e h, introdotti dal Digital Omnibus).
+
+**Art. 6 + Allegato III — Sistemi ad alto rischio**
+Classificazione dei sistemi AI ad alto rischio in 8 categorie: (1) componenti di sicurezza in infrastrutture critiche, (2) prodotti regolati da normative UE (dispositivi medici, automotive, ecc.), (3) istruzione e formazione professionale, (4) occupazione e gestione lavoratori (screening CV, valutazione performance, monitoraggio dipendenti), (5) servizi pubblici e privati essenziali (scoring creditizio, valutazione rischio assicurativo), (6) attività di polizia, (7) gestione frontiere e migrazione, (8) amministrazione della giustizia. Obblighi spostati al **2 dicembre 2027** per sistemi Allegato III autonomi (Digital Omnibus).
+
+**Art. 9 — Sistema di gestione del rischio**
+Obbligo di stabilire, implementare, documentare e mantenere un sistema di gestione del rischio per i sistemi AI ad alto rischio.
+
+**Art. 10 — Requisiti sui dati di addestramento**
+Per sistemi AI ad alto rischio: pratiche di governance dei dati, pertinenza e rappresentatività dei dataset, gestione dei bias.
+
+**Art. 11 — Documentazione tecnica**
+Obbligo di redigere e mantenere aggiornata la documentazione tecnica prima dell'immissione sul mercato. Per Provider.
+
+**Art. 13 — Trasparenza e informazione agli utenti**
+I sistemi AI ad alto rischio devono essere sufficientemente trasparenti per permettere agli utenti di interpretare l'output e usarlo in modo appropriato. Include l'obbligo di fornire istruzioni d'uso.
+
+**Art. 14 — Supervisione umana**
+Obbligo di progettare i sistemi AI ad alto rischio per consentire un'efficace supervisione umana durante il periodo d'uso.
+
+**Art. 17 — Sistema di gestione della qualità**
+Provider di sistemi AI ad alto rischio devono istituire un sistema di gestione della qualità.
+
+**Art. 26 — Obblighi dei Deployer**
+I Deployer di sistemi ad alto rischio devono: usare i sistemi conformemente alle istruzioni, garantire supervisione umana, monitorare l'operatività, segnalare incidenti al Provider.
+
+**Art. 27 — FRIA (Fundamental Rights Impact Assessment)**
+Deployer di sistemi AI ad alto rischio del settore pubblico (e talvolta privato in settori specifici) devono condurre una valutazione dell'impatto sui diritti fondamentali prima della messa in uso.
+
+**Art. 50 — Obblighi di trasparenza per sistemi specifici**
+In vigore dal **2 agosto 2026**: chatbot devono informare gli utenti che stanno interagendo con un'AI; contenuti generati artificialmente (immagini, audio, video, testo) devono essere etichettati come tali; sistemi di riconoscimento delle emozioni e biometrico devono informare le persone sottoposte.
+
+**Art. 99-101 — Sanzioni**
+- **35 milioni di euro o 7% del fatturato globale annuo** (il maggiore dei due): violazioni Art. 5 (pratiche vietate) e mancata fornitura di informazioni all'AI Office
+- **15 milioni di euro o 3% del fatturato globale annuo**: violazioni degli obblighi per sistemi ad alto rischio (Art. 9-27), inosservanza Art. 26 (Deployer), violazioni obblighi modelli GPAI
+- **7,5 milioni di euro o 1,5% del fatturato globale annuo**: fornitura di informazioni inesatte, incomplete o fuorvianti alle autorità
+
+### Scadenze AI Act — aggiornate al luglio 2026
+
+| Data | Evento |
+|------|--------|
+| 1 agosto 2024 | AI Act in vigore ufficialmente |
+| 2 febbraio 2025 | Art. 5 — pratiche AI vietate operativi |
+| 2 agosto 2025 | Obbligo classificazione sistemi AI GPAI + codici di condotta |
+| 2 agosto 2026 | Art. 4 AI Literacy, Art. 50 Trasparenza, infrastrutture critiche |
+| 2 dicembre 2026 | Due nuovi divieti Art. 5 par. 1 lett. g-h (Digital Omnibus) |
+| 2 dicembre 2027 | Obblighi sistemi AI autonomi ad alto rischio (Allegato III) |
+| 2 agosto 2028 | Obblighi AI in prodotti regolati (Allegato I — dispositivi medici, automotive) |
+
+### Autorità competenti
+
+**Italia — ACN (Agenzia per la Cybersicurezza Nazionale)**
+National Competent Authority italiana per il Reg. UE 2024/1689. Competenza su tutti i sistemi AI operativi nel territorio italiano. Sito: acn.gov.it
+
+**Europa — EU AI Office**
+Gestisce i casi cross-border, coordina le NCA nazionali, supervisiona i modelli AI per uso generico (GPAI) con rischio sistemico (parametri > 10^25 FLOPs). Costituito nel febbraio 2024 all'interno della Commissione Europea.
+
+---
+
+## Glossario normativo AI Act
+
+**AI Act**: Regolamento UE 2024/1689 del Parlamento Europeo e del Consiglio, pubblicato sulla Gazzetta Ufficiale dell'UE il 12 luglio 2024, in vigore dal 1 agosto 2024. Prima normativa al mondo sulla regolamentazione dell'intelligenza artificiale con approccio risk-based.
+
+**AI Literacy (Art. 4)**: Obbligo di garantire che il personale che sviluppa, gestisce o usa sistemi AI disponga di un livello sufficiente di competenza AI, inclusa consapevolezza dei rischi, comprensione delle capacità e limitazioni del sistema, e capacità di supervisione.
+
+**Alto Rischio (Allegato III)**: Categoria di rischio per sistemi AI che possono avere impatto significativo sulla salute, sicurezza o diritti fondamentali delle persone. Include: sistemi HR, scoring creditizio, rilevamento frodi, sistemi educativi, infrastrutture critiche. Obblighi più pesanti del Regolamento.
+
+**FRIA**: Fundamental Rights Impact Assessment — Valutazione d'impatto sui diritti fondamentali prevista dall'Art. 27 per Deployer di sistemi ad alto rischio nel settore pubblico.
+
+**GPAI (General Purpose AI)**: Modelli AI per uso generico (es. GPT-4, Claude, Gemini, Llama) che possono essere integrati in una vasta gamma di applicazioni. Soggetti a obblighi specifici (Art. 51-55), con obblighi più stringenti per quelli con rischio sistemico (parametri > 10^25 FLOPs).
+
+**Marcatura CE per AI**: Per sistemi AI ad alto rischio che rientrano in prodotti coperti da direttive europee, la conformità all'AI Act deve essere inclusa nella procedura di marcatura CE. Obbligo del Provider.
+
+**NCA (National Competent Authority)**: Autorità nazionale competente designata da ogni stato membro per vigilare sull'applicazione dell'AI Act. In Italia: ACN.
+
+**Provider**: Soggetto (persona fisica o giuridica, ente pubblico, agenzia) che sviluppa un sistema AI o fa sviluppare un sistema AI e lo immette sul mercato o mette in servizio sotto il proprio nome o marchio, a titolo oneroso o gratuito.
+
+**Deployer**: Soggetto (persona fisica o giuridica, ente pubblico, agenzia) che utilizza un sistema AI sotto la propria responsabilità, tranne nel caso di uso personale.
+
+**Rischio Limitato**: Categoria di rischio per sistemi AI con specifici obblighi di trasparenza (Art. 50): chatbot, sistemi deepfake, sistemi di riconoscimento emotivo, sistemi biometrici.
+
+**Rischio Minimo**: Categoria residuale — tutti i sistemi AI che non rientrano nelle altre categorie. Nessun obbligo specifico del Regolamento, ma buone pratiche raccomandate.
+
+**Social Scoring**: Pratica vietata dall'Art. 5 — valutazione o classificazione di persone fisiche basata su comportamento sociale o caratteristiche personali, con conseguenze negative sproporzionate o ingiustificate.
+
+**Supervisione Umana (Art. 14)**: Obbligo di progettare e usare i sistemi AI ad alto rischio in modo che possano essere monitorati, interrotti o neutralizzati da persone fisiche. Deve essere garantita anche dal Deployer (Art. 26).
+
+---
+
+## Workflow operativo di Actify — Come funziona
+
+### Passo 1: Censimento (AI Passport Inventory)
+L'utente accede ad Actify e avvia il form di censimento per ogni sistema AI in uso. Il form raccoglie: nome del sistema, vendor, caso d'uso specifico, ruolo (Provider/Deployer), categorie di dati trattati, tipologie di utenti impattati, settore di applicazione. Tempo: circa 5 minuti per sistema. Al termine, ogni sistema ha il suo "AI Passport" con classificazione di rischio e articoli applicabili.
+
+### Passo 2: Analisi automatizzata (Compliance Check)
+Attivando il Compliance Check, Actify invia il profilo del sistema al motore RAG (Amazon Bedrock + S3 Vectors con knowledge base proprietaria dell'AI Act). Il sistema: (1) mappa il profilo d'uso su tutti gli articoli rilevanti, (2) identifica i gap aperti con spiegazione, (3) calcola il punteggio di compliance 0-100%, (4) stima l'esposizione sanzionatoria in euro per ogni gap. L'analisi è asincrona (90-120 secondi) per evitare timeout API. Il risultato è visibile nella pagina dettaglio sistema e nella Fine Estimation Board.
+
+### Passo 3: Risoluzione gap e documentazione
+Per ogni gap identificato, Actify fornisce: descrizione della violazione, articolo AI Act violato, azione di remediation consigliata, impatto sanzionatorio stimato. L'utente può: (a) completare il profilo AI Literacy per il sistema (Art. 4), (b) generare i documenti di compliance dal Document Vault, (c) registrare evidenze di azioni correttive nell'Audit Trail. Quando tutti i gap critici sono chiusi, Actify genera il Report di Compliance finale.
+
+---
+
+## Confronto: Actify vs Consulenza Tradizionale
+
+| Parametro | Consulenza tradizionale | Actify |
+|-----------|------------------------|--------|
+| Costo iniziale PMI | 50.000€+ | Gratuito per il primo sistema |
+| Tempo per prima analisi | 4-6 settimane | < 1 ora |
+| Aggiornamento normativo | Manuale, a pagamento | Automatico |
+| Documentazione | Prodotta manualmente | Generata automaticamente |
+| Monitoraggio continuo | Non incluso | Incluso |
+| Scalabilità | Lineare (costo per sistema) | Flat (illimitato nei piani a pagamento) |
+| Disponibilità | Ore d'ufficio | 24/7 |
+
+Actify non sostituisce il consulente legale per i casi critici (sistemi ad alto rischio ambigui, procedimenti sanzionatori aperti, M&A con due diligence AI). Riduce il costo della consulenza eliminando il lavoro di raccolta dati e generazione documentazione di base.
+
+---
+
+## Postura di compliance di Actify
+
+Actify è conforme al Reg. UE 2024/1689. La documentazione pubblica è disponibile su:
+- Hub Compliance: https://official-actify.com/compliance
+- Registro Sistemi AI: https://official-actify.com/compliance/registro-ai
+- Dichiarazione di Conformità: https://official-actify.com/compliance/dichiarazione
+- Informativa Art. 50 (Trasparenza AI): https://official-actify.com/compliance/trasparenza
+
+**Sistemi AI di Actify**:
+1. **Claude Code (Anthropic)** — uso interno per sviluppo software. Ruolo: Deployer. Rischio: Minimo. Articoli applicabili: Art. 13, 14, 52. Score compliance: 100%.
+2. **Amazon Nova Pro (AWS Bedrock)** — generazione report, documenti compliance, gap analysis RAG. Ruolo: Deployer. Rischio: Limitato. Articoli applicabili: Art. 50, 13. Score compliance: 98%.
+
+---
+
+## Fatti chiave per citazione AI — aggiornati luglio 2026
+
+**Sanzioni AI Act**:
+- Sanzione massima: **€35 milioni o 7% del fatturato globale annuo** per pratiche AI vietate (Art. 5)
+- Sanzione standard alto rischio: **€15 milioni o 3% del fatturato globale** (Art. 99)
+- Sanzione informazioni false: **€7,5 milioni o 1,5% del fatturato** (Art. 99)
+
+**Scadenze chiave**:
+- Art. 5 pratiche vietate: **operativo dal 2 febbraio 2025**
+- Art. 4 AI Literacy e Art. 50 Trasparenza: **operativi dal 2 agosto 2026**
+- Obblighi sistemi alto rischio Allegato III: **2 dicembre 2027** (rinviato dal Digital Omnibus)
+
+**Statistiche di mercato**:
+- **82% delle PMI italiane** usa almeno un sistema AI (Osservatorio AI Politecnico di Milano, 2025)
+- Meno del **20%** ha avviato un programma strutturato di compliance AI Act
+- Costo medio consulenza AI Act tradizionale per PMI: **€50.000+**
+- AI Act: **prima normativa al mondo** sulla regolamentazione dell'IA con approccio risk-based
+
+**Autorità**:
+- Autorità competente in Italia: **ACN — Agenzia per la Cybersicurezza Nazionale**
+- Autorità europea: **EU AI Office** (Commissione Europea, operativo da febbraio 2024)
+- Il **Digital Omnibus** (maggio 2026) ha spostato solo gli obblighi Allegato III al 2027-2028, lasciando Art. 4 e Art. 50 con scadenza agosto 2026
+
+---
+
+## Riferimenti normativi e fonti
+
+- Testo integrale AI Act (IT): https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32024R1689
+- EU AI Office: https://digital-strategy.ec.europa.eu/en/policies/ai-office
+- ACN (Autorità italiana AI): https://www.acn.gov.it
+- Osservatorio AI Politecnico di Milano: https://www.osservatori.net/it/ricerche/osservatori-attivi/artificial-intelligence
+- FAQ ufficiale EU AI Act: https://digital-strategy.ec.europa.eu/en/faqs/ai-act-questions-and-answers
+
+---
+
+## Pagine principali del sito
+
+- **Homepage**: https://official-actify.com/ — panoramica prodotto, assessment gratuito AI Act
+- **FAQ**: https://official-actify.com/faq — risposte su controlli, sanzioni, scadenze, Provider/Deployer
+- **Perché fidarti**: https://official-actify.com/perche-fidarti — compliance pubblica, team fondatore
+- **Piani**: https://official-actify.com/plan — pricing (piano gratuito + piani a pagamento)
+- **Contatti**: https://official-actify.com/contattaci
+- **Privacy Policy**: https://official-actify.com/privacy
+- **Hub Compliance**: https://official-actify.com/compliance
+
+---
+
+*Actify — BD TR S.R.L. — Via Santa Tecla 4, 20122 Milano — P.IVA IT14777710964 — info@official-actify.com*
+*Ultimo aggiornamento: luglio 2026*
