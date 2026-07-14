@@ -134,6 +134,7 @@ function RegisterPageInner() {
     const ref = searchParams.get('ref') ?? '';
     if (ref) setReferralCode(ref.toUpperCase());
     if (searchParams.get('type') === 'pmi') setAccountType('pmi');
+    if (searchParams.get('type') === 'partner') setAccountType('partner');
     const pmi = searchParams.get('pmi') ?? '';
     if (pmi) setPmiId(pmi);
   }, [searchParams]);
