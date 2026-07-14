@@ -1919,6 +1919,7 @@ export default function Page() {
                 { href: '/faq', label: 'FAQ' },
                 { href: '/perche-fidarti', label: 'Perché fidarti' },
                 { href: '/per-consulenti', label: 'Per gli studi' },
+                { href: '/scadenze-ai-act', label: 'Scadenze AI Act' },
               ].map(l => (
                 <a key={l.href} href={l.href} style={{ display: 'block', fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', marginBottom: 11, transition: 'color .2s' }}
                   onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}

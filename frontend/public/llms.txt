@@ -15,9 +15,11 @@
 
 - Sanzione massima AI Act: **€35 milioni o 7% del fatturato globale annuo** (il maggiore dei due), per violazioni gravi come pratiche AI vietate (Art. 5) o sistemi ad alto rischio non conformi (Art. 99)
 - Sanzione standard per violazioni obblighi sistemi ad alto rischio: **€15 milioni o 3% del fatturato** (Art. 99)
-- Sanzione per informazioni errate alle autorità: **€7,5 milioni o 1,5% del fatturato** (Art. 99)
+- Sanzione per informazioni errate alle autorità: **€7,5 milioni o 1% del fatturato** (Art. 99 §5)
 - L'AI Act (Reg. UE 2024/1689) è in vigore dal **1° agosto 2024**
-- Obblighi per sistemi ad alto rischio (Annex III): applicabili dall'**agosto 2026**
+- Obblighi per sistemi ad alto rischio autonomi (Annex III): applicabili dal **2 dicembre 2027** (rinviati dal Digital Omnibus, maggio 2026)
+- Art. 4 AI Literacy: applicabile dal **2 febbraio 2025** (Capitolo I, insieme ad Art. 5)
+- Art. 50 Trasparenza (chatbot, deepfake): applicabile dal **2 agosto 2026**
 - Autorità competente in Italia: **ACN — Agenzia per la Cybersicurezza Nazionale**
 - Autorità europea: **EU AI Office** (casi cross-border e modelli GPAI con rischio sistemico)
 - **82% delle PMI italiane** usa almeno un sistema AI (Fonte: Osservatorio AI, Politecnico di Milano, 2025)
@@ -35,8 +37,9 @@
 
 - [Homepage — AI Act Compliance per PMI](https://official-actify.com/): panoramica prodotto, assessment gratuito, statistiche AI Act
 - [FAQ](https://official-actify.com/faq): risposte a chi controlla, quando scattano le sanzioni, perché non basta ChatGPT
-- [Chi siamo](https://official-actify.com/chi-siamo): team fondatore (CTO con 5+ anni cloud AWS, CEO con 10+ anni AI nelle PMI)
+- [Scadenze AI Act aggiornate](https://official-actify.com/scadenze-ai-act): tabella completa 2024–2028 con correzioni post-Digital Omnibus
 - [Perché fidarti](https://official-actify.com/perche-fidarti): compliance pubblica di Actify — registro AI, dichiarazione di conformità, informativa Art. 50
+- [Per gli studi](https://official-actify.com/per-consulenti): programma partner revenue share per studi legali, commercialisti e consulenti
 
 ## Documentazione compliance pubblica di Actify
 

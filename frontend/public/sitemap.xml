@@ -37,6 +37,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://official-actify.com/scadenze-ai-act</loc>
+    <lastmod>2026-07-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://official-actify.com/compliance</loc>
     <lastmod>2026-07-14</lastmod>
     <changefreq>monthly</changefreq>

@@ -122,7 +122,7 @@ In vigore dal **2 agosto 2026**: chatbot devono informare gli utenti che stanno 
 **Art. 99-101 — Sanzioni**
 - **35 milioni di euro o 7% del fatturato globale annuo** (il maggiore dei due): violazioni Art. 5 (pratiche vietate) e mancata fornitura di informazioni all'AI Office
 - **15 milioni di euro o 3% del fatturato globale annuo**: violazioni degli obblighi per sistemi ad alto rischio (Art. 9-27), inosservanza Art. 26 (Deployer), violazioni obblighi modelli GPAI
-- **7,5 milioni di euro o 1,5% del fatturato globale annuo**: fornitura di informazioni inesatte, incomplete o fuorvianti alle autorità
+- **7,5 milioni di euro o 1% del fatturato globale annuo**: fornitura di informazioni inesatte, incomplete o fuorvianti alle autorità
 
 ### Scadenze AI Act — aggiornate al luglio 2026
 
