@@ -1,4 +1,16 @@
+import type { Metadata } from 'next';
 import { markSvg } from '@/lib/branding';
+
+export const metadata: Metadata = {
+  title: "Informativa Trasparenza AI (Art. 50 AI Act) — Actify",
+  description: "Actify usa AI generativa (Amazon Nova Pro) per generare report e documenti di compliance. Informativa pubblica ai sensi dell'Art. 50 Reg. UE 2024/1689 — obbligatoria dal 2 agosto 2026.",
+  alternates: { canonical: '/compliance/trasparenza' },
+  openGraph: {
+    title: "Informativa Art. 50 AI Act — Trasparenza sull'uso dell'AI in Actify",
+    description: "Quali contenuti genera Actify con l'AI, come vengono etichettati e quali garanzie offre. Conforme all'Art. 50 Reg. UE 2024/1689.",
+    url: 'https://official-actify.com/compliance/trasparenza',
+  },
+};
 
 export default function TrasparenzaPage() {
   return (

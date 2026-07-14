@@ -1,10 +1,33 @@
+import type { Metadata } from 'next';
 import { badgeSvg, markSvg } from '@/lib/branding';
+
+export const metadata: Metadata = {
+  title: 'Compliance AI Act di Actify — Registro Sistemi, Dichiarazione e Trasparenza',
+  description: "Actify è conforme al Reg. UE 2024/1689. Score 100%, 0 violazioni AI Act. Consulta il nostro Registro Sistemi AI, la Dichiarazione di Conformità e l'Informativa Art. 50 sulla trasparenza AI.",
+  alternates: { canonical: '/compliance' },
+  openGraph: {
+    title: 'Compliance AI Act di Actify — Documentazione pubblica e verificabile',
+    description: "Registro Sistemi AI, Dichiarazione di Conformità Reg. UE 2024/1689 e Informativa Art. 50. La nostra conformità è pubblica.",
+    url: 'https://official-actify.com/compliance',
+  },
+};
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://official-actify.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Compliance AI Act di Actify', item: 'https://official-actify.com/compliance' },
+  ],
+};
 
 export default function CompliancePage() {
   const badge = badgeSvg(120);
   const mark  = markSvg(28);
 
   return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
     <div className="comp-page">
 
       {/* ── Nav ── */}
@@ -351,5 +374,6 @@ export default function CompliancePage() {
         </div>
       </footer>
     </div>
+    </>
   );
 }

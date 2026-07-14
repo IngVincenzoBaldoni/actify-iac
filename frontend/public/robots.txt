@@ -10,6 +10,12 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
 User-agent: CCBot
 Disallow: /
 
@@ -21,3 +27,4 @@ Disallow: /register
 Disallow: /partner/
 
 Sitemap: https://official-actify.com/sitemap.xml
+

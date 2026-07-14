@@ -1,4 +1,16 @@
+import type { Metadata } from 'next';
 import { markSvg } from '@/lib/branding';
+
+export const metadata: Metadata = {
+  title: "Dichiarazione di Conformità AI Act — Actify (Reg. UE 2024/1689)",
+  description: "Dichiarazione formale di conformità di Actify al Regolamento UE 2024/1689 (AI Act). BD TR S.R.L., P.IVA IT14777710964 — 0 violazioni, Art. 4, Art. 50 e Art. 6 verificati.",
+  alternates: { canonical: '/compliance/dichiarazione' },
+  openGraph: {
+    title: "Dichiarazione di Conformità AI Act di Actify",
+    description: "Dichiarazione formale pubblica di conformità al Reg. UE 2024/1689. Verificabile da clienti, partner e autorità.",
+    url: 'https://official-actify.com/compliance/dichiarazione',
+  },
+};
 
 export default function DichiarazionePage() {
   return (

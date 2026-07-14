@@ -12,8 +12,19 @@ export const metadata: Metadata = {
   },
 };
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://official-actify.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Perché fidarti di Actify', item: 'https://official-actify.com/perche-fidarti' },
+  ],
+};
+
 export default function PercheFildartiPage() {
   return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
     <div className="doc-page">
       <nav className="doc-page-nav">
         <a href="/" className="doc-back">
@@ -231,5 +242,6 @@ export default function PercheFildartiPage() {
 
       </div>
     </div>
+    </>
   );
 }

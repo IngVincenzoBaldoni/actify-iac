@@ -1,4 +1,16 @@
+import type { Metadata } from 'next';
 import { markSvg } from '@/lib/branding';
+
+export const metadata: Metadata = {
+  title: 'Registro Sistemi AI di Actify — Art. 6 Reg. UE 2024/1689',
+  description: "Registro pubblico dei sistemi AI usati da Actify, con classificazione del rischio ai sensi dell'Art. 6 e Allegato III del Reg. UE 2024/1689. Claude Code (Rischio Minimo), Amazon Nova Pro (Rischio Limitato).",
+  alternates: { canonical: '/compliance/registro-ai' },
+  openGraph: {
+    title: 'Registro Sistemi AI di Actify — Classificazione pubblica per livello di rischio',
+    description: "Tutti i sistemi AI usati da Actify, con classificazione Art. 6 AI Act, articoli applicabili e score di conformità.",
+    url: 'https://official-actify.com/compliance/registro-ai',
+  },
+};
 
 export default function RegistroAIPage() {
   return (
