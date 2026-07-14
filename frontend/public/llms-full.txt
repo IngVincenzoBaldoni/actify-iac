@@ -52,7 +52,7 @@ Dashboard che calcola in tempo reale l'esposizione sanzionatoria complessiva del
 - Grafico aggregato delle sanzioni con scala dinamica
 
 ### 4. AI Literacy Tracker (Art. 4)
-Modulo per la gestione della formazione obbligatoria del personale prevista dall'Art. 4 del Reg. UE 2024/1689 (in vigore dal 2 agosto 2026). Funzionalità:
+Modulo per la gestione della formazione obbligatoria del personale prevista dall'Art. 4 del Reg. UE 2024/1689 (in vigore dal 2 febbraio 2025 — Capitolo I del Regolamento, applicabile insieme alle pratiche vietate Art. 5). Funzionalità:
 - Profili literacy per ogni sistema AI censito, distinti per ruolo (Provider: dev_team, qa_team, commercial_team / Deployer: operational_users, supervisors)
 - Tracciamento evidenze: certificazioni esterne e training interni
 - Modalità "PMI piccola": profilo unificato per aziende con meno di 10 dipendenti
@@ -84,7 +84,7 @@ Dashboard dedicata per studi di consulenza e intermediari (consulenti legali, co
 ### Articoli principali e obblighi
 
 **Art. 4 — AI Literacy (formazione obbligatoria)**
-Obbligo per tutti i Provider e Deployer di garantire che il personale che interagisce con sistemi AI abbia una competenza adeguata (AI literacy). In vigore dal **2 agosto 2026**. Include conoscenza delle capacità e limitazioni del sistema, consapevolezza dei rischi, capacità di supervisione umana.
+Obbligo per tutti i Provider e Deployer di garantire che il personale che interagisce con sistemi AI abbia una competenza adeguata (AI literacy). In vigore dal **2 febbraio 2025** (Art. 113(2)(a) del Reg. UE 2024/1689: Capitolo I applicabile insieme alle pratiche vietate). Include conoscenza delle capacità e limitazioni del sistema, consapevolezza dei rischi, capacità di supervisione umana.
 
 **Art. 5 — Pratiche AI vietate**
 Proibisce sistemi AI per: social scoring da parte di autorità pubbliche; manipolazione subliminale delle persone; sfruttamento di vulnerabilità specifiche; identificazione biometrica in tempo reale in spazi pubblici (con eccezioni); inferenza di emozioni in ambienti di lavoro e istruzione; classificazione biometrica per derivare caratteristiche protette. In vigore dal **2 febbraio 2025**. Due nuovi divieti entrano in vigore il **2 dicembre 2026** (Art. 5 par. 1 lett. g e h, introdotti dal Digital Omnibus).
@@ -129,9 +129,9 @@ In vigore dal **2 agosto 2026**: chatbot devono informare gli utenti che stanno 
 | Data | Evento |
 |------|--------|
 | 1 agosto 2024 | AI Act in vigore ufficialmente |
-| 2 febbraio 2025 | Art. 5 — pratiche AI vietate operativi |
+| 2 febbraio 2025 | Art. 4 AI Literacy + Art. 5 pratiche AI vietate (Capitoli I e II — applicazione anticipata) |
 | 2 agosto 2025 | Obbligo classificazione sistemi AI GPAI + codici di condotta |
-| 2 agosto 2026 | Art. 4 AI Literacy, Art. 50 Trasparenza, infrastrutture critiche |
+| 2 agosto 2026 | Art. 50 Trasparenza (chatbot, deepfake, contenuti AI), infrastrutture critiche |
 | 2 dicembre 2026 | Due nuovi divieti Art. 5 par. 1 lett. g-h (Digital Omnibus) |
 | 2 dicembre 2027 | Obblighi sistemi AI autonomi ad alto rischio (Allegato III) |
 | 2 agosto 2028 | Obblighi AI in prodotti regolati (Allegato I — dispositivi medici, automotive) |
@@ -228,7 +228,8 @@ Actify è conforme al Reg. UE 2024/1689. La documentazione pubblica è disponibi
 
 **Scadenze chiave**:
 - Art. 5 pratiche vietate: **operativo dal 2 febbraio 2025**
-- Art. 4 AI Literacy e Art. 50 Trasparenza: **operativi dal 2 agosto 2026**
+- Art. 4 AI Literacy: **operativo dal 2 febbraio 2025** (Capitolo I, applicazione anticipata)
+- Art. 50 Trasparenza: **operativo dal 2 agosto 2026**
 - Obblighi sistemi alto rischio Allegato III: **2 dicembre 2027** (rinviato dal Digital Omnibus)
 
 **Statistiche di mercato**:
@@ -240,7 +241,7 @@ Actify è conforme al Reg. UE 2024/1689. La documentazione pubblica è disponibi
 **Autorità**:
 - Autorità competente in Italia: **ACN — Agenzia per la Cybersicurezza Nazionale**
 - Autorità europea: **EU AI Office** (Commissione Europea, operativo da febbraio 2024)
-- Il **Digital Omnibus** (maggio 2026) ha spostato solo gli obblighi Allegato III al 2027-2028, lasciando Art. 4 e Art. 50 con scadenza agosto 2026
+- Il **Digital Omnibus** (maggio 2026) ha spostato solo gli obblighi Allegato III al 2027-2028, lasciando Art. 50 con scadenza agosto 2026 (Art. 4 è già in vigore dal 2 febbraio 2025)
 
 ---
 

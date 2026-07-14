@@ -42,7 +42,7 @@ const faqSchema = {
       name: "Cosa significa essere 'Provider' o 'Deployer' nell'AI Act? Cambia qualcosa per me?",
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Sì, cambia moltissimo. È una delle distinzioni fondamentali del Reg. UE 2024/1689. Provider: sviluppi e commercializzi il sistema AI. Deployer: usi un sistema AI sviluppato da altri nel tuo contesto operativo (es. ChatGPT, un CRM con AI, tool HR acquistati). Il Provider ha gli obblighi più pesanti: documentazione tecnica completa, gestione dei rischi, registrazione nel database EU per sistemi ad alto rischio, marcatura CE, supervisione post-mercato, notifica incidenti all'autorità. Il Deployer ha obblighi più limitati ma reali: supervisione umana, uso conforme alle istruzioni del provider, formazione del personale in materia di AI (Art. 4 — AI Literacy obbligatoria dal 2 agosto 2026), comunicazione incidenti al provider. La maggior parte delle PMI italiane sono Deployer. Actify classifica automaticamente ogni sistema come Provider o Deployer e mostra gli obblighi specifici per ogni ruolo, articolo per articolo.",
+        text: "Sì, cambia moltissimo. È una delle distinzioni fondamentali del Reg. UE 2024/1689. Provider: sviluppi e commercializzi il sistema AI. Deployer: usi un sistema AI sviluppato da altri nel tuo contesto operativo (es. ChatGPT, un CRM con AI, tool HR acquistati). Il Provider ha gli obblighi più pesanti: documentazione tecnica completa, gestione dei rischi, registrazione nel database EU per sistemi ad alto rischio, marcatura CE, supervisione post-mercato, notifica incidenti all'autorità. Il Deployer ha obblighi più limitati ma reali: supervisione umana, uso conforme alle istruzioni del provider, formazione del personale in materia di AI (Art. 4 — AI Literacy obbligatoria dal 2 febbraio 2025, Capitolo I del Reg.), comunicazione incidenti al provider. La maggior parte delle PMI italiane sono Deployer. Actify classifica automaticamente ogni sistema come Provider o Deployer e mostra gli obblighi specifici per ogni ruolo, articolo per articolo.",
       },
     },
     {
@@ -66,7 +66,7 @@ const faqSchema = {
       name: "Ho letto che l'AI Act è stato rinviato al 2027: posso aspettare?",
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "No. Il rinvio esiste ma riguarda solo una parte degli obblighi. Il pacchetto Digital Omnibus (maggio 2026) sposta solo gli obblighi più pesanti sui sistemi ad alto rischio: obblighi per sistemi AI autonomi ad alto rischio (Allegato III) al 2 dicembre 2027, obblighi per AI integrata in prodotti regolati (Allegato I) al 2 agosto 2028. Non è stato rinviato: Art. 5 pratiche AI vietate (in vigore dal 2 febbraio 2025, con nuovi divieti dal 2 dicembre 2026); Art. 4 AI Literacy, la formazione obbligatoria del personale che usa AI (in vigore dal 2 agosto 2026); Art. 50 obblighi di trasparenza per chatbot e contenuti AI generati (in vigore dal 2 agosto 2026). Per una PMI che usa AI di terzi come Deployer, gli obblighi diretti non sono stati rinviati. Il rinvio al 2027-2028 riguarda chi sviluppa sistemi ad alto rischio.",
+        text: "No. Il rinvio esiste ma riguarda solo una parte degli obblighi. Il pacchetto Digital Omnibus (maggio 2026) sposta solo gli obblighi più pesanti sui sistemi ad alto rischio: obblighi per sistemi AI autonomi ad alto rischio (Allegato III) al 2 dicembre 2027, obblighi per AI integrata in prodotti regolati (Allegato I) al 2 agosto 2028. Non è stato rinviato: Art. 5 pratiche AI vietate (in vigore dal 2 febbraio 2025, con nuovi divieti dal 2 dicembre 2026); Art. 4 AI Literacy, la formazione obbligatoria del personale che usa AI (in vigore dal 2 febbraio 2025 — Capitolo I del Reg., già applicabile); Art. 50 obblighi di trasparenza per chatbot e contenuti AI generati (in vigore dal 2 agosto 2026). Per una PMI che usa AI di terzi come Deployer, gli obblighi diretti non sono stati rinviati. Il rinvio al 2027-2028 riguarda chi sviluppa sistemi ad alto rischio.",
       },
     },
     {
@@ -758,7 +758,7 @@ export default function FaqPage() {
                   <div className="faq-trigger-n" style={{background:'rgba(239,68,68,.15)',color:'#f87171',borderColor:'rgba(239,68,68,.2)'}}>!</div>
                   <div className="faq-trigger-body">
                     <strong>Art. 4 &mdash; AI Literacy (formazione del personale)</strong>
-                    <p>In vigore dal <strong>2 agosto 2026</strong>. Ogni azienda che usa AI deve garantire che il personale abbia una competenza adeguata. Obbligo attivo tra poche settimane, non nel 2027.</p>
+                    <p>In vigore dal <strong>2 febbraio 2025</strong> (Capitolo I del Reg. UE 2024/1689, applicabile insieme alle pratiche vietate). Ogni azienda che usa AI deve garantire che il personale abbia una competenza adeguata. Obbligo gi&agrave; attivo, non rinviato al 2027.</p>
                   </div>
                 </div>
                 <div className="faq-trigger">
