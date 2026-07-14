@@ -19,7 +19,7 @@ const VIDEO_SRC = '/media/actify-demo.mov';
 function VideoSection() {
   const isReady = !!VIDEO_SRC;
   return (
-    <div id="video" data-reveal style={{ scrollMarginTop: 72, maxWidth: 1100, margin: '0 auto', padding: '96px 40px' }}>
+    <div id="video" data-reveal className="video-outer" style={{ scrollMarginTop: 72, maxWidth: 1100, margin: '0 auto', padding: '96px 40px' }}>
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 52 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 700, color: '#4ADE80', textTransform: 'uppercase', letterSpacing: '.1em', background: 'rgba(34,197,94,.09)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
@@ -517,6 +517,66 @@ export default function Page() {
           mask-composite:exclude;
           pointer-events:none;
         }
+
+        /* ══════════════════════════════════════════════════
+           MOBILE — max-width: 768px
+           ═════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+
+          /* NAV */
+          .site-nav  { padding: 10px 16px !important; }
+          .nav-pill  { display: none !important; }
+          .nav-ctas a:first-child { display: none !important; }
+
+          /* HERO */
+          .hero-content { padding: 88px 20px 48px !important; }
+
+          /* SECTION CONTAINERS */
+          .section-wide { padding-left: 20px !important; padding-right: 20px !important; }
+
+          /* PROBLEM GRID — 2 cols → 1 */
+          .problem-grid { grid-template-columns: 1fr !important; }
+
+          /* HIW "COME FUNZIONA" */
+          .hiw-track   { display: none !important; }
+          .hiw-mark    { display: none !important; }
+          .hiw-cards-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .hiw-node      { display: none !important; }
+          .hiw-connector { display: none !important; }
+          .hiw-cards-grid > div { padding-top: 24px !important; }
+
+          /* TRUST STATS — 4 cols → 2×2 */
+          .trust-stats-grid {
+            grid-template-columns: 1fr 1fr !important;
+            overflow: visible !important;
+            border-radius: 14px !important;
+          }
+          .trust-stats-grid > div {
+            padding: 20px 16px !important;
+            border-right: 1px solid rgba(255,255,255,0.07) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+          }
+          .trust-stats-grid > div:nth-child(even) { border-right: none !important; }
+          .trust-stats-grid > div:nth-last-child(-n+2) { border-bottom: none !important; }
+          .trust-stats-grid > div span[data-count] { font-size: 34px !important; letter-spacing: -1px !important; }
+
+          /* TRUST LAYOUT — 2 cols → 1 */
+          .trust-two-col { grid-template-columns: 1fr !important; }
+
+          /* TRUST TABLE — collapse fixed-width columns */
+          .trust-table-header { display: none !important; }
+          .trust-table-grid { grid-template-columns: 1fr !important; }
+          .trust-table-grid > div:not(:first-child) { display: none !important; }
+
+          /* VIDEO */
+          .video-outer { padding: 56px 20px !important; }
+
+          /* FOOTER */
+          .footer-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+        }
       `}} />
 
       {/* ═══ LANDING ═══ */}
@@ -528,7 +588,7 @@ export default function Page() {
         <div id="cursor-glow" style={{ position: 'fixed', top: 0, left: 0, width: 640, height: 640, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,197,94,.07) 0%, rgba(129,140,248,.04) 45%, transparent 70%)', filter: 'blur(100px)', pointerEvents: 'none', zIndex: 1 }} />
 
         {/* Fixed nav */}
-        <nav style={{
+        <nav className="site-nav" style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '12px 36px',
@@ -543,7 +603,7 @@ export default function Page() {
           </div>
 
           {/* Pill nav — centro */}
-          <div style={{
+          <div className="nav-pill" style={{
             border: '1px solid rgba(55,65,81,.85)',
             borderRadius: 9999,
             padding: '9px 36px',
@@ -564,7 +624,7 @@ export default function Page() {
           </div>
 
           {/* Right CTAs — tutto a destra */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+          <div className="nav-ctas" style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
             <a href="/login" style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Accedi</a>
             <a href="/register" style={{ fontSize: 13, fontWeight: 700, color: '#000', textDecoration: 'none', background: '#22C55E', borderRadius: 9999, padding: '8px 22px', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(34,197,94,.28)' }}>Registrati</a>
           </div>
@@ -609,7 +669,7 @@ export default function Page() {
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 240, background: 'linear-gradient(to bottom, transparent, #000 92%)', pointerEvents: 'none' }} />
 
           {/* Hero content — centrato, full screen */}
-          <div style={{
+          <div className="hero-content" style={{
             flex: 1, position: 'relative', zIndex: 10,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
@@ -787,7 +847,7 @@ export default function Page() {
               <div key={`pd${x}${y}`} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, width: 3, height: 3, borderRadius: '50%', background: 'rgba(34,197,94,0.2)', transform: 'translate(-50%,-50%)' }} />
             ))}
           </div>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 40px 80px', position: 'relative', zIndex: 1 }}>
+        <div className="section-wide" style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 40px 80px', position: 'relative', zIndex: 1 }}>
 
           {/* Section header */}
           <div data-reveal style={{ textAlign: 'center', marginBottom: 72 }}>
@@ -804,7 +864,7 @@ export default function Page() {
           </div>
 
           {/* Two Apple-style panels */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div className="problem-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
             {/* ── Panel 1: Rischio Normativo ── */}
             <div data-reveal data-d="1" style={{ background: 'rgba(10,10,12,0.98)', border: '1px solid rgba(255,255,255,0.08)', borderTop: '2px solid rgba(239,68,68,0.6)', borderRadius: 24, padding: '36px 36px 0', display: 'flex', flexDirection: 'column' }}>
@@ -1179,7 +1239,7 @@ export default function Page() {
             94%, 100% { opacity: 0; }
           }
         `}</style>
-        <div data-reveal style={{ maxWidth: 1200, margin: '0 auto', padding: '36px 40px 80px' }}>
+        <div data-reveal className="section-wide hiw-outer" style={{ maxWidth: 1200, margin: '0 auto', padding: '36px 40px 80px' }}>
           <div style={{ position: 'relative' }}>
           {/* Grid overlay — vertical lines aligned to the 3 steps */}
           <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
@@ -1211,11 +1271,11 @@ export default function Page() {
           {/* ── Unified track + cards ─────────────────────────────── */}
           <div style={{ position: 'relative', zIndex: 1 }}>
             {/* Horizontal track — sits at node height (top: 28px of each card) */}
-            <div style={{ position: 'absolute', top: 28, left: 'calc(16.67%)', right: 'calc(16.67%)', height: 1, background: 'rgba(255,255,255,0.07)', zIndex: 0 }} />
-            <div style={{ position: 'absolute', top: 28, left: 'calc(16.67%)', height: 1, background: 'linear-gradient(to right, #22C55E, rgba(34,197,94,0.2))', animation: 'hiw-trail 20s ease-in-out infinite', width: 0, zIndex: 1 }} />
+            <div className="hiw-track" style={{ position: 'absolute', top: 28, left: 'calc(16.67%)', right: 'calc(16.67%)', height: 1, background: 'rgba(255,255,255,0.07)', zIndex: 0 }} />
+            <div className="hiw-track" style={{ position: 'absolute', top: 28, left: 'calc(16.67%)', height: 1, background: 'linear-gradient(to right, #22C55E, rgba(34,197,94,0.2))', animation: 'hiw-trail 20s ease-in-out infinite', width: 0, zIndex: 1 }} />
 
             {/* Moving Actify mark */}
-            <div style={{ position: 'absolute', top: 28, left: '16.67%', transform: 'translate(-50%, -50%)', zIndex: 10, animation: 'hiw-travel 20s ease-in-out infinite', filter: 'drop-shadow(0 0 12px rgba(34,197,94,0.8))' }}>
+            <div className="hiw-mark" style={{ position: 'absolute', top: 28, left: '16.67%', transform: 'translate(-50%, -50%)', zIndex: 10, animation: 'hiw-travel 20s ease-in-out infinite', filter: 'drop-shadow(0 0 12px rgba(34,197,94,0.8))' }}>
               <svg width="40" height="40" viewBox="0 0 126 126" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
                 <circle cx="63" cy="63" r="60" fill="rgba(6,6,8,1)" stroke="#22C55E" strokeWidth="6"/>
                 <g fill="none" stroke="#22C55E" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round">
@@ -1227,7 +1287,7 @@ export default function Page() {
             </div>
 
             {/* Cards grid — nodes at top connect to track */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <div className="hiw-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {([
                 {
                   n: '01', anim: 'hiw-card-1', nodeAnim: 'hiw-node-1', descAnim: 'hiw-desc-1',
@@ -1251,9 +1311,9 @@ export default function Page() {
                 <div key={s.n} data-reveal data-d={String(i + 1)} style={{ position: 'relative', zIndex: 2, animation: `${s.anim} 20s ease-in-out infinite`, border: '1px solid', borderRadius: 24, padding: '48px 28px 28px' }}>
 
                   {/* Node */}
-                  <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -50%)', width: 10, height: 10, borderRadius: '50%', animation: `${s.nodeAnim} 20s ease-in-out infinite`, zIndex: 3 }} />
+                  <div className="hiw-node" style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -50%)', width: 10, height: 10, borderRadius: '50%', animation: `${s.nodeAnim} 20s ease-in-out infinite`, zIndex: 3 }} />
                   {/* Connector */}
-                  <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 1, height: 36, background: 'rgba(255,255,255,0.06)' }} />
+                  <div className="hiw-connector" style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 1, height: 36, background: 'rgba(255,255,255,0.06)' }} />
 
                   {/* Step label + icon */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -1293,7 +1353,7 @@ export default function Page() {
             60% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
           }
         `}</style>
-        <div data-reveal style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 40px 80px' }}>
+        <div data-reveal className="section-wide" style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 40px 80px' }}>
 
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
@@ -1310,7 +1370,7 @@ export default function Page() {
           </div>
 
           {/* Stats strip */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 20 }}>
+          <div className="trust-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 20 }}>
             {([
               { n: 0, suffix: '', label: 'Violazioni AI Act', color: '#22C55E', sub: 'conformità totale' },
               { n: 11, suffix: '', label: 'Articoli verificati', color: '#818CF8', sub: 'copertura Art. 1–50' },
@@ -1329,7 +1389,7 @@ export default function Page() {
           </div>
 
           {/* Two-panel layout */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.72fr', gap: 20 }}>
+          <div className="trust-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1.72fr', gap: 20 }}>
 
             {/* Left — Certificate panel */}
             <div style={{ background: 'rgba(10,10,12,0.98)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, padding: '40px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
@@ -1372,7 +1432,7 @@ export default function Page() {
               </div>
 
               {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 130px', gap: 12, padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="trust-table-header" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 130px', gap: 12, padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '.2em' }}>Sistema AI</div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '.2em', textAlign: 'center' }}>Conformità</div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '.2em', textAlign: 'right' }}>Rischio</div>
@@ -1392,7 +1452,7 @@ export default function Page() {
                 },
               ] as Array<{ name: string; vendor: string; usage: string; risk: string; rc: string; rb: string; dot: string; score: number; articles: string[] }>).map((sys, i, arr) => (
                 <div key={sys.name} className="trust-sys-row" style={{ padding: '24px 28px', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: 'transparent' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 130px', gap: 12, alignItems: 'center' }}>
+                  <div className="trust-table-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 130px', gap: 12, alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: sys.dot, boxShadow: `0 0 10px ${sys.dot}99`, flexShrink: 0 }} />
                       <div>
@@ -1820,7 +1880,7 @@ export default function Page() {
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           {/* Top grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.4fr', gap: '40px 48px', marginBottom: 52 }}>
+          <div className="footer-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.4fr', gap: '40px 48px', marginBottom: 52 }}>
 
             {/* Col 1 — Brand */}
             <div>

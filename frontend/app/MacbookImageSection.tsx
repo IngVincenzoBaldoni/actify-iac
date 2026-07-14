@@ -173,7 +173,16 @@ export default function MacbookImageSection() {
   }
 
   return (
-    <section style={{ background: '#000', padding: '90px 0 130px', position: 'relative', overflow: 'hidden' }}>
+    <section className="macbook-section" style={{ background: '#000', padding: '90px 0 130px', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .macbook-detail-inner { flex-wrap: wrap !important; gap: 16px !important; }
+          .macbook-detail-icon  { display: none !important; }
+          .macbook-detail-divider { display: none !important; }
+          .macbook-section-padding { padding: 0 20px !important; }
+          .macbook-section { padding: 60px 0 80px !important; }
+        }
+      `}</style>
 
       {/* Glow ambientale */}
       <div aria-hidden style={{
@@ -226,12 +235,12 @@ export default function MacbookImageSection() {
         maxWidth: 1100, margin: '0 auto', padding: '0 24px',
         position: 'relative', zIndex: 3,
         overflow: 'hidden',
-        maxHeight: selectedPill?.detail ? 200 : 0,
+        maxHeight: selectedPill?.detail ? 500 : 0,
         opacity: selectedPill?.detail ? 1 : 0,
         marginBottom: selectedPill?.detail ? 28 : 0,
         transition: 'max-height 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, margin-bottom 0.4s ease',
       }}>
-        <div style={{
+        <div className="macbook-detail-inner" style={{
           background: 'rgba(22,22,24,0.98)',
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 20,
@@ -242,7 +251,7 @@ export default function MacbookImageSection() {
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
         }}>
-          <div style={{
+          <div className="macbook-detail-icon" style={{
             width: 52, height: 52, borderRadius: 14, flexShrink: 0,
             background: 'rgba(255,255,255,.05)',
             border: '1px solid rgba(255,255,255,.1)',
@@ -251,7 +260,7 @@ export default function MacbookImageSection() {
           }}>
             {activeCard ? ICON_MAP[activeCard] : null}
           </div>
-          <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
+          <div className="macbook-detail-divider" style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 }}>
               <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', fontFamily: 'inherit' }}>
@@ -280,7 +289,7 @@ export default function MacbookImageSection() {
       </div>
 
       {/* MacBook */}
-      <div style={{ maxWidth: 1300, margin: '0 auto', padding: '0 40px', position: 'relative', zIndex: 2 }}>
+      <div className="macbook-section-padding" style={{ maxWidth: 1300, margin: '0 auto', padding: '0 40px', position: 'relative', zIndex: 2 }}>
         <div ref={imgRef} style={{ position: 'relative' }}>
           <div aria-hidden style={{
             position: 'absolute',
