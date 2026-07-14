@@ -621,7 +621,7 @@ export default function Page() {
             ].map(([l, h]) => (
               <a key={l} href={h} className="new-nav-link" style={{ fontSize: 13, fontWeight: 400, color: 'rgba(255,255,255,.7)', textDecoration: 'none', transition: 'color .2s', whiteSpace: 'nowrap' }}>{l}</a>
             ))}
-            <a href="/per-consulenti" className="new-nav-link" style={{ fontSize: 13, fontWeight: 700, color: '#22C55E', textDecoration: 'none', transition: 'color .2s', whiteSpace: 'nowrap', border: '1px solid rgba(34,197,94,.3)', borderRadius: 9999, padding: '4px 12px' }}>Per consulenti</a>
+            <a href="/per-consulenti" className="new-nav-link" style={{ fontSize: 13, fontWeight: 700, color: '#22C55E', textDecoration: 'none', transition: 'color .2s', whiteSpace: 'nowrap', border: '1px solid rgba(34,197,94,.3)', borderRadius: 9999, padding: '4px 12px' }}>Per gli studi</a>
           </div>
 
           {/* Right CTAs — tutto a destra */}
@@ -1918,7 +1918,7 @@ export default function Page() {
                 { href: '/plan', label: 'Prezzi' },
                 { href: '/faq', label: 'FAQ' },
                 { href: '/perche-fidarti', label: 'Perché fidarti' },
-                { href: '/per-consulenti', label: 'Per studi e consulenti' },
+                { href: '/per-consulenti', label: 'Per gli studi' },
               ].map(l => (
                 <a key={l.href} href={l.href} style={{ display: 'block', fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', marginBottom: 11, transition: 'color .2s' }}
                   onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
