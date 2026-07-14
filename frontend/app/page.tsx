@@ -1889,10 +1889,24 @@ export default function Page() {
                 La piattaforma italiana per la compliance all&apos;AI Act europeo.<br />
                 Analisi AI-powered, documentazione automatica, audit trail immutabile.
               </p>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(34,197,94,.8)', background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 6, padding: '3px 10px', letterSpacing: .5 }}>EU AI Act 2024/1689</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(99,102,241,.9)', background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 6, padding: '3px 10px', letterSpacing: .5 }}>AWS eu-central-1</span>
               </div>
+              <a
+                href="https://www.instagram.com/official_actify"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(148,163,184,.75)', textDecoration: 'none', transition: 'color .2s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(148,163,184,.75)')}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="currentColor" strokeWidth="1.8"/>
+                  <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8"/>
+                  <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/>
+                </svg>
+                @official_actify
+              </a>
             </div>
 
             {/* Col 2 — Navigazione */}

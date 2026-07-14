@@ -50,6 +50,7 @@ const organizationSchema = {
   ],
   sameAs: [
     'https://www.linkedin.com/company/actify-ai',
+    'https://www.instagram.com/official_actify',
   ],
   inLanguage: 'it',
 };
